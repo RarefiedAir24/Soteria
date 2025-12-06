@@ -6,14 +6,67 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */; };
+		EF83ABD32EE46B020006A32D /* ReverMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF83ABC82EE46B020006A32D /* ReverMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EF83ABE82EE46EC20006A32D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */; };
+		EF83ABEB2EE476030006A32D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = EF83ABEA2EE476030006A32D /* FirebaseAuth */; };
+		EF83ABED2EE476030006A32D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EF83ABEC2EE476030006A32D /* FirebaseCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EF83ABD12EE46B020006A32D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EF83ABAE2EE467910006A32D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EF83ABC72EE46B020006A32D;
+			remoteInfo = ReverMonitor;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EF83ABD82EE46B020006A32D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EF83ABD32EE46B020006A32D /* ReverMonitor.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		EF83ABB62EE467910006A32D /* rever.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = rever.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF83ABC82EE46B020006A32D /* ReverMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReverMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EF83ABD42EE46B020006A32D /* Exceptions for "ReverMonitor" folder in "ReverMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EF83ABC72EE46B020006A32D /* ReverMonitor */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EF83ABB82EE467910006A32D /* rever */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = rever;
+			sourceTree = "<group>";
+		};
+		EF83ABCC2EE46B020006A32D /* ReverMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EF83ABD42EE46B020006A32D /* Exceptions for "ReverMonitor" folder in "ReverMonitor" target */,
+			);
+			path = ReverMonitor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -23,6 +76,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EF83ABED2EE476030006A32D /* FirebaseCore in Frameworks */,
+				EF83ABEB2EE476030006A32D /* FirebaseAuth in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EF83ABC52EE46B020006A32D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -32,7 +95,10 @@
 		EF83ABAD2EE467910006A32D = {
 			isa = PBXGroup;
 			children = (
+				EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */,
 				EF83ABB82EE467910006A32D /* rever */,
+				EF83ABCC2EE46B020006A32D /* ReverMonitor */,
+				EF83ABC92EE46B020006A32D /* Frameworks */,
 				EF83ABB72EE467910006A32D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +107,17 @@
 			isa = PBXGroup;
 			children = (
 				EF83ABB62EE467910006A32D /* rever.app */,
+				EF83ABC82EE46B020006A32D /* ReverMonitor.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		EF83ABC92EE46B020006A32D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,20 +130,46 @@
 				EF83ABB22EE467910006A32D /* Sources */,
 				EF83ABB32EE467910006A32D /* Frameworks */,
 				EF83ABB42EE467910006A32D /* Resources */,
+				EF83ABD82EE46B020006A32D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				EF83ABD22EE46B020006A32D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				EF83ABB82EE467910006A32D /* rever */,
 			);
 			name = rever;
 			packageProductDependencies = (
+				EF83ABEA2EE476030006A32D /* FirebaseAuth */,
+				EF83ABEC2EE476030006A32D /* FirebaseCore */,
 			);
 			productName = rever;
 			productReference = EF83ABB62EE467910006A32D /* rever.app */;
 			productType = "com.apple.product-type.application";
+		};
+		EF83ABC72EE46B020006A32D /* ReverMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "ReverMonitor" */;
+			buildPhases = (
+				EF83ABC42EE46B020006A32D /* Sources */,
+				EF83ABC52EE46B020006A32D /* Frameworks */,
+				EF83ABC62EE46B020006A32D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EF83ABCC2EE46B020006A32D /* ReverMonitor */,
+			);
+			name = ReverMonitor;
+			packageProductDependencies = (
+			);
+			productName = ReverMonitor;
+			productReference = EF83ABC82EE46B020006A32D /* ReverMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -83,6 +184,9 @@
 					EF83ABB52EE467910006A32D = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
+					EF83ABC72EE46B020006A32D = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 				};
 			};
 			buildConfigurationList = EF83ABB12EE467910006A32D /* Build configuration list for PBXProject "rever" */;
@@ -94,18 +198,30 @@
 			);
 			mainGroup = EF83ABAD2EE467910006A32D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EF83ABE92EE476030006A32D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EF83ABB72EE467910006A32D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				EF83ABB52EE467910006A32D /* rever */,
+				EF83ABC72EE46B020006A32D /* ReverMonitor */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		EF83ABB42EE467910006A32D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF83ABE82EE46EC20006A32D /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EF83ABC62EE46B020006A32D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +238,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EF83ABC42EE46B020006A32D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EF83ABD22EE46B020006A32D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EF83ABC72EE46B020006A32D /* ReverMonitor */;
+			targetProxy = EF83ABD12EE46B020006A32D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		EF83ABBF2EE467920006A32D /* Debug */ = {
@@ -310,6 +441,64 @@
 			};
 			name = Release;
 		};
+		EF83ABD62EE46B020006A32D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReverMonitor/ReverMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReverMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ReverMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.rever.ReverMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EF83ABD72EE46B020006A32D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ReverMonitor/ReverMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReverMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ReverMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.rever.ReverMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -331,7 +520,40 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "ReverMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF83ABD62EE46B020006A32D /* Debug */,
+				EF83ABD72EE46B020006A32D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		EF83ABE92EE476030006A32D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EF83ABEA2EE476030006A32D /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF83ABE92EE476030006A32D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		EF83ABEC2EE476030006A32D /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF83ABE92EE476030006A32D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = EF83ABAE2EE467910006A32D /* Project object */;
 }
