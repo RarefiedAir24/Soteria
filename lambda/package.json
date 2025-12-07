@@ -1,0 +1,17 @@
+{
+  "name": "rever-plaid-lambda",
+  "version": "1.0.0",
+  "description": "Lambda functions for Rever Plaid integration",
+  "main": "index.js",
+  "scripts": {
+    "install-deps": "cd rever-plaid-create-link-token && npm install && cd ../rever-plaid-exchange-token && npm install && cd ../rever-plaid-transfer && npm install"
+  },
+  "dependencies": {
+    "plaid": "^21.0.0",
+    "aws-sdk": "^2.1691.0"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
+

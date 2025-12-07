@@ -1,0 +1,6 @@
+framework module Pods_rever {
+  umbrella header "Pods-rever-umbrella.h"
+
+  export *
+  module * { export * }
+}

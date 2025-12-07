@@ -1,0 +1,10 @@
+{
+  "name": "rever-plaid-create-link-token",
+  "version": "1.0.0",
+  "description": "Lambda function to create Plaid link tokens",
+  "main": "index.js",
+  "dependencies": {
+    "plaid": "^21.0.0"
+  }
+}
+

@@ -1,0 +1,10 @@
+{
+  "name": "rever-plaid-transfer",
+  "version": "1.0.0",
+  "description": "Lambda function to process Plaid transfers",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "plaid": "^21.0.0"
+  }
+}

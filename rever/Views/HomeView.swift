@@ -2,19 +2,22 @@
 //  HomeView.swift
 //  rever
 //
-//  Created by Frank Schioppa on 12/6/25.
+//  Home view with behavioral insights
 //
 
 import SwiftUI
 import FirebaseAuth
-import UIKit
 
 struct HomeView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var savingsService: SavingsService
+    @EnvironmentObject var quietHoursService: QuietHoursService
+    @EnvironmentObject var regretRiskEngine: RegretRiskEngine
+    @EnvironmentObject var moodService: MoodTrackingService
+    @EnvironmentObject var regretService: RegretLoggingService
     
     private var userEmail: String {
-        authService.currentUser?.email ?? "there"
+        authService.currentUser?.email?.components(separatedBy: "@").first ?? "there"
     }
     
     private var formattedTotalSaved: String {
@@ -32,18 +35,126 @@ struct HomeView: View {
         return formatter.string(from: NSNumber(value: lastSaved)) ?? "$0.00"
     }
     
+    private var riskLevelColor: Color {
+        guard let risk = regretRiskEngine.currentRisk else { return .gray }
+        if risk.riskLevel >= 0.7 {
+            return .red
+        } else if risk.riskLevel >= 0.4 {
+            return .orange
+        } else {
+            return Color(red: 0.1, green: 0.6, blue: 0.3)
+        }
+    }
+    
+    private var riskLevelText: String {
+        guard let risk = regretRiskEngine.currentRisk else { return "Unknown" }
+        if risk.riskLevel >= 0.7 {
+            return "High Risk"
+        } else if risk.riskLevel >= 0.4 {
+            return "Moderate Risk"
+        } else {
+            return "Low Risk"
+        }
+    }
+    
     var body: some View {
         ZStack(alignment: .top) {
-            // Background
             Color(red: 0.98, green: 0.98, blue: 0.98)
                 .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 24) {
+                    // Regret Risk Alert Card
+                    if let risk = regretRiskEngine.currentRisk, risk.riskLevel >= 0.4 {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: risk.riskLevel >= 0.7 ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(riskLevelColor)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(riskLevelText)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    
+                                    if let recommendation = risk.recommendation {
+                                        Text(recommendation)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                            .lineLimit(2)
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            
+                            if !risk.factors.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(risk.factors, id: \.self) { factor in
+                                            Text(factor.displayName)
+                                                .font(.system(size: 12))
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 6)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(riskLevelColor.opacity(0.1))
+                                                )
+                                                .foregroundColor(riskLevelColor)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.top, 60)
+                    }
+                    
+                    // Quiet Mode Status Card
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: quietHoursService.isQuietModeActive ? "moon.fill" : "moon")
+                                .font(.system(size: 24))
+                                .foregroundColor(quietHoursService.isQuietModeActive ? Color(red: 0.1, green: 0.6, blue: 0.3) : .gray)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(quietHoursService.isQuietModeActive ? "Quiet Mode Active" : "Quiet Mode Inactive")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                
+                                if let schedule = quietHoursService.currentActiveSchedule {
+                                    Text(schedule.name)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                } else {
+                                    Text("No active schedule")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white)
+                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.top, quietHoursService.isQuietModeActive || (regretRiskEngine.currentRisk?.riskLevel ?? 0) >= 0.4 ? 0 : 60)
+                    
                     // Total Saved Card - Hero Card
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Total Saved")
-                            .font(.system(size: 14, weight: .medium, design: .default))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
                         
                         Text(formattedTotalSaved)
@@ -51,7 +162,7 @@ struct HomeView: View {
                             .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
                         
                         Text("by skipping impulse purchases")
-                            .font(.system(size: 13, weight: .regular, design: .default))
+                            .font(.system(size: 13))
                             .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -71,14 +182,13 @@ struct HomeView: View {
                             .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
                     )
                     .padding(.horizontal, 20)
-                    .padding(.top, 60)
                     
                     // Stats Row
                     HStack(spacing: 16) {
-                        // Rever Moments Card
+                        // SOTERIA Moments Card
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Rever Moments")
-                                .font(.system(size: 12, weight: .medium, design: .default))
+                            Text("SOTERIA Moments")
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
                             
                             Text("\(savingsService.reverMomentsCount)")
@@ -97,7 +207,7 @@ struct HomeView: View {
                         if savingsService.lastSavedAmount != nil {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Last Saved")
-                                    .font(.system(size: 12, weight: .medium, design: .default))
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
                                 
                                 Text(formattedLastSaved)
@@ -115,6 +225,65 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 20)
                     
+                    // Mood Insights Card
+                    if let currentMood = moodService.currentMood {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text(currentMood.emoji)
+                                    .font(.system(size: 32))
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Current Mood")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                    
+                                    Text(currentMood.displayName)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                }
+                                
+                                Spacer()
+                            }
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        )
+                        .padding(.horizontal, 20)
+                    }
+                    
+                    // Regret Summary Card
+                    if regretService.recentRegretCount > 0 {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.orange)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("This Week's Regrets")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                    
+                                    Text("\(regretService.recentRegretCount)")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                }
+                                
+                                Spacer()
+                            }
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        )
+                        .padding(.horizontal, 20)
+                    }
+                    
                     Spacer(minLength: 40)
                 }
             }
@@ -122,11 +291,11 @@ struct HomeView: View {
             // Fixed Header
             VStack(spacing: 2) {
                 Text("Hi, \(userEmail)")
-                    .font(.system(size: 24, weight: .semibold, design: .default))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
                 
                 Text("Welcome back")
-                    .font(.system(size: 13, weight: .regular, design: .default))
+                    .font(.system(size: 13))
                     .foregroundColor(.gray)
             }
             .frame(maxWidth: .infinity)
@@ -144,4 +313,8 @@ struct HomeView: View {
     HomeView()
         .environmentObject(AuthService())
         .environmentObject(SavingsService())
+        .environmentObject(QuietHoursService.shared)
+        .environmentObject(RegretRiskEngine.shared)
+        .environmentObject(MoodTrackingService.shared)
+        .environmentObject(RegretLoggingService.shared)
 }

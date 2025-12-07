@@ -15,6 +15,11 @@ struct MainTabView: View {
                     Label("Home", systemImage: "house.fill")
                 }
             
+            GoalsView()
+                .tabItem {
+                    Label("Goals", systemImage: "target")
+                }
+            
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")

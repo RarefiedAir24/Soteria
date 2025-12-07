@@ -1,0 +1,10 @@
+{
+  "name": "rever-plaid-exchange-token",
+  "version": "1.0.0",
+  "description": "Lambda function to exchange Plaid public tokens",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "plaid": "^21.0.0"
+  }
+}
