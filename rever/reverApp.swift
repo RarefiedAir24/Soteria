@@ -4,6 +4,7 @@ import FirebaseCore
 @main
 struct ReverApp: App {
     @StateObject private var authService = AuthService()
+    @StateObject private var savingsService = SavingsService()
 
     init() {
         FirebaseApp.configure()
@@ -13,6 +14,7 @@ struct ReverApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(authService)
+                .environmentObject(savingsService)
         }
     }
 }
