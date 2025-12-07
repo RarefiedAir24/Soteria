@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>io.montebay.rever</string>
+	<string>io.montebay.soteria</string>
 	<key>PROJECT_ID</key>
 	<string>rever-453d5</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:302693001580:ios:8239c285a5593bcf02ab49</string>
+	<string>1:302693001580:ios:b257a3d8bde3f5ac02ab49</string>
 </dict>
 </plist>

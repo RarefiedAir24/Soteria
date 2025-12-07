@@ -4,20 +4,19 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>Plaid.xcscheme</key>
+		<key>Pods-soteria-ReverMonitor.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
+			<key>orderHint</key>
+			<integer>1</integer>
 		</dict>
-		<key>Pods-rever-ReverMonitor.xcscheme</key>
+		<key>Pods-soteria.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
-		</dict>
-		<key>Pods-rever.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
+			<key>orderHint</key>
+			<integer>0</integer>
 		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>

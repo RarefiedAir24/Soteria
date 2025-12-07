@@ -6,179 +6,90 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXAggregateTarget section */
-		A9A06AE06B89E553A8C6646F39D27675 /* Plaid */ = {
-			isa = PBXAggregateTarget;
-			buildConfigurationList = 9DE5093DADA019E2BDAA64CAE885BBE3 /* Build configuration list for PBXAggregateTarget "Plaid" */;
-			buildPhases = (
-				E1BA0BE3AC392ADD92F1FE8109C4E189 /* [CP] Copy XCFrameworks */,
-			);
-			dependencies = (
-			);
-			name = Plaid;
-		};
-/* End PBXAggregateTarget section */
-
 /* Begin PBXBuildFile section */
-		11D1FB87D53D9D20D1EF6C345BA34261 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		1AA70545B613A6465C666613604AB2B5 /* Pods-rever-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = D215068C5ABE768087C54749B1C6BAB8 /* Pods-rever-dummy.m */; };
-		58F927B888E2E04B0EAF6D5CD38E8997 /* Pods-rever-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 758607EAF123DD30C907DD01D58804A9 /* Pods-rever-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		9B7532AECAD02A6F8CE53018C14779D7 /* Pods-rever-ReverMonitor-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 0F0996E99BD49E320922858F181FF2D1 /* Pods-rever-ReverMonitor-dummy.m */; };
-		D81CD441DACC154711FCEAE3F76FD9D9 /* Pods-rever-ReverMonitor-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 6B10CE351572A77BA34161321088F835 /* Pods-rever-ReverMonitor-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		F3A4D0082478A86984988C6B8B785176 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
+		032418D9EB47587B14DA6083F02F793D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
+		33EC571FF27A7C5F146210F27052A455 /* Pods-soteria-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 2BF6D9B7236F55E93E8B80526C9004A7 /* Pods-soteria-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		40B66DA404F902EA17128161EC75335E /* Pods-soteria-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 5E9E3B357196B9499159412242B66FA2 /* Pods-soteria-dummy.m */; };
+		B62626B1F3A0769A5D5C8B823AD555E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
+		BAE02A75A48F1DA9604CA08EFCEA1E7E /* Pods-soteria-ReverMonitor-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 0FDF57ED89098812466A509391DD9383 /* Pods-soteria-ReverMonitor-dummy.m */; };
+		FEDD411CFC1AA14F68CE2B3F658961ED /* Pods-soteria-ReverMonitor-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 6E84EB5AD8544D6932BC7245B42F1C54 /* Pods-soteria-ReverMonitor-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		31938D2455FF43EB5FFF88C05A959AAE /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A9A06AE06B89E553A8C6646F39D27675;
-			remoteInfo = Plaid;
-		};
-		E439A08E0EF32DB79560845E68FC4B1C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BFDFE7DC352907FC980B868725387E98 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A9A06AE06B89E553A8C6646F39D27675;
-			remoteInfo = Plaid;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
-		0F0996E99BD49E320922858F181FF2D1 /* Pods-rever-ReverMonitor-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-rever-ReverMonitor-dummy.m"; sourceTree = "<group>"; };
-		10642A70CC304D8262DBC70B4F76D5AF /* Plaid.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Plaid.debug.xcconfig; sourceTree = "<group>"; };
-		1AB08ECEDA36ED32D83E23DC2FE2E17C /* Pods-rever-ReverMonitor-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-rever-ReverMonitor-Info.plist"; sourceTree = "<group>"; };
-		1CE51D713C491883F1B8AD768B3EF9B7 /* LinkKit.xcframework */ = {isa = PBXFileReference; includeInIndex = 1; path = LinkKit.xcframework; sourceTree = "<group>"; };
-		21012ADA5A0E44EA152516E1A8DBA508 /* Pods-rever-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-rever-acknowledgements.markdown"; sourceTree = "<group>"; };
-		32274B4A95FA1840467EA140F9DE5701 /* Pods-rever.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-rever.release.xcconfig"; sourceTree = "<group>"; };
+		008AC0315E0E2FC83C3AC73998CDDF43 /* Pods-soteria-ReverMonitor-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-soteria-ReverMonitor-acknowledgements.markdown"; sourceTree = "<group>"; };
+		0D7307A37CA83D22CC1ADB52AA9CF846 /* Pods-soteria-ReverMonitor-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-ReverMonitor-acknowledgements.plist"; sourceTree = "<group>"; };
+		0FDF57ED89098812466A509391DD9383 /* Pods-soteria-ReverMonitor-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-soteria-ReverMonitor-dummy.m"; sourceTree = "<group>"; };
+		2BF6D9B7236F55E93E8B80526C9004A7 /* Pods-soteria-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-soteria-umbrella.h"; sourceTree = "<group>"; };
+		2F1A062DB49A914F68F19799BAB065BB /* Pods-soteria-ReverMonitor */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-soteria-ReverMonitor"; path = Pods_soteria_ReverMonitor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		416A8A404D329EF0766578CB334453DE /* Pods-rever-ReverMonitor-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-rever-ReverMonitor-acknowledgements.plist"; sourceTree = "<group>"; };
-		43DEDAAFEB62A4DEDBB1C9DF4A4CCB0C /* Pods-rever-ReverMonitor */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-rever-ReverMonitor"; path = Pods_rever_ReverMonitor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		43ED1D14661D9F50E5057F465A68688B /* Pods-rever-ReverMonitor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-rever-ReverMonitor.release.xcconfig"; sourceTree = "<group>"; };
-		532EB86C178EC9273950AC9E5BF6BB59 /* Pods-rever.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-rever.debug.xcconfig"; sourceTree = "<group>"; };
-		593ED780116A566E8ED39CF23946E5F5 /* Pods-rever-ReverMonitor-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-rever-ReverMonitor-acknowledgements.markdown"; sourceTree = "<group>"; };
-		6B10CE351572A77BA34161321088F835 /* Pods-rever-ReverMonitor-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-rever-ReverMonitor-umbrella.h"; sourceTree = "<group>"; };
-		6DAEE86642D5FB98373D3CD53187A886 /* Pods-rever-frameworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Pods-rever-frameworks.sh"; sourceTree = "<group>"; };
-		74F9C967570DB2003DDD82605527916E /* Pods-rever-ReverMonitor.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-rever-ReverMonitor.modulemap"; sourceTree = "<group>"; };
-		758607EAF123DD30C907DD01D58804A9 /* Pods-rever-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-rever-umbrella.h"; sourceTree = "<group>"; };
-		853AA6905ABB63C7F46F3CE048FAE681 /* Pods-rever-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-rever-acknowledgements.plist"; sourceTree = "<group>"; };
-		9A82127D35A42789696A95DCAD4632B4 /* Pods-rever-ReverMonitor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-rever-ReverMonitor.debug.xcconfig"; sourceTree = "<group>"; };
+		3AEDACAD1ADE73A7DDFAD15056944AFC /* Pods-soteria.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria.debug.xcconfig"; sourceTree = "<group>"; };
+		484732FCC59612F7FB6DDD76500CAF2B /* Pods-soteria-ReverMonitor.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-soteria-ReverMonitor.modulemap"; sourceTree = "<group>"; };
+		50EE9D26408F25BC0EC8099416EB3A4C /* Pods-soteria-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-Info.plist"; sourceTree = "<group>"; };
+		530C8F08857CA4F4D79BC255D57201BC /* Pods-soteria-ReverMonitor-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-ReverMonitor-Info.plist"; sourceTree = "<group>"; };
+		5E9E3B357196B9499159412242B66FA2 /* Pods-soteria-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-soteria-dummy.m"; sourceTree = "<group>"; };
+		6150C8DD5BEA6C25D688A2F63EB92DEA /* Pods-soteria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria.release.xcconfig"; sourceTree = "<group>"; };
+		6E84EB5AD8544D6932BC7245B42F1C54 /* Pods-soteria-ReverMonitor-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-soteria-ReverMonitor-umbrella.h"; sourceTree = "<group>"; };
+		719EBD6D57EE881ADA984A4212486D47 /* Pods-soteria */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-soteria"; path = Pods_soteria.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
-		ABF66DB56488AB0884BC4011A16E9422 /* Plaid-xcframeworks.sh */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.script.sh; path = "Plaid-xcframeworks.sh"; sourceTree = "<group>"; };
-		AC8C7E679241987F101A75C890265383 /* Pods-rever */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-rever"; path = Pods_rever.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		C4FDB79B13A1A4828D9673B6D2D1D00A /* Pods-rever.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-rever.modulemap"; sourceTree = "<group>"; };
-		C7AA08607EC1D401AE47257639D4E7F0 /* Pods-rever-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-rever-Info.plist"; sourceTree = "<group>"; };
-		D1BA15F072E04FB94C6AEC4DC3DE90FC /* Plaid.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Plaid.release.xcconfig; sourceTree = "<group>"; };
-		D215068C5ABE768087C54749B1C6BAB8 /* Pods-rever-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-rever-dummy.m"; sourceTree = "<group>"; };
+		B27CF8CE1B834C8EE2E99CD7DA968F16 /* Pods-soteria-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-soteria-acknowledgements.markdown"; sourceTree = "<group>"; };
+		C492752EEE29B97C46BF9C8AC5DD5D4F /* Pods-soteria.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-soteria.modulemap"; sourceTree = "<group>"; };
+		C4CEF0360AB1C42144BC00333283842D /* Pods-soteria-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-acknowledgements.plist"; sourceTree = "<group>"; };
+		FC655679ECA44ED508530FFBF6E5F6AC /* Pods-soteria-ReverMonitor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria-ReverMonitor.release.xcconfig"; sourceTree = "<group>"; };
+		FE50EB69DE630E0C0DF86BDEFC5B8AC0 /* Pods-soteria-ReverMonitor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria-ReverMonitor.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		5C3D1893FA5F891525DD04D9BF077D84 /* Frameworks */ = {
+		1490E2D0106DA1FD269BC185A9769B73 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				11D1FB87D53D9D20D1EF6C345BA34261 /* Foundation.framework in Frameworks */,
+				032418D9EB47587B14DA6083F02F793D /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		FECB69B7E342C16380907D4252A23EEC /* Frameworks */ = {
+		F076581F983362B980C31F900A0FC244 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F3A4D0082478A86984988C6B8B785176 /* Foundation.framework in Frameworks */,
+				B62626B1F3A0769A5D5C8B823AD555E8 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		3C32782AC1F1E76E3497C73DF1AAD3FE /* Products */ = {
+		4103C9F6E6794879EB1392EDC555AFCF /* Targets Support Files */ = {
 			isa = PBXGroup;
 			children = (
-				AC8C7E679241987F101A75C890265383 /* Pods-rever */,
-				43DEDAAFEB62A4DEDBB1C9DF4A4CCB0C /* Pods-rever-ReverMonitor */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		44391652E6BB46602E409296F2752D01 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				1CE51D713C491883F1B8AD768B3EF9B7 /* LinkKit.xcframework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		47BF73E8D17D469AD3EF23E539164EF9 /* Plaid */ = {
-			isa = PBXGroup;
-			children = (
-				44391652E6BB46602E409296F2752D01 /* Frameworks */,
-				B26398A94BF3A78574A282A7B53626A1 /* Support Files */,
-			);
-			name = Plaid;
-			path = Plaid;
-			sourceTree = "<group>";
-		};
-		957C9F703278D835D447598F5373DB7F /* Pods-rever-ReverMonitor */ = {
-			isa = PBXGroup;
-			children = (
-				74F9C967570DB2003DDD82605527916E /* Pods-rever-ReverMonitor.modulemap */,
-				593ED780116A566E8ED39CF23946E5F5 /* Pods-rever-ReverMonitor-acknowledgements.markdown */,
-				416A8A404D329EF0766578CB334453DE /* Pods-rever-ReverMonitor-acknowledgements.plist */,
-				0F0996E99BD49E320922858F181FF2D1 /* Pods-rever-ReverMonitor-dummy.m */,
-				1AB08ECEDA36ED32D83E23DC2FE2E17C /* Pods-rever-ReverMonitor-Info.plist */,
-				6B10CE351572A77BA34161321088F835 /* Pods-rever-ReverMonitor-umbrella.h */,
-				9A82127D35A42789696A95DCAD4632B4 /* Pods-rever-ReverMonitor.debug.xcconfig */,
-				43ED1D14661D9F50E5057F465A68688B /* Pods-rever-ReverMonitor.release.xcconfig */,
-			);
-			name = "Pods-rever-ReverMonitor";
-			path = "Target Support Files/Pods-rever-ReverMonitor";
-			sourceTree = "<group>";
-		};
-		B26398A94BF3A78574A282A7B53626A1 /* Support Files */ = {
-			isa = PBXGroup;
-			children = (
-				ABF66DB56488AB0884BC4011A16E9422 /* Plaid-xcframeworks.sh */,
-				10642A70CC304D8262DBC70B4F76D5AF /* Plaid.debug.xcconfig */,
-				D1BA15F072E04FB94C6AEC4DC3DE90FC /* Plaid.release.xcconfig */,
-			);
-			name = "Support Files";
-			path = "../Target Support Files/Plaid";
-			sourceTree = "<group>";
-		};
-		B63AEA324A0376AC821A0E1B5C4ACA8B /* Targets Support Files */ = {
-			isa = PBXGroup;
-			children = (
-				C5934EFFB6FC4FD1AB89B7C8A09D7357 /* Pods-rever */,
-				957C9F703278D835D447598F5373DB7F /* Pods-rever-ReverMonitor */,
+				B0D00F2BAD8258772212BE7DCEC3E8D9 /* Pods-soteria */,
+				D682888CEE255D5079CB519C1AC27FDC /* Pods-soteria-ReverMonitor */,
 			);
 			name = "Targets Support Files";
 			sourceTree = "<group>";
 		};
-		B7933AB90BD26E5E8905B1A98D46A269 /* Pods */ = {
+		B0D00F2BAD8258772212BE7DCEC3E8D9 /* Pods-soteria */ = {
 			isa = PBXGroup;
 			children = (
-				47BF73E8D17D469AD3EF23E539164EF9 /* Plaid */,
+				C492752EEE29B97C46BF9C8AC5DD5D4F /* Pods-soteria.modulemap */,
+				B27CF8CE1B834C8EE2E99CD7DA968F16 /* Pods-soteria-acknowledgements.markdown */,
+				C4CEF0360AB1C42144BC00333283842D /* Pods-soteria-acknowledgements.plist */,
+				5E9E3B357196B9499159412242B66FA2 /* Pods-soteria-dummy.m */,
+				50EE9D26408F25BC0EC8099416EB3A4C /* Pods-soteria-Info.plist */,
+				2BF6D9B7236F55E93E8B80526C9004A7 /* Pods-soteria-umbrella.h */,
+				3AEDACAD1ADE73A7DDFAD15056944AFC /* Pods-soteria.debug.xcconfig */,
+				6150C8DD5BEA6C25D688A2F63EB92DEA /* Pods-soteria.release.xcconfig */,
 			);
-			name = Pods;
+			name = "Pods-soteria";
+			path = "Target Support Files/Pods-soteria";
 			sourceTree = "<group>";
 		};
-		C5934EFFB6FC4FD1AB89B7C8A09D7357 /* Pods-rever */ = {
+		B99A9732ECA6B074CE74C0ED4F99FAC7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C4FDB79B13A1A4828D9673B6D2D1D00A /* Pods-rever.modulemap */,
-				21012ADA5A0E44EA152516E1A8DBA508 /* Pods-rever-acknowledgements.markdown */,
-				853AA6905ABB63C7F46F3CE048FAE681 /* Pods-rever-acknowledgements.plist */,
-				D215068C5ABE768087C54749B1C6BAB8 /* Pods-rever-dummy.m */,
-				6DAEE86642D5FB98373D3CD53187A886 /* Pods-rever-frameworks.sh */,
-				C7AA08607EC1D401AE47257639D4E7F0 /* Pods-rever-Info.plist */,
-				758607EAF123DD30C907DD01D58804A9 /* Pods-rever-umbrella.h */,
-				532EB86C178EC9273950AC9E5BF6BB59 /* Pods-rever.debug.xcconfig */,
-				32274B4A95FA1840467EA140F9DE5701 /* Pods-rever.release.xcconfig */,
+				719EBD6D57EE881ADA984A4212486D47 /* Pods-soteria */,
+				2F1A062DB49A914F68F19799BAB065BB /* Pods-soteria-ReverMonitor */,
 			);
-			name = "Pods-rever";
-			path = "Target Support Files/Pods-rever";
+			name = Products;
 			sourceTree = "<group>";
 		};
 		CF1408CF629C7361332E53B88F7BD30C = {
@@ -186,9 +97,8 @@
 			children = (
 				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
 				D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */,
-				B7933AB90BD26E5E8905B1A98D46A269 /* Pods */,
-				3C32782AC1F1E76E3497C73DF1AAD3FE /* Products */,
-				B63AEA324A0376AC821A0E1B5C4ACA8B /* Targets Support Files */,
+				B99A9732ECA6B074CE74C0ED4F99FAC7 /* Products */,
+				4103C9F6E6794879EB1392EDC555AFCF /* Targets Support Files */,
 			);
 			sourceTree = "<group>";
 		};
@@ -198,6 +108,22 @@
 				E4801F62A6B08CD9B5410329F1A18FDE /* iOS */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D682888CEE255D5079CB519C1AC27FDC /* Pods-soteria-ReverMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				484732FCC59612F7FB6DDD76500CAF2B /* Pods-soteria-ReverMonitor.modulemap */,
+				008AC0315E0E2FC83C3AC73998CDDF43 /* Pods-soteria-ReverMonitor-acknowledgements.markdown */,
+				0D7307A37CA83D22CC1ADB52AA9CF846 /* Pods-soteria-ReverMonitor-acknowledgements.plist */,
+				0FDF57ED89098812466A509391DD9383 /* Pods-soteria-ReverMonitor-dummy.m */,
+				530C8F08857CA4F4D79BC255D57201BC /* Pods-soteria-ReverMonitor-Info.plist */,
+				6E84EB5AD8544D6932BC7245B42F1C54 /* Pods-soteria-ReverMonitor-umbrella.h */,
+				FE50EB69DE630E0C0DF86BDEFC5B8AC0 /* Pods-soteria-ReverMonitor.debug.xcconfig */,
+				FC655679ECA44ED508530FFBF6E5F6AC /* Pods-soteria-ReverMonitor.release.xcconfig */,
+			);
+			name = "Pods-soteria-ReverMonitor";
+			path = "Target Support Files/Pods-soteria-ReverMonitor";
 			sourceTree = "<group>";
 		};
 		E4801F62A6B08CD9B5410329F1A18FDE /* iOS */ = {
@@ -211,61 +137,59 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		1B10659102394B5C20C2F04922D595BE /* Headers */ = {
+		4892DBEEB00CC5A5DAF63B31446F9760 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				58F927B888E2E04B0EAF6D5CD38E8997 /* Pods-rever-umbrella.h in Headers */,
+				FEDD411CFC1AA14F68CE2B3F658961ED /* Pods-soteria-ReverMonitor-umbrella.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		8FAFF9561A506358A6D6239962B1A23A /* Headers */ = {
+		A2A74D721723283470A326F73D25935D /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D81CD441DACC154711FCEAE3F76FD9D9 /* Pods-rever-ReverMonitor-umbrella.h in Headers */,
+				33EC571FF27A7C5F146210F27052A455 /* Pods-soteria-umbrella.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		04141CA9ECBD80CF6F05883E6F9A16D6 /* Pods-rever */ = {
+		DC2AE2A00C0F16AB41C9CA073574E386 /* Pods-soteria */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 024CB5F59EF9614569AEF07FC4A33518 /* Build configuration list for PBXNativeTarget "Pods-rever" */;
+			buildConfigurationList = DD79B68EB8D014FA6FA51002EC0AA616 /* Build configuration list for PBXNativeTarget "Pods-soteria" */;
 			buildPhases = (
-				1B10659102394B5C20C2F04922D595BE /* Headers */,
-				CDA3BBD2C8BE117FEAC94ADD3E37FFE1 /* Sources */,
-				5C3D1893FA5F891525DD04D9BF077D84 /* Frameworks */,
-				4CA40E471751FD0323868F0C254CF80C /* Resources */,
+				A2A74D721723283470A326F73D25935D /* Headers */,
+				D4E24E4084A39D9D1DE93D10B04DC634 /* Sources */,
+				F076581F983362B980C31F900A0FC244 /* Frameworks */,
+				B1201C6CD95BE098301C5D5C8A72AA3D /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				51D4D6B191AA4727CE70F3F5B2FA1C17 /* PBXTargetDependency */,
 			);
-			name = "Pods-rever";
-			productName = Pods_rever;
-			productReference = AC8C7E679241987F101A75C890265383 /* Pods-rever */;
+			name = "Pods-soteria";
+			productName = Pods_soteria;
+			productReference = 719EBD6D57EE881ADA984A4212486D47 /* Pods-soteria */;
 			productType = "com.apple.product-type.framework";
 		};
-		BD0B30A37474E44275F5F0C8C9AC5585 /* Pods-rever-ReverMonitor */ = {
+		EF273E6D3E0561CEBE51C4F301913B88 /* Pods-soteria-ReverMonitor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0572D641528B11078763A0A2F2CD97DA /* Build configuration list for PBXNativeTarget "Pods-rever-ReverMonitor" */;
+			buildConfigurationList = B7E0F99CC3E7E31CB9CC4008EED1122F /* Build configuration list for PBXNativeTarget "Pods-soteria-ReverMonitor" */;
 			buildPhases = (
-				8FAFF9561A506358A6D6239962B1A23A /* Headers */,
-				00F6793DC926A3B2FA6C16B3D1D50AA7 /* Sources */,
-				FECB69B7E342C16380907D4252A23EEC /* Frameworks */,
-				71D2329B84EA6EAAF6513492FF5ED58C /* Resources */,
+				4892DBEEB00CC5A5DAF63B31446F9760 /* Headers */,
+				8A7B9A2683D6E031DB37F36A7FCCAE9D /* Sources */,
+				1490E2D0106DA1FD269BC185A9769B73 /* Frameworks */,
+				E2BE0BB45C28CC5281F3D7FC4B0523F5 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				12E64F7730D333962E1008975043D495 /* PBXTargetDependency */,
 			);
-			name = "Pods-rever-ReverMonitor";
-			productName = Pods_rever_ReverMonitor;
-			productReference = 43DEDAAFEB62A4DEDBB1C9DF4A4CCB0C /* Pods-rever-ReverMonitor */;
+			name = "Pods-soteria-ReverMonitor";
+			productName = Pods_soteria_ReverMonitor;
+			productReference = 2F1A062DB49A914F68F19799BAB065BB /* Pods-soteria-ReverMonitor */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
@@ -288,26 +212,25 @@
 			mainGroup = CF1408CF629C7361332E53B88F7BD30C;
 			minimizedProjectReferenceProxies = 0;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 3C32782AC1F1E76E3497C73DF1AAD3FE /* Products */;
+			productRefGroup = B99A9732ECA6B074CE74C0ED4F99FAC7 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A9A06AE06B89E553A8C6646F39D27675 /* Plaid */,
-				04141CA9ECBD80CF6F05883E6F9A16D6 /* Pods-rever */,
-				BD0B30A37474E44275F5F0C8C9AC5585 /* Pods-rever-ReverMonitor */,
+				DC2AE2A00C0F16AB41C9CA073574E386 /* Pods-soteria */,
+				EF273E6D3E0561CEBE51C4F301913B88 /* Pods-soteria-ReverMonitor */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		4CA40E471751FD0323868F0C254CF80C /* Resources */ = {
+		B1201C6CD95BE098301C5D5C8A72AA3D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		71D2329B84EA6EAAF6513492FF5ED58C /* Resources */ = {
+		E2BE0BB45C28CC5281F3D7FC4B0523F5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -316,64 +239,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		E1BA0BE3AC392ADD92F1FE8109C4E189 /* [CP] Copy XCFrameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Plaid/Plaid-xcframeworks-input-files.xcfilelist",
-			);
-			name = "[CP] Copy XCFrameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Plaid/Plaid-xcframeworks-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Plaid/Plaid-xcframeworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
-		00F6793DC926A3B2FA6C16B3D1D50AA7 /* Sources */ = {
+		8A7B9A2683D6E031DB37F36A7FCCAE9D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B7532AECAD02A6F8CE53018C14779D7 /* Pods-rever-ReverMonitor-dummy.m in Sources */,
+				BAE02A75A48F1DA9604CA08EFCEA1E7E /* Pods-soteria-ReverMonitor-dummy.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		CDA3BBD2C8BE117FEAC94ADD3E37FFE1 /* Sources */ = {
+		D4E24E4084A39D9D1DE93D10B04DC634 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1AA70545B613A6465C666613604AB2B5 /* Pods-rever-dummy.m in Sources */,
+				40B66DA404F902EA17128161EC75335E /* Pods-soteria-dummy.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		12E64F7730D333962E1008975043D495 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = Plaid;
-			target = A9A06AE06B89E553A8C6646F39D27675 /* Plaid */;
-			targetProxy = 31938D2455FF43EB5FFF88C05A959AAE /* PBXContainerItemProxy */;
-		};
-		51D4D6B191AA4727CE70F3F5B2FA1C17 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = Plaid;
-			target = A9A06AE06B89E553A8C6646F39D27675 /* Plaid */;
-			targetProxy = E439A08E0EF32DB79560845E68FC4B1C /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin XCBuildConfiguration section */
-		0979B225D62CF9279E71FC4FA349508D /* Debug */ = {
+		25E2AAC843DB15E5A5018AD9D7557DD5 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 532EB86C178EC9273950AC9E5BF6BB59 /* Pods-rever.debug.xcconfig */;
+			baseConfigurationReference = FE50EB69DE630E0C0DF86BDEFC5B8AC0 /* Pods-soteria-ReverMonitor.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
@@ -387,7 +275,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-rever/Pods-rever-Info.plist";
+				INFOPLIST_FILE = "Target Support Files/Pods-soteria-ReverMonitor/Pods-soteria-ReverMonitor-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -396,7 +284,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-rever/Pods-rever.modulemap";
+				MODULEMAP_FILE = "Target Support Files/Pods-soteria-ReverMonitor/Pods-soteria-ReverMonitor.modulemap";
 				OTHER_LDFLAGS = "";
 				OTHER_LIBTOOLFLAGS = "";
 				PODS_ROOT = "$(SRCROOT)";
@@ -410,9 +298,9 @@
 			};
 			name = Debug;
 		};
-		0A026B8C3485AE4D3C549A7D7383863F /* Release */ = {
+		5420AC27FF71142A5278F2BF49FCFEF7 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 43ED1D14661D9F50E5057F465A68688B /* Pods-rever-ReverMonitor.release.xcconfig */;
+			baseConfigurationReference = 6150C8DD5BEA6C25D688A2F63EB92DEA /* Pods-soteria.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
@@ -426,7 +314,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-rever-ReverMonitor/Pods-rever-ReverMonitor-Info.plist";
+				INFOPLIST_FILE = "Target Support Files/Pods-soteria/Pods-soteria-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -435,7 +323,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-rever-ReverMonitor/Pods-rever-ReverMonitor.modulemap";
+				MODULEMAP_FILE = "Target Support Files/Pods-soteria/Pods-soteria.modulemap";
 				OTHER_LDFLAGS = "";
 				OTHER_LIBTOOLFLAGS = "";
 				PODS_ROOT = "$(SRCROOT)";
@@ -450,82 +338,44 @@
 			};
 			name = Release;
 		};
-		0B5BE8D9457411452DA9943B778ACDD4 /* Debug */ = {
+		90493A452B98388E7F8A7CB07AA33059 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 10642A70CC304D8262DBC70B4F76D5AF /* Plaid.debug.xcconfig */;
+			baseConfigurationReference = 3AEDACAD1ADE73A7DDFAD15056944AFC /* Pods-soteria.debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				INFOPLIST_FILE = "Target Support Files/Pods-soteria/Pods-soteria-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
+				MODULEMAP_FILE = "Target Support Files/Pods-soteria/Pods-soteria.modulemap";
+				OTHER_LDFLAGS = "";
+				OTHER_LIBTOOLFLAGS = "";
+				PODS_ROOT = "$(SRCROOT)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
 			};
 			name = Debug;
-		};
-		2E2183E7A861424EBE565525B461ED7D /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 32274B4A95FA1840467EA140F9DE5701 /* Pods-rever.release.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-rever/Pods-rever-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-rever/Pods-rever.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Release;
-		};
-		6E9C2A4504308FDAF57E633D9337E9A3 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D1BA15F072E04FB94C6AEC4DC3DE90FC /* Plaid.release.xcconfig */;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
 		};
 		90D4D09BCB6A4660E43ACBE9ECB6FE9A /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -655,9 +505,9 @@
 			};
 			name = Release;
 		};
-		DB53CB3A7D16C1A549C4082F57F356A7 /* Debug */ = {
+		F9F41183AF06B366D3B51D63B7AEFC8B /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9A82127D35A42789696A95DCAD4632B4 /* Pods-rever-ReverMonitor.debug.xcconfig */;
+			baseConfigurationReference = FC655679ECA44ED508530FFBF6E5F6AC /* Pods-soteria-ReverMonitor.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
@@ -671,7 +521,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_MODULE_VERIFIER = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-rever-ReverMonitor/Pods-rever-ReverMonitor-Info.plist";
+				INFOPLIST_FILE = "Target Support Files/Pods-soteria-ReverMonitor/Pods-soteria-ReverMonitor-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -680,7 +530,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-rever-ReverMonitor/Pods-rever-ReverMonitor.modulemap";
+				MODULEMAP_FILE = "Target Support Files/Pods-soteria-ReverMonitor/Pods-soteria-ReverMonitor.modulemap";
 				OTHER_LDFLAGS = "";
 				OTHER_LIBTOOLFLAGS = "";
 				PODS_ROOT = "$(SRCROOT)";
@@ -689,32 +539,15 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Debug;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		024CB5F59EF9614569AEF07FC4A33518 /* Build configuration list for PBXNativeTarget "Pods-rever" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				0979B225D62CF9279E71FC4FA349508D /* Debug */,
-				2E2183E7A861424EBE565525B461ED7D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		0572D641528B11078763A0A2F2CD97DA /* Build configuration list for PBXNativeTarget "Pods-rever-ReverMonitor" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				DB53CB3A7D16C1A549C4082F57F356A7 /* Debug */,
-				0A026B8C3485AE4D3C549A7D7383863F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -724,11 +557,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		9DE5093DADA019E2BDAA64CAE885BBE3 /* Build configuration list for PBXAggregateTarget "Plaid" */ = {
+		B7E0F99CC3E7E31CB9CC4008EED1122F /* Build configuration list for PBXNativeTarget "Pods-soteria-ReverMonitor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0B5BE8D9457411452DA9943B778ACDD4 /* Debug */,
-				6E9C2A4504308FDAF57E633D9337E9A3 /* Release */,
+				25E2AAC843DB15E5A5018AD9D7557DD5 /* Debug */,
+				F9F41183AF06B366D3B51D63B7AEFC8B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD79B68EB8D014FA6FA51002EC0AA616 /* Build configuration list for PBXNativeTarget "Pods-soteria" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				90493A452B98388E7F8A7CB07AA33059 /* Debug */,
+				5420AC27FF71142A5278F2BF49FCFEF7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

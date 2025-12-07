@@ -7,10 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B4973FE4629073F6875E8BE0 /* Pods_rever.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F89DC3D2F90CF447610E03E /* Pods_rever.framework */; };
-		C1C1D5C0180918B8CBB98654 /* Pods_rever_ReverMonitor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21F75DB6F44225EEFC556B49 /* Pods_rever_ReverMonitor.framework */; };
 		EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */; };
-		EF83ABD32EE46B020006A32D /* ReverMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF83ABC82EE46B020006A32D /* ReverMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EF83ABD32EE46B020006A32D /* SoteriaMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EF83ABE82EE46EC20006A32D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */; };
 		EF83ABEB2EE476030006A32D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = EF83ABEA2EE476030006A32D /* FirebaseAuth */; };
 		EF83ABED2EE476030006A32D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EF83ABEC2EE476030006A32D /* FirebaseCore */; };
@@ -23,7 +21,7 @@
 			containerPortal = EF83ABAE2EE467910006A32D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = EF83ABC72EE46B020006A32D;
-			remoteInfo = ReverMonitor;
+			remoteInfo = SoteriaMonitor;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -34,7 +32,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				EF83ABD32EE46B020006A32D /* ReverMonitor.appex in Embed Foundation Extensions */,
+				EF83ABD32EE46B020006A32D /* SoteriaMonitor.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -42,41 +40,39 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0FB440D58CD71B3CB9CEC24D /* Pods-rever-ReverMonitor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-rever-ReverMonitor.release.xcconfig"; path = "Target Support Files/Pods-rever-ReverMonitor/Pods-rever-ReverMonitor.release.xcconfig"; sourceTree = "<group>"; };
-		21F75DB6F44225EEFC556B49 /* Pods_rever_ReverMonitor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_rever_ReverMonitor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		682C47E2895C1BE6E03B1EDC /* Pods-rever-ReverMonitor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-rever-ReverMonitor.debug.xcconfig"; path = "Target Support Files/Pods-rever-ReverMonitor/Pods-rever-ReverMonitor.debug.xcconfig"; sourceTree = "<group>"; };
-		8F89DC3D2F90CF447610E03E /* Pods_rever.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_rever.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		C638B735BC50BCDAD97C604D /* Pods-rever.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-rever.debug.xcconfig"; path = "Target Support Files/Pods-rever/Pods-rever.debug.xcconfig"; sourceTree = "<group>"; };
-		E0C59B5CD330B938680DE047 /* Pods-rever.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-rever.release.xcconfig"; path = "Target Support Files/Pods-rever/Pods-rever.release.xcconfig"; sourceTree = "<group>"; };
-		EF83ABB62EE467910006A32D /* rever.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = rever.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EF83ABC82EE46B020006A32D /* ReverMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReverMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0FB440D58CD71B3CB9CEC24D /* Pods-soteria-ReverMonitor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria-ReverMonitor.release.xcconfig"; path = "Target Support Files/Pods-soteria-ReverMonitor/Pods-soteria-ReverMonitor.release.xcconfig"; sourceTree = "<group>"; };
+		682C47E2895C1BE6E03B1EDC /* Pods-soteria-ReverMonitor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria-ReverMonitor.debug.xcconfig"; path = "Target Support Files/Pods-soteria-ReverMonitor/Pods-soteria-ReverMonitor.debug.xcconfig"; sourceTree = "<group>"; };
+		C638B735BC50BCDAD97C604D /* Pods-soteria.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria.debug.xcconfig"; path = "Target Support Files/Pods-soteria/Pods-soteria.debug.xcconfig"; sourceTree = "<group>"; };
+		E0C59B5CD330B938680DE047 /* Pods-soteria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria.release.xcconfig"; path = "Target Support Files/Pods-soteria/Pods-soteria.release.xcconfig"; sourceTree = "<group>"; };
+		EF83ABB62EE467910006A32D /* soteria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = soteria.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SoteriaMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		EF83ABF52EE53A520006A32D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EF83ABD42EE46B020006A32D /* Exceptions for "ReverMonitor" folder in "ReverMonitor" target */ = {
+		EF83ABD92EE46B020006A32D /* Exceptions for "SoteriaMonitor" folder in "SoteriaMonitor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = EF83ABC72EE46B020006A32D /* ReverMonitor */;
+			target = EF83ABC72EE46B020006A32D /* SoteriaMonitor */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		EF83ABB82EE467910006A32D /* rever */ = {
+		EF83ABB82EE467910006A32D /* soteria */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = rever;
+			path = soteria;
 			sourceTree = "<group>";
 		};
-		EF83ABCC2EE46B020006A32D /* ReverMonitor */ = {
+		EF83ABCC2EE46B020006A32D /* SoteriaMonitor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				EF83ABD42EE46B020006A32D /* Exceptions for "ReverMonitor" folder in "ReverMonitor" target */,
+				EF83ABD92EE46B020006A32D /* Exceptions for "SoteriaMonitor" folder in "SoteriaMonitor" target */,
 			);
-			path = ReverMonitor;
+			path = SoteriaMonitor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -89,7 +85,6 @@
 				EF83ABED2EE476030006A32D /* FirebaseCore in Frameworks */,
 				EF83ABF62EE53A520006A32D /* FamilyControls.framework in Frameworks */,
 				EF83ABEB2EE476030006A32D /* FirebaseAuth in Frameworks */,
-				B4973FE4629073F6875E8BE0 /* Pods_rever.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,7 +93,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */,
-				C1C1D5C0180918B8CBB98654 /* Pods_rever_ReverMonitor.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -108,10 +102,10 @@
 		73591A144853D95FF75A3391 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				C638B735BC50BCDAD97C604D /* Pods-rever.debug.xcconfig */,
-				E0C59B5CD330B938680DE047 /* Pods-rever.release.xcconfig */,
-				682C47E2895C1BE6E03B1EDC /* Pods-rever-ReverMonitor.debug.xcconfig */,
-				0FB440D58CD71B3CB9CEC24D /* Pods-rever-ReverMonitor.release.xcconfig */,
+				C638B735BC50BCDAD97C604D /* Pods-soteria.debug.xcconfig */,
+				E0C59B5CD330B938680DE047 /* Pods-soteria.release.xcconfig */,
+				682C47E2895C1BE6E03B1EDC /* Pods-soteria-ReverMonitor.debug.xcconfig */,
+				0FB440D58CD71B3CB9CEC24D /* Pods-soteria-ReverMonitor.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -120,8 +114,8 @@
 			isa = PBXGroup;
 			children = (
 				EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */,
-				EF83ABB82EE467910006A32D /* rever */,
-				EF83ABCC2EE46B020006A32D /* ReverMonitor */,
+				EF83ABB82EE467910006A32D /* soteria */,
+				EF83ABCC2EE46B020006A32D /* SoteriaMonitor */,
 				EF83ABC92EE46B020006A32D /* Frameworks */,
 				EF83ABB72EE467910006A32D /* Products */,
 				73591A144853D95FF75A3391 /* Pods */,
@@ -131,8 +125,8 @@
 		EF83ABB72EE467910006A32D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				EF83ABB62EE467910006A32D /* rever.app */,
-				EF83ABC82EE46B020006A32D /* ReverMonitor.appex */,
+				EF83ABB62EE467910006A32D /* soteria.app */,
+				EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -142,8 +136,6 @@
 			children = (
 				EF83ABF52EE53A520006A32D /* FamilyControls.framework */,
 				EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */,
-				8F89DC3D2F90CF447610E03E /* Pods_rever.framework */,
-				21F75DB6F44225EEFC556B49 /* Pods_rever_ReverMonitor.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -151,16 +143,15 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		EF83ABB52EE467910006A32D /* rever */ = {
+		EF83ABB52EE467910006A32D /* soteria */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = EF83ABC12EE467920006A32D /* Build configuration list for PBXNativeTarget "rever" */;
+			buildConfigurationList = EF83ABC12EE467920006A32D /* Build configuration list for PBXNativeTarget "soteria" */;
 			buildPhases = (
 				10F7A1E7FB54CBAAE214A921 /* [CP] Check Pods Manifest.lock */,
 				EF83ABB22EE467910006A32D /* Sources */,
 				EF83ABB32EE467910006A32D /* Frameworks */,
 				EF83ABB42EE467910006A32D /* Resources */,
 				EF83ABD82EE46B020006A32D /* Embed Foundation Extensions */,
-				37830BA9869E2D761606CE09 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -168,20 +159,20 @@
 				EF83ABD22EE46B020006A32D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				EF83ABB82EE467910006A32D /* rever */,
+				EF83ABB82EE467910006A32D /* soteria */,
 			);
-			name = rever;
+			name = soteria;
 			packageProductDependencies = (
 				EF83ABEA2EE476030006A32D /* FirebaseAuth */,
 				EF83ABEC2EE476030006A32D /* FirebaseCore */,
 			);
-			productName = rever;
-			productReference = EF83ABB62EE467910006A32D /* rever.app */;
+			productName = soteria;
+			productReference = EF83ABB62EE467910006A32D /* soteria.app */;
 			productType = "com.apple.product-type.application";
 		};
-		EF83ABC72EE46B020006A32D /* ReverMonitor */ = {
+		EF83ABC72EE46B020006A32D /* SoteriaMonitor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "ReverMonitor" */;
+			buildConfigurationList = EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "SoteriaMonitor" */;
 			buildPhases = (
 				C9AC3F83B5729E941CA11A58 /* [CP] Check Pods Manifest.lock */,
 				EF83ABC42EE46B020006A32D /* Sources */,
@@ -193,11 +184,11 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				EF83ABCC2EE46B020006A32D /* ReverMonitor */,
+				EF83ABCC2EE46B020006A32D /* SoteriaMonitor */,
 			);
-			name = ReverMonitor;
-			productName = ReverMonitor;
-			productReference = EF83ABC82EE46B020006A32D /* ReverMonitor.appex */;
+			name = SoteriaMonitor;
+			productName = SoteriaMonitor;
+			productReference = EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -235,8 +226,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				EF83ABB52EE467910006A32D /* rever */,
-				EF83ABC72EE46B020006A32D /* ReverMonitor */,
+				EF83ABB52EE467910006A32D /* soteria */,
+				EF83ABC72EE46B020006A32D /* SoteriaMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -275,32 +266,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-rever-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-soteria-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		37830BA9869E2D761606CE09 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-rever/Pods-rever-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-rever/Pods-rever-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-rever/Pods-rever-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		C9AC3F83B5729E941CA11A58 /* [CP] Check Pods Manifest.lock */ = {
@@ -318,7 +288,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-rever-ReverMonitor-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-soteria-ReverMonitor-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -347,7 +317,7 @@
 /* Begin PBXTargetDependency section */
 		EF83ABD22EE46B020006A32D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = EF83ABC72EE46B020006A32D /* ReverMonitor */;
+			target = EF83ABC72EE46B020006A32D /* SoteriaMonitor */;
 			targetProxy = EF83ABD12EE46B020006A32D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -476,16 +446,17 @@
 		};
 		EF83ABC22EE467920006A32D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C638B735BC50BCDAD97C604D /* Pods-rever.debug.xcconfig */;
+			baseConfigurationReference = C638B735BC50BCDAD97C604D /* Pods-soteria.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = rever/rever.entitlements;
+				CODE_SIGN_ENTITLEMENTS = soteria/soteria.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Soteria;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -496,7 +467,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.rever;
+				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.soteria;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -510,16 +481,17 @@
 		};
 		EF83ABC32EE467920006A32D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E0C59B5CD330B938680DE047 /* Pods-rever.release.xcconfig */;
+			baseConfigurationReference = E0C59B5CD330B938680DE047 /* Pods-soteria.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = rever/rever.entitlements;
+				CODE_SIGN_ENTITLEMENTS = soteria/soteria.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Soteria;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -530,7 +502,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.rever;
+				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.soteria;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -544,15 +516,15 @@
 		};
 		EF83ABD62EE46B020006A32D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 682C47E2895C1BE6E03B1EDC /* Pods-rever-ReverMonitor.debug.xcconfig */;
+			baseConfigurationReference = 682C47E2895C1BE6E03B1EDC /* Pods-soteria-ReverMonitor.debug.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ReverMonitor/ReverMonitor.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SoteriaMonitor/SoteriaMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ReverMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ReverMonitor;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SoteriaMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SoteriaMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -560,7 +532,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.rever.ReverMonitor;
+				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.soteria.SoteriaMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -574,15 +546,15 @@
 		};
 		EF83ABD72EE46B020006A32D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 0FB440D58CD71B3CB9CEC24D /* Pods-rever-ReverMonitor.release.xcconfig */;
+			baseConfigurationReference = 0FB440D58CD71B3CB9CEC24D /* Pods-soteria-ReverMonitor.release.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = ReverMonitor/ReverMonitor.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SoteriaMonitor/SoteriaMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ReverMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = ReverMonitor;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SoteriaMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SoteriaMonitor;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -590,7 +562,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.rever.ReverMonitor;
+				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.soteria.SoteriaMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -614,7 +586,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		EF83ABC12EE467920006A32D /* Build configuration list for PBXNativeTarget "rever" */ = {
+		EF83ABC12EE467920006A32D /* Build configuration list for PBXNativeTarget "soteria" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				EF83ABC22EE467920006A32D /* Debug */,
@@ -623,7 +595,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "ReverMonitor" */ = {
+		EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "SoteriaMonitor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				EF83ABD62EE46B020006A32D /* Debug */,
