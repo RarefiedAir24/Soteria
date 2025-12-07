@@ -6,43 +6,55 @@
 //
 
 import DeviceActivity
+import UserNotifications
 
-// Optionally override any of the functions below.
-// Make sure that your class name matches the NSExtensionPrincipalClass in your Info.plist.
 class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        
-        // Handle the start of the interval.
+        // When monitoring starts, send notification immediately
+        // This happens when a monitored app is opened
+        sendReverMomentNotification()
     }
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        
-        // Handle the end of the interval.
+        // Monitoring ended
     }
     
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
-        
-        // Handle the event reaching its threshold.
+        // Event threshold reached - send notification
+        sendReverMomentNotification()
     }
     
     override func intervalWillStartWarning(for activity: DeviceActivityName) {
         super.intervalWillStartWarning(for: activity)
-        
-        // Handle the warning before the interval starts.
     }
     
     override func intervalWillEndWarning(for activity: DeviceActivityName) {
         super.intervalWillEndWarning(for: activity)
-        
-        // Handle the warning before the interval ends.
     }
     
     override func eventWillReachThresholdWarning(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventWillReachThresholdWarning(event, activity: activity)
+    }
+    
+    // Send notification when monitored app is opened
+    private func sendReverMomentNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Rever Moment"
+        content.body = "You're about to open a shopping app. Take a moment to pause and think."
+        content.sound = .default
+        content.categoryIdentifier = "REVER_MOMENT"
+        content.userInfo = ["type": "rever_moment"]
         
-        // Handle the warning before the event reaches its threshold.
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to send notification: \(error)")
+            }
+        }
     }
 }

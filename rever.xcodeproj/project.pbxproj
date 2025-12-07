@@ -12,6 +12,7 @@
 		EF83ABE82EE46EC20006A32D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */; };
 		EF83ABEB2EE476030006A32D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = EF83ABEA2EE476030006A32D /* FirebaseAuth */; };
 		EF83ABED2EE476030006A32D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EF83ABEC2EE476030006A32D /* FirebaseCore */; };
+		EF83ABF62EE53A520006A32D /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF83ABF52EE53A520006A32D /* FamilyControls.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +44,7 @@
 		EF83ABC82EE46B020006A32D /* ReverMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReverMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		EF83ABF52EE53A520006A32D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -77,6 +79,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EF83ABED2EE476030006A32D /* FirebaseCore in Frameworks */,
+				EF83ABF62EE53A520006A32D /* FamilyControls.framework in Frameworks */,
 				EF83ABEB2EE476030006A32D /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -115,6 +118,7 @@
 		EF83ABC92EE46B020006A32D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				EF83ABF52EE53A520006A32D /* FamilyControls.framework */,
 				EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */,
 			);
 			name = Frameworks;
@@ -382,6 +386,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = rever/rever.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
@@ -414,6 +419,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = rever/rever.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
