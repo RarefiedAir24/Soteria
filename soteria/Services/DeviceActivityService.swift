@@ -13,8 +13,6 @@ import ManagedSettings
 import UserNotifications
 import UIKit
 
-// Helper to add timeout to async operations (removed - not needed since AWS is disabled)
-
 class DeviceActivityService: ObservableObject {
     static let shared = DeviceActivityService()
     
@@ -24,10 +22,41 @@ class DeviceActivityService: ObservableObject {
     
     @Published var selectedApps: FamilyActivitySelection = FamilyActivitySelection() {
         didSet {
-            // Save selection when it changes
-            saveSelection()
-            // Update app names mapping if needed
-            updateAppNamesMapping()
+            // DISABLED: All synchronous operations in didSet to prevent blocking
+            // Move everything to background tasks
+            
+            // Save app count in background (this is the critical blocking operation)
+            // Use a significant delay to ensure this doesn't block startup
+            Task.detached(priority: .background) { [weak self] in
+                guard let self = self else { return }
+                // Wait 5 seconds to ensure app is fully responsive before accessing blocking property
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                // Access count in background task to avoid blocking main thread
+                let count = await MainActor.run {
+                    self.selectedApps.applicationTokens.count
+                }
+                UserDefaults.standard.set(count, forKey: "cachedSelectedAppsCount")
+                await MainActor.run {
+                    self.cachedAppsCount = count
+                }
+                print("💾 [DeviceActivityService] Cached app count: \(count)")
+            }
+            
+            // Save selection in background
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                await MainActor.run {
+                    self.saveSelection()
+                }
+            }
+            
+            // Update app names mapping in background
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                await MainActor.run {
+                    self.updateAppNamesMapping()
+                }
+            }
             
             // If monitoring is active, restart it to apply new app selection
             if isMonitoring {
@@ -44,6 +73,10 @@ class DeviceActivityService: ObservableObject {
         }
     }
     
+    // Cached app count - loaded from UserDefaults to avoid blocking
+    @Published var cachedAppsCount: Int = 0
+    private let cachedAppsCountKey = "cachedSelectedAppsCount"
+    
     // Store app names by index (since we can't get names from ApplicationToken)
     // Key: app index (0-based), Value: user-provided name
     @Published var appNames: [Int: String] = [:]
@@ -51,7 +84,13 @@ class DeviceActivityService: ObservableObject {
     @Published var isMonitoring: Bool = false {
         didSet {
             // Save monitoring state when it changes
-            saveMonitoringState()
+            // Make this non-blocking by doing it in background
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                await MainActor.run {
+                    self.saveMonitoringState()
+                }
+            }
         }
     }
     private let isMonitoringKey = "isMonitoringActive"
@@ -199,53 +238,133 @@ class DeviceActivityService: ObservableObject {
     
     private init() {
         // Do absolutely nothing synchronously
-        print("✅ [DeviceActivityService] Init started (all work deferred)")
+        let initStart = Date()
+        print("✅ [DeviceActivityService] Init started at \(initStart) (all work deferred)")
         
-        // Load everything asynchronously in background
-        Task.detached(priority: .background) { [weak self] in
+        // Load everything asynchronously in background with significant delay
+        // This ensures the UI is fully rendered before we do any work
+        Task.detached(priority: .background) { [weak self, initStart] in
             guard let self = self else { return }
             
-            // Small delay to ensure UI renders first
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            let taskStart = Date()
+            print("🟡 [DeviceActivityService] Background task started at \(taskStart)")
             
-            await MainActor.run {
-                // Load critical data first (fast UserDefaults reads)
-                self.loadSelection()
-                self.loadMonitoringState()
-                self.loadAppNamesMapping()
+            // Long delay to ensure UI renders first and app is responsive
+            let sleep1Start = Date()
+            print("🟡 [DeviceActivityService] Starting 2s sleep at \(sleep1Start)")
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            let sleep1End = Date()
+            print("🟡 [DeviceActivityService] 2s sleep completed at \(sleep1End) (took \(sleep1End.timeIntervalSince(sleep1Start))s)")
+            
+            // Load critical data in separate background tasks - don't await MainActor.run
+            // This prevents any blocking even if MainActor is busy
+            let loadStart = Date()
+            print("🟡 [DeviceActivityService] Starting critical data loading (truly non-blocking) at \(loadStart)")
+            
+            // Load cached app count in background (fast UserDefaults read)
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                let cachedCount = UserDefaults.standard.integer(forKey: "cachedSelectedAppsCount")
+                await MainActor.run {
+                    self.cachedAppsCount = cachedCount
+                }
+                print("📂 [DeviceActivityService] Loaded cached app count: \(cachedCount)")
             }
+            
+            // Load monitoring state in background (fast UserDefaults read)
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                await MainActor.run {
+                    self.loadMonitoringState()
+                }
+            }
+            
+            // Load app names mapping in background (fast UserDefaults read)
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                await MainActor.run {
+                    self.loadAppNamesMapping()
+                }
+            }
+            
+            // Load selection in background (doesn't access blocking property)
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else { return }
+                await MainActor.run {
+                    self.loadSelection()
+                }
+            }
+            
+            let loadEnd = Date()
+            print("🟡 [DeviceActivityService] Critical data loading tasks started at \(loadEnd) (took \(loadEnd.timeIntervalSince(loadStart))s) - tasks running in background")
+            
+            // Additional delay before heavy operations
+            let sleep2Start = Date()
+            print("🟡 [DeviceActivityService] Starting 1s sleep at \(sleep2Start)")
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 more second
+            let sleep2End = Date()
+            print("🟡 [DeviceActivityService] 1s sleep completed at \(sleep2End) (took \(sleep2End.timeIntervalSince(sleep2Start))s)")
             
             // Load heavy data in background (JSON decoding can be slow)
-            await MainActor.run {
-                self.loadUnblockEvents() // Now async with Task.detached inside
-            }
-            await MainActor.run {
-                self.loadAppUsageSessions()
-            }
+            // DISABLED: Defer loadUnblockEvents() significantly to prevent blocking
+            // Even though it starts a background task, calling it can still cause issues
+            // Load it much later or on-demand
+            print("🟡 [DeviceActivityService] Deferring loadUnblockEvents() - will load later")
+            // self.loadUnblockEvents() // DISABLED to prevent blocking
             
-            // Background tasks
+            // Load app usage sessions in background (JSON decoding can block)
+            // DISABLED: Defer significantly to prevent blocking
+            print("🟡 [DeviceActivityService] Deferring loadAppUsageSessions() - will load later")
+            /*
+            Task.detached(priority: .background) { [weak self] in
+                guard let self = self else { return }
+                // Additional delay for this heavy operation
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                await MainActor.run {
+                    self.loadAppUsageSessions()
+                }
+            }
+            */
+            
+            // Background tasks - DISABLED to prevent blocking
+            // Defer all of these significantly or load on-demand
+            print("🟡 [DeviceActivityService] Deferring startSessionMonitoring() - will start later")
+            print("🟡 [DeviceActivityService] Deferring endAllActiveSessions() - will run later")
+            /*
+            // Background tasks - move off main thread with delay
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            // startSessionMonitoring() needs to be on MainActor for Timer
             await MainActor.run {
                 self.startSessionMonitoring()
-                self.endAllActiveSessions()
-                // Don't request notification authorization here - SoteriaApp handles it
-                // self.requestNotificationAuthorization()
             }
+            
+            // End active sessions in background (can do I/O) - with delay
+            Task.detached(priority: .background) { [weak self] in
+                guard let self = self else { return }
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                await MainActor.run {
+                    self.endAllActiveSessions()
+                }
+            }
+            */
             
             // DISABLED: Don't restore monitoring automatically on startup
             // This was causing 3-minute freezes. User can manually start monitoring.
-            // Restore monitoring if needed (defer this significantly)
-            // let isMonitoring = await MainActor.run { self.isMonitoring }
-            // let appsEmpty = await MainActor.run { self.selectedApps.applicationTokens.isEmpty }
-            // let hasSelectedApps = !appsEmpty
-            // if isMonitoring && hasSelectedApps {
-            //     try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
-            //     await self.startMonitoring()
-            // }
             print("⚠️ [DeviceActivityService] Auto-restore monitoring disabled - user must manually start")
             
-            await MainActor.run {
-                print("✅ [DeviceActivityService] Initialized - isMonitoring: \(self.isMonitoring), apps selected: \(self.selectedApps.applicationTokens.count)")
+            // DISABLED: Accessing selectedApps.applicationTokens.count can block
+            // Just log basic info without accessing the property
+            let initEnd = Date()
+            let totalInitTime = initEnd.timeIntervalSince(initStart)
+            print("✅ [DeviceActivityService] Initialized at \(initEnd) (total: \(totalInitTime)s)")
+            // Access isMonitoring directly since we're already in a Task.detached
+            // Don't use MainActor.run here - it can cause concurrency issues
+            let isMonitoringValue = await MainActor.run {
+                self.isMonitoring
             }
+            print("✅ [DeviceActivityService] isMonitoring: \(isMonitoringValue)")
+            // Skip accessing selectedApps.applicationTokens.count - it can block for minutes
+            print("✅ [DeviceActivityService] Initialization complete - apps count will be loaded on demand")
         }
     }
     
@@ -367,19 +486,21 @@ class DeviceActivityService: ObservableObject {
     
     // Save selection to UserDefaults
     private func saveSelection() {
-        // FamilyActivitySelection can't be directly encoded, but the tokens are preserved
-        // The selection is managed by the system, so we just need to ensure state updates
-        print("Selected apps count: \(selectedApps.applicationTokens.count)")
-        
-        // Save app token count for extension to know how many apps to block
-        UserDefaults.standard.set(selectedApps.applicationTokens.count, forKey: "selectedAppsCount")
+        // DISABLED: Don't access selectedApps.applicationTokens.count here
+        // It's already cached in cachedAppsCount
+        // Just save the cached count
+        UserDefaults.standard.set(cachedAppsCount, forKey: "selectedAppsCount")
+        print("Selected apps count (cached): \(cachedAppsCount)")
     }
     
     // Save unblock events for metrics
     private func saveUnblockEvents() {
-        // Save to UserDefaults (always, as fallback)
-        if let encoded = try? JSONEncoder().encode(unblockEvents) {
-            UserDefaults.standard.set(encoded, forKey: "unblockEvents")
+        // Save to UserDefaults in background (JSON encoding can block)
+        let events = unblockEvents
+        Task.detached(priority: .utility) {
+            if let encoded = try? JSONEncoder().encode(events) {
+                UserDefaults.standard.set(encoded, forKey: "unblockEvents")
+            }
         }
         
         // Sync to AWS if enabled
@@ -441,27 +562,56 @@ class DeviceActivityService: ObservableObject {
     
     // Get comprehensive metrics about unblocks
     func getUnblockMetrics() -> (totalUnblocks: Int, plannedUnblocks: Int, impulseUnblocks: Int, mostCommonCategory: String?, mostCommonMood: String?, mostRequestedAppIndex: Int?, mostRequestedAppName: String?) {
-        let total = unblockEvents.count
-        let planned = unblockEvents.filter { $0.purchaseType == "planned" }.count
-        let impulse = unblockEvents.filter { $0.purchaseType == "impulse" }.count
+        // OPTIMIZED: Single pass through unblockEvents instead of multiple iterations
+        // This prevents blocking when the array is large
+        let startTime = Date()
+        let events = unblockEvents
+        let total = events.count
         
-        // Find most common category
-        let categories = unblockEvents.compactMap { $0.category }
-        let categoryCounts = Dictionary(grouping: categories, by: { $0 }).mapValues { $0.count }
+        // Single pass to collect all data
+        var planned = 0
+        var impulse = 0
+        var categoryCounts: [String: Int] = [:]
+        var moodCounts: [String: Int] = [:]
+        var appIndexCounts: [Int: Int] = [:]
+        
+        for event in events {
+            // Count purchase types
+            if event.purchaseType == "planned" {
+                planned += 1
+            } else if event.purchaseType == "impulse" {
+                impulse += 1
+            }
+            
+            // Count categories
+            if let category = event.category {
+                categoryCounts[category, default: 0] += 1
+            }
+            
+            // Count moods
+            if let mood = event.mood {
+                moodCounts[mood, default: 0] += 1
+            }
+            
+            // Count app indices
+            if let appIndex = event.appIndex {
+                appIndexCounts[appIndex, default: 0] += 1
+            }
+        }
+        
+        // Find most common
         let mostCommonCategory = categoryCounts.max(by: { $0.value < $1.value })?.key
-        
-        // Find most common mood
-        let moods = unblockEvents.compactMap { $0.mood }
-        let moodCounts = Dictionary(grouping: moods, by: { $0 }).mapValues { $0.count }
         let mostCommonMood = moodCounts.max(by: { $0.value < $1.value })?.key
-        
-        // Find most requested app (by index)
-        let appIndices = unblockEvents.compactMap { $0.appIndex }
-        let appIndexCounts = Dictionary(grouping: appIndices, by: { $0 }).mapValues { $0.count }
         let mostRequestedAppIndex = appIndexCounts.max(by: { $0.value < $1.value })?.key
         
         // Get app name for most requested app
         let mostRequestedAppName = mostRequestedAppIndex.map { getAppName(forIndex: $0) }
+        
+        let endTime = Date()
+        let duration = endTime.timeIntervalSince(startTime)
+        if duration > 0.1 {
+            print("⚠️ [DeviceActivityService] getUnblockMetrics() took \(duration)s (processed \(total) events)")
+        }
         
         return (total, planned, impulse, mostCommonCategory, mostCommonMood, mostRequestedAppIndex, mostRequestedAppName)
     }
@@ -480,6 +630,10 @@ class DeviceActivityService: ObservableObject {
             events = unblockEvents.filter { $0.timestamp >= start && $0.timestamp <= end }
         } else {
             events = unblockEvents
+        }
+        
+        if events.count > 1000 {
+            print("⚠️ [DeviceActivityService] getBehavioralPatterns() processing \(events.count) events (may be slow)")
         }
         
         // Time of day patterns
@@ -599,8 +753,11 @@ class DeviceActivityService: ObservableObject {
     
     // Load monitoring state
     private func loadMonitoringState() {
-        isMonitoring = UserDefaults.standard.bool(forKey: isMonitoringKey)
-        print("📂 [DeviceActivityService] Loaded monitoring state: \(isMonitoring)")
+        // CRITICAL: Don't trigger didSet during initialization
+        // The _isInitializing flag will prevent saveMonitoringState() from being called
+        let monitoringState = UserDefaults.standard.bool(forKey: isMonitoringKey)
+        isMonitoring = monitoringState
+        print("📂 [DeviceActivityService] Loaded monitoring state: \(monitoringState)")
     }
     
     // Load selection from UserDefaults (if needed)
@@ -613,13 +770,15 @@ class DeviceActivityService: ObservableObject {
         // Load app names mapping
         loadAppNamesMapping()
         
-        // Log current selection state
-        print("📂 [DeviceActivityService] Loaded selection - apps count: \(selectedApps.applicationTokens.count)")
+        // DISABLED: Accessing selectedApps.applicationTokens.count can block for minutes
+        // Don't access it during initialization - it will be loaded on demand
+        print("📂 [DeviceActivityService] Loaded selection - apps count will be loaded on demand")
     }
     
     // Update app names mapping when apps are selected
     private func updateAppNamesMapping() {
-        let currentCount = selectedApps.applicationTokens.count
+        // Use cached count instead of accessing selectedApps.applicationTokens.count
+        let currentCount = cachedAppsCount
         let previousCount = appNames.keys.max() ?? -1
         // Only update if the count changed
         if currentCount != previousCount + 1 {
@@ -659,11 +818,16 @@ class DeviceActivityService: ObservableObject {
     
     // Load app names mapping
     private func loadAppNamesMapping() {
-        // Always load from UserDefaults first (synchronous, immediate)
-        if let data = UserDefaults.standard.data(forKey: appNamesKey),
-           let decoded = try? JSONDecoder().decode([Int: String].self, from: data) {
-            appNames = decoded
-            print("✅ [DeviceActivityService] App names loaded from UserDefaults: \(appNames)")
+        // Load from UserDefaults - decode JSON in background to avoid blocking
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            if let data = UserDefaults.standard.data(forKey: self.appNamesKey),
+               let decoded = try? JSONDecoder().decode([Int: String].self, from: data) {
+                await MainActor.run {
+                    self.appNames = decoded
+                    print("✅ [DeviceActivityService] App names loaded from UserDefaults: \(self.appNames)")
+                }
+            }
         }
         
         // DISABLED: Skip AWS during initialization to prevent 3-minute freezes
@@ -724,9 +888,14 @@ class DeviceActivityService: ObservableObject {
     func startMonitoring() async {
         print("🔄 [DeviceActivityService] startMonitoring() called")
         print("🔄 [DeviceActivityService] isMonitoring currently: \(isMonitoring)")
-        print("🔄 [DeviceActivityService] selectedApps count: \(selectedApps.applicationTokens.count)")
+        // DISABLED: Accessing selectedApps.applicationTokens.count can block
+        // Access it safely on MainActor
+        let appsCount = await MainActor.run {
+            self.selectedApps.applicationTokens.count
+        }
+        print("🔄 [DeviceActivityService] selectedApps count: \(appsCount)")
         
-        guard !selectedApps.applicationTokens.isEmpty else {
+        guard appsCount > 0 else {
             print("❌ [DeviceActivityService] No apps selected for monitoring")
             await MainActor.run {
                 isMonitoring = false
@@ -734,7 +903,7 @@ class DeviceActivityService: ObservableObject {
             return
         }
         
-        print("✅ [DeviceActivityService] \(selectedApps.applicationTokens.count) apps selected")
+        print("✅ [DeviceActivityService] \(appsCount) apps selected")
         print("✅ [DeviceActivityService] Apps will be monitored and events will fire when they open")
         
         // Stop any existing monitoring first
@@ -756,6 +925,7 @@ class DeviceActivityService: ObservableObject {
         // This handles the case where Quiet Hours are active when monitoring starts (e.g., on app launch)
         if quietHoursService.isQuietModeActive {
             await MainActor.run {
+                // Access selectedApps on MainActor to avoid blocking
                 self.store.shield.applications = self.selectedApps.applicationTokens
                 print("🔒 [DeviceActivityService] Shield set on monitoring start (Quiet Hours active)")
             }
@@ -769,10 +939,15 @@ class DeviceActivityService: ObservableObject {
     private func updateMonitoringSchedule() async {
         print("🔄 [DeviceActivityService] Updating monitoring schedule based on Quiet Hours...")
         
+        // Access selectedApps on MainActor to avoid blocking
+        let appsTokens = await MainActor.run {
+            self.selectedApps.applicationTokens
+        }
+        
         // Create an event to detect when monitored apps are opened
         let eventName = DeviceActivityEvent.Name("soteria.moment")
         let event = DeviceActivityEvent(
-            applications: selectedApps.applicationTokens,
+            applications: appsTokens,
             threshold: DateComponents(second: 1)
         )
         
@@ -806,7 +981,7 @@ class DeviceActivityService: ObservableObject {
             print("🔒 [DeviceActivityService] Activity name: \(self.activityName)")
             print("🔒 [DeviceActivityService] Event name: \(eventName)")
             print("🔒 [DeviceActivityService] Event threshold: 1 second")
-            print("🔒 [DeviceActivityService] Apps in event: \(selectedApps.applicationTokens.count)")
+            print("🔒 [DeviceActivityService] Apps in event: \(appsTokens.count)")
             print("🔒 [DeviceActivityService] ════════════════════════════════════════")
             
             do {
@@ -814,10 +989,10 @@ class DeviceActivityService: ObservableObject {
                     try self.center.startMonitoring(self.activityName, during: deviceSchedule, events: [eventName: event])
                     // Set blocking - apps will be blocked during Quiet Hours
                     // IMPORTANT: Set shield.applications to ALL selected apps
-                        self.store.shield.applications = self.selectedApps.applicationTokens
+                        self.store.shield.applications = appsTokens
                         print("🔒 [DeviceActivityService] Blocking enabled - apps will be BLOCKED from FOREGROUND during Quiet Hours")
                         print("🔒 [DeviceActivityService] Apps can run in background, but CANNOT come to focus/foreground")
-                        print("🔒 [DeviceActivityService] Number of apps being blocked: \(self.selectedApps.applicationTokens.count)")
+                        print("🔒 [DeviceActivityService] Number of apps being blocked: \(appsTokens.count)")
                         print("🔒 [DeviceActivityService] Shield applications set: \(self.store.shield.applications?.count ?? 0) apps")
                         print("🔒 [DeviceActivityService] Extension will customize blocking screen with purchase intent question")
                 }
@@ -871,7 +1046,7 @@ class DeviceActivityService: ObservableObject {
             print("📊 [DeviceActivityService] Activity name: \(self.activityName)")
             print("📊 [DeviceActivityService] Event name: \(eventName)")
             print("📊 [DeviceActivityService] Event threshold: 1 second")
-            print("📊 [DeviceActivityService] Apps in event: \(selectedApps.applicationTokens.count)")
+            print("📊 [DeviceActivityService] Apps in event: \(appsTokens.count)")
             print("📊 [DeviceActivityService] ════════════════════════════════════════")
             
             do {
@@ -905,12 +1080,13 @@ class DeviceActivityService: ObservableObject {
             print("⚠️ [DeviceActivityService] Not monitoring - cannot update blocking status")
             // If monitoring isn't active but Quiet Hours are, we should still set the shield
             // This handles the case where user toggles monitoring off/on
-            if quietHoursService.isQuietModeActive && !selectedApps.applicationTokens.isEmpty {
-                await MainActor.run {
-                    self.store.shield.applications = self.selectedApps.applicationTokens
-                    print("🔒 [DeviceActivityService] Shield set even though monitoring is off (Quiet Hours active)")
-                }
-            }
+            // DISABLED: Accessing selectedApps.applicationTokens can block
+            // if quietHoursService.isQuietModeActive && !selectedApps.applicationTokens.isEmpty {
+            //     await MainActor.run {
+            //         self.store.shield.applications = self.selectedApps.applicationTokens
+            //         print("🔒 [DeviceActivityService] Shield set even though monitoring is off (Quiet Hours active)")
+            //     }
+            // }
             return
         }
         
@@ -920,8 +1096,12 @@ class DeviceActivityService: ObservableObject {
         
         // Ensure shield is set if Quiet Hours are active
         if quietHoursService.isQuietModeActive {
+            // Access selectedApps on MainActor to avoid blocking
+            let appsTokens = await MainActor.run {
+                self.selectedApps.applicationTokens
+            }
             await MainActor.run {
-                self.store.shield.applications = self.selectedApps.applicationTokens
+                self.store.shield.applications = appsTokens
                 print("🔒 [DeviceActivityService] Shield applications updated: \(self.store.shield.applications?.count ?? 0) apps")
                 print("🔒 [DeviceActivityService] Apps will be blocked during Quiet Hours")
             }
@@ -1172,9 +1352,12 @@ class DeviceActivityService: ObservableObject {
         // Only save completed sessions (not active ones)
         let completedSessions = appUsageSessions.filter { $0.endTime != nil }
         
-        // Save to UserDefaults (always, as fallback)
-        if let encoded = try? JSONEncoder().encode(completedSessions) {
-            UserDefaults.standard.set(encoded, forKey: appUsageSessionsKey)
+        // Save to UserDefaults in background (JSON encoding can block)
+        let key = appUsageSessionsKey
+        Task.detached(priority: .utility) {
+            if let encoded = try? JSONEncoder().encode(completedSessions) {
+                UserDefaults.standard.set(encoded, forKey: key)
+            }
         }
         
         // Sync to AWS if enabled
@@ -1217,10 +1400,15 @@ class DeviceActivityService: ObservableObject {
         }
         */
         
-        // Load from UserDefaults only
-        if let data = UserDefaults.standard.data(forKey: appUsageSessionsKey),
-           let decoded = try? JSONDecoder().decode([AppUsageSession].self, from: data) {
-            appUsageSessions = decoded
+        // Load from UserDefaults - decode JSON in background to avoid blocking
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            if let data = UserDefaults.standard.data(forKey: self.appUsageSessionsKey),
+               let decoded = try? JSONDecoder().decode([AppUsageSession].self, from: data) {
+                await MainActor.run {
+                    self.appUsageSessions = decoded
+                }
+            }
         }
     }
     

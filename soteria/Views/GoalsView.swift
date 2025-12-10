@@ -13,6 +13,9 @@ struct GoalsView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
+            // Consistent background that extends to safe area
+            Color(red: 0.95, green: 0.95, blue: 0.95)
+                .ignoresSafeArea(.all, edges: .top)
             // Background
             Color(red: 0.98, green: 0.98, blue: 0.98)
                 .ignoresSafeArea()

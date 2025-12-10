@@ -4,32 +4,86 @@ import UserNotifications
 
 @main
 struct SoteriaApp: App {
-    // Re-enable all services now that basic rendering works
+    // Re-enabling services one by one to find the crash
+    // Start with simple services (no external dependencies)
     @StateObject private var authService = AuthService()
     @StateObject private var savingsService = SavingsService()
     @StateObject private var goalsService = GoalsService.shared
     @StateObject private var moodService = MoodTrackingService.shared
+    @StateObject private var streakService = StreakService.shared
+    // Services with Firebase (re-enabling since Firebase is working)
+    @StateObject private var subscriptionService = SubscriptionService.shared
     @StateObject private var regretService = RegretLoggingService.shared
     @StateObject private var regretRiskEngine = RegretRiskEngine.shared
+    // Services with DeviceActivity (re-enabling - should be fine)
     @StateObject private var quietHoursService = QuietHoursService.shared
     @StateObject private var deviceActivityService = DeviceActivityService.shared
     @StateObject private var purchaseIntentService = PurchaseIntentService.shared
+    // Plaid (keeping disabled - was causing crash)
+    // @StateObject private var plaidService = PlaidService.shared
     @State private var showPauseView = false
     @State private var showPurchaseLogPrompt = false
     @State private var showPurchaseIntentPrompt = false
+    @State private var showPaywall = false
 
     init() {
         let startTime = Date()
         print("✅ [App] Starting initialization at \(startTime)...")
+        print("🟡 [App] About to initialize services...")
         
-        // Configure Firebase immediately but on main thread
-        // This is the recommended approach - Firebase needs main thread
-        FirebaseApp.configure()
-        let firebaseTime = Date().timeIntervalSince(startTime)
-        print("✅ [App] Firebase configured (took \(firebaseTime) seconds)")
+        // Log each service initialization
+        print("🟡 [App] Services will initialize as @StateObject properties")
+        print("🟡 [App] Note: @StateObject properties initialize BEFORE init() runs")
+        
+        // Configure consistent navigation bar appearance
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 0.95, alpha: 1.0)
+        appearance.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().compactScrollEdgeAppearance = appearance
+        
+        // Also configure UITabBar appearance for consistency
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 0.95, alpha: 1.0)
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        
+        // Re-enable Firebase - app is working now
+        // Debug: List all plist files in bundle
+        let plistFiles = Bundle.main.paths(forResourcesOfType: "plist", inDirectory: nil)
+        print("🔍 [App] Plist files in bundle: \(plistFiles)")
+        
+        // Configure Firebase - check if already configured first
+        // FirebaseApp.configure() can crash if GoogleService-Info.plist is missing/invalid
+        if FirebaseApp.app() == nil {
+            // Check if GoogleService-Info.plist exists in bundle
+            if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+               FileManager.default.fileExists(atPath: path) {
+                print("✅ [App] Found GoogleService-Info.plist at: \(path)")
+                // FirebaseApp.configure() doesn't throw, but may abort if plist is invalid
+                // We can't catch that, but at least we verified the file exists
+                print("🔍 [App] About to call FirebaseApp.configure()...")
+                let firebaseStart = Date()
+                FirebaseApp.configure()
+                let firebaseTime = Date().timeIntervalSince(firebaseStart)
+                print("✅ [App] Firebase configured (took \(firebaseTime) seconds)")
+            } else {
+                print("⚠️ [App] GoogleService-Info.plist not found in bundle")
+                print("⚠️ [App] Available resources: \(Bundle.main.paths(forResourcesOfType: nil, inDirectory: nil).prefix(10))")
+                print("⚠️ [App] Skipping Firebase configuration - app may not have auth")
+                // Don't call configure() if file doesn't exist - it will crash
+            }
+        } else {
+            print("✅ [App] Firebase already configured")
+        }
         
         let totalTime = Date().timeIntervalSince(startTime)
         print("✅ [App] SoteriaApp init completed (total: \(totalTime) seconds)")
+        print("🟡 [App] Services should have initialized by now - check their logs above")
     }
     
     private func setupNotifications() {
@@ -61,6 +115,7 @@ struct SoteriaApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // Testing with basic services enabled
             RootView(showPauseView: $showPauseView)
                 .environmentObject(authService)
                 .environmentObject(savingsService)
@@ -71,59 +126,76 @@ struct SoteriaApp: App {
                 .environmentObject(regretRiskEngine)
                 .environmentObject(regretService)
                 .environmentObject(purchaseIntentService)
-                .onAppear {
-                    let appearTime = Date()
-                    print("📱 [SoteriaApp] WindowGroup appeared at \(appearTime)")
-                    setupNotifications()
-                    
-                    // Check if we should show purchase intent prompt immediately on app launch
-                    if UserDefaults.standard.bool(forKey: "shouldShowPurchaseIntentPrompt") {
-                        print("✅ [SoteriaApp] shouldShowPurchaseIntentPrompt is true on app launch - showing prompt")
-                        UserDefaults.standard.set(false, forKey: "shouldShowPurchaseIntentPrompt")
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            showPurchaseIntentPrompt = true
-                        }
-                    }
-                }
-                .sheet(isPresented: $showPauseView) {
-                    PauseView()
-                        .environmentObject(savingsService)
-                        .environmentObject(deviceActivityService)
-                        .environmentObject(goalsService)
-                        .environmentObject(regretService)
-                        .environmentObject(moodService)
-                        .environmentObject(purchaseIntentService)
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPauseView"))) { _ in
-                    showPauseView = true
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPurchaseLogPrompt"))) { _ in
-                    showPurchaseLogPrompt = true
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPurchaseIntentPrompt"))) { _ in
-                    showPurchaseIntentPrompt = true
-                }
-                .sheet(isPresented: $showPurchaseLogPrompt) {
-                    PurchaseLogPromptView()
-                        .environmentObject(deviceActivityService)
-                        .environmentObject(purchaseIntentService)
-                        .environmentObject(savingsService)
-                        .environmentObject(goalsService)
-                        .environmentObject(regretService)
-                        .environmentObject(moodService)
-                }
-                .onOpenURL { url in
-                    // Handle URL schemes
-                    if url.scheme == "soteria" {
-                        if url.host == "pause" {
-                            print("✅ [App] Opened via URL scheme: \(url)")
-                            showPauseView = true
-                        } else if url.host == "purchase-intent" {
-                            print("✅ [App] Opened via URL scheme: \(url)")
-                            showPurchaseIntentPrompt = true
-                        }
-                    }
-                }
+                .environmentObject(subscriptionService)
+                .environmentObject(streakService)
+                // .environmentObject(plaidService)  // Keeping disabled - was causing crash
+                // Set consistent status bar style
+                .preferredColorScheme(.light)
+                .statusBar(hidden: false)
+            // .sheet(isPresented: $showPaywall) {
+            //     PaywallView()
+            //         .environmentObject(subscriptionService)
+            // }
+            // .task {
+            //     // Initialize premium status for QuietHoursService
+            //     QuietHoursService.shared.updatePremiumStatus(subscriptionService.isPremium)
+            //     let appearTime = Date()
+            //     print("📱 [SoteriaApp] WindowGroup appeared at \(appearTime)")
+            //     setupNotifications()
+            //     
+            //     // Check if we should show purchase intent prompt immediately on app launch
+            //     if UserDefaults.standard.bool(forKey: "shouldShowPurchaseIntentPrompt") {
+            //         print("✅ [SoteriaApp] shouldShowPurchaseIntentPrompt is true on app launch - showing prompt")
+            //         UserDefaults.standard.set(false, forKey: "shouldShowPurchaseIntentPrompt")
+            //         try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            //         showPurchaseIntentPrompt = true
+            //     }
+            // }
+            // .onChange(of: subscriptionService.isPremium) { oldValue, newValue in
+            //     // Update QuietHoursService when premium status changes
+            //     QuietHoursService.shared.updatePremiumStatus(newValue)
+            // }
+            // .sheet(isPresented: $showPauseView) {
+            //         PauseView()
+            //             .environmentObject(savingsService)
+            //             .environmentObject(deviceActivityService)
+            //             .environmentObject(goalsService)
+            //             .environmentObject(regretService)
+            //             .environmentObject(moodService)
+            //             .environmentObject(purchaseIntentService)
+            //             .environmentObject(streakService)
+            //             .environmentObject(plaidService)
+            //     }
+            //     .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPauseView"))) { _ in
+            //         showPauseView = true
+            //     }
+            //     .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPurchaseLogPrompt"))) { _ in
+            //         showPurchaseLogPrompt = true
+            //     }
+            //     .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPurchaseIntentPrompt"))) { _ in
+            //         showPurchaseIntentPrompt = true
+            //     }
+            //     .sheet(isPresented: $showPurchaseLogPrompt) {
+            //         PurchaseLogPromptView()
+            //             .environmentObject(deviceActivityService)
+            //             .environmentObject(purchaseIntentService)
+            //             .environmentObject(savingsService)
+            //             .environmentObject(goalsService)
+            //             .environmentObject(regretService)
+            //             .environmentObject(moodService)
+            //     }
+            //     .onOpenURL { url in
+            //         // Handle URL schemes
+            //         if url.scheme == "soteria" {
+            //             if url.host == "pause" {
+            //                 print("✅ [App] Opened via URL scheme: \(url)")
+            //                 showPauseView = true
+            //             } else if url.host == "purchase-intent" {
+            //                 print("✅ [App] Opened via URL scheme: \(url)")
+            //                 showPurchaseIntentPrompt = true
+            //             }
+            //         }
+            //     }
         }
     }
 }
@@ -225,6 +297,27 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     }
 }
 
+// Minimal test view to isolate crash
+struct TestMinimalView: View {
+    var body: some View {
+        ZStack {
+            Color.blue.ignoresSafeArea()
+            VStack {
+                Text("✅ App is Running!")
+                    .font(.largeTitle)
+                    .foregroundColor(.white)
+                Text("If you see this, the crash is in service initialization")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding()
+            }
+        }
+        .onAppear {
+            print("✅ [TestMinimalView] Rendered successfully!")
+        }
+    }
+}
+
 struct RootView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var deviceActivityService: DeviceActivityService
@@ -232,40 +325,78 @@ struct RootView: View {
     @Binding var showPauseView: Bool
     @State private var showPurchaseLogPrompt = false
     @State private var showPurchaseIntentPrompt = false
+    @State private var isAppReady = false  // Track if app initialization is complete
 
     var body: some View {
-        Group {
+        let _ = {
+            let timestamp = Date()
+            print("🟢 [RootView] body evaluated at \(timestamp), isAuthenticated: \(authService.isAuthenticated)")
+        }()
+        
+        return Group {
             if authService.isAuthenticated {
-                // User is signed in → main app
-                MainTabView()
+                // CRITICAL: Only create MainTabView after app is ready
+                // This prevents TabView from evaluating all its children during startup
+                if isAppReady {
+                    MainTabView()
+                } else {
+                    // Show a simple placeholder while app initializes
+                    Color(red: 0.98, green: 0.98, blue: 0.98)
+                        .ignoresSafeArea()
+                        .overlay(
+                            ProgressView()
+                                .scaleEffect(1.5)
+                        )
+                }
             } else {
-                // User is signed out → auth flow
                 AuthView()
             }
         }
         .onAppear {
-            print("📱 [RootView] Appeared - isAuthenticated: \(authService.isAuthenticated)")
-            // Check for recent shopping sessions when app opens
-            checkForRecentShoppingSession()
+            let timestamp = Date()
+            print("🟢 [RootView] onAppear at \(timestamp), isAuthenticated: \(authService.isAuthenticated)")
+        }
+        .task {
+            let taskStart = Date()
+            print("🟢 [RootView] .task started at \(taskStart), isAuthenticated: \(authService.isAuthenticated)")
             
-            // Also check for purchase intent prompt on appear
-            checkForPurchaseIntentPrompt()
+            // Wait for app initialization to complete before showing MainTabView
+            // This prevents TabView from evaluating all its children during startup
+            if authService.isAuthenticated {
+                print("🟡 [RootView] Waiting for app initialization...")
+                // Wait a bit to ensure all services are initialized
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                await MainActor.run {
+                    isAppReady = true
+                    print("🟢 [RootView] App is ready - MainTabView will be created")
+                }
+            }
+            
+            // DISABLE these checks on app launch - they're blocking the main thread
+            // They can run later when user interacts with the app
+            // Task.detached(priority: .background) {
+            //     try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+            //     await MainActor.run {
+            //         checkForRecentShoppingSession()
+            //         checkForPurchaseIntentPrompt()
+            //     }
+            // }
+            let taskEnd = Date()
+            print("🟢 [RootView] .task completed at \(taskEnd) (took \(taskEnd.timeIntervalSince(taskStart))s)")
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            // Check when app comes to foreground
-            print("📱 [RootView] App entering foreground - checking for shopping sessions")
-            checkForRecentShoppingSession()
+            // DISABLED: These checks block the main thread
+            // They can be re-enabled later if needed, but must be truly async
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            // Also check when app becomes active (more reliable)
-            print("📱 [RootView] App did become active - checking for shopping sessions")
-            checkForRecentShoppingSession()
-            // Also trigger DeviceActivityService check
-            deviceActivityService.checkForSessionEnd()
-            
-            // Check for purchase intent prompt
-            checkForPurchaseIntentPrompt()
-        }
+               .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                   // DISABLED: These checks block the main thread
+                   // They can be re-enabled later if needed, but must be truly async
+               }
+               .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+                   // App is going to background - end any active usage sessions
+                   // Note: This is a fallback - we primarily track via DeviceActivity events
+                   print("📱 [RootView] App will resign active")
+               }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenSOTERIA"))) { notification in
             print("✅ [RootView] Received OpenSOTERIA notification")
             if let urlString = notification.userInfo?["url"] as? String,
@@ -373,11 +504,8 @@ struct RootView: View {
             }
         } else {
             print("📭 [RootView] ❌ No shopping session found in UserDefaults")
-            // Debug: Print all UserDefaults keys
-            let allKeys = UserDefaults.standard.dictionaryRepresentation().keys
-            let relevantKeys = Array(allKeys).filter { $0.contains("shopping") || $0.contains("session") || $0.contains("active") }
-            print("📋 [RootView] Relevant UserDefaults keys: \(relevantKeys)")
-            print("📋 [RootView] Total UserDefaults keys: \(allKeys.count)")
+            // REMOVED: dictionaryRepresentation() is VERY slow and blocks main thread
+            // Don't enumerate all UserDefaults keys - it's expensive
         }
         print("🔍 [RootView] ════════════════════════════════════════")
     }
