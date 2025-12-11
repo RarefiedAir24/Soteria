@@ -14,7 +14,7 @@ struct RegretLogView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
@@ -36,7 +36,7 @@ struct RegretLogView: View {
                                 
                                 Text("\(regretService.regretEntries.count) total")
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                             }
                             
                             Spacer()
@@ -48,7 +48,7 @@ struct RegretLogView: View {
                                 
                                 Text("\(regretService.recentRegretCount)")
                                     .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                             }
                         }
                         
@@ -64,7 +64,7 @@ struct RegretLogView: View {
                                 
                                 Text("\(pendingReturns.count) return\(pendingReturns.count == 1 ? "" : "s") pending")
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 Spacer()
                                 
@@ -89,7 +89,7 @@ struct RegretLogView: View {
                                 
                                 Text(formatCurrency(regretService.totalRegretAmount))
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                             }
                         }
                     }
@@ -106,7 +106,7 @@ struct RegretLogView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                             
                             Text("No Regrets Logged")
                                 .font(.system(size: 20, weight: .semibold))
@@ -114,7 +114,7 @@ struct RegretLogView: View {
                             
                             Text("Great job! You're protecting your emotional and financial peace")
                                 .font(.system(size: 14))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                         }
@@ -144,7 +144,7 @@ struct RegretLogView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.themePrimary)
+                                    .fill(Color.reverBlue)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -177,7 +177,7 @@ struct RegretLogView: View {
             VStack(spacing: 2) {
                 Text("Regret Log")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
@@ -244,7 +244,7 @@ struct RegretEntryCard: View {
                     if let merchant = regret.merchant {
                         Text(merchant)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                     }
                     
                     if regret.amount != nil {
@@ -268,9 +268,9 @@ struct RegretEntryCard: View {
                             .padding(.vertical, 4)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(status == .returned ? Color.themePrimary.opacity(0.2) : Color.orange.opacity(0.2))
+                                    .fill(status == .returned ? Color.reverBlue.opacity(0.2) : Color.orange.opacity(0.2))
                             )
-                            .foregroundColor(status == .returned ? Color.themePrimary : .orange)
+                            .foregroundColor(status == .returned ? Color.reverBlue : .orange)
                     }
                     
                     // Deadline indicator
@@ -479,7 +479,7 @@ struct RegretDetailView: View {
                                 .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                        .fill(Color.mistGray)
                                 )
                             }
                         }
@@ -493,7 +493,7 @@ struct RegretDetailView: View {
                             HStack {
                                 Image(systemName: regret.isDeadlineExpired ? "exclamationmark.triangle.fill" : "clock.fill")
                                     .font(.system(size: 20))
-                                    .foregroundColor(regret.isDeadlineExpired ? .red : (regret.isDeadlineApproaching ? .orange : Color.themePrimary))
+                                    .foregroundColor(regret.isDeadlineExpired ? .red : (regret.isDeadlineApproaching ? .orange : Color.reverBlue))
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     if regret.isDeadlineExpired {
@@ -508,7 +508,7 @@ struct RegretDetailView: View {
                                         } else {
                                             Text("Return Deadline: \(days) days left")
                                                 .font(.system(size: 16, weight: .semibold))
-                                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                .foregroundColor(Color.midnightSlate)
                                         }
                                     }
                                     
@@ -580,7 +580,7 @@ struct RegretDetailView: View {
                                         .padding()
                                         .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                .fill(Color.mistGray)
                                         )
                                     
                                     Button(action: {
@@ -591,7 +591,7 @@ struct RegretDetailView: View {
                                             Text("Copy Template")
                                         }
                                         .font(.system(size: 14))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(Color.reverBlue)
                                     }
                                 }
                             }

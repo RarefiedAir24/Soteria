@@ -19,7 +19,8 @@ struct SoteriaApp: App {
     @StateObject private var quietHoursService = QuietHoursService.shared
     @StateObject private var deviceActivityService = DeviceActivityService.shared
     @StateObject private var purchaseIntentService = PurchaseIntentService.shared
-    // Plaid (keeping disabled - was causing crash)
+    // Plaid - temporarily disabled due to dyld crash
+    // Will implement lazy loading to prevent framework loading at startup
     // @StateObject private var plaidService = PlaidService.shared
     @State private var showPauseView = false
     @State private var showPurchaseLogPrompt = false
@@ -38,7 +39,7 @@ struct SoteriaApp: App {
         // Configure consistent navigation bar appearance
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 0.95, alpha: 1.0)
+        appearance.backgroundColor = UIColor(Color.mistGray)
         appearance.shadowColor = .clear
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
@@ -48,7 +49,7 @@ struct SoteriaApp: App {
         // Also configure UITabBar appearance for consistency
         let tabBarAppearance = UITabBarAppearance()
         tabBarAppearance.configureWithOpaqueBackground()
-        tabBarAppearance.backgroundColor = UIColor(red: 0.95, green: 0.95, blue: 0.95, alpha: 1.0)
+        tabBarAppearance.backgroundColor = UIColor(Color.mistGray)
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
         
@@ -128,7 +129,7 @@ struct SoteriaApp: App {
                 .environmentObject(purchaseIntentService)
                 .environmentObject(subscriptionService)
                 .environmentObject(streakService)
-                // .environmentObject(plaidService)  // Keeping disabled - was causing crash
+                // .environmentObject(plaidService)  // Temporarily disabled
                 // Set consistent status bar style
                 .preferredColorScheme(.light)
                 .statusBar(hidden: false)
@@ -340,13 +341,8 @@ struct RootView: View {
                 if isAppReady {
                     MainTabView()
                 } else {
-                    // Show a simple placeholder while app initializes
-                    Color(red: 0.98, green: 0.98, blue: 0.98)
-                        .ignoresSafeArea()
-                        .overlay(
-                            ProgressView()
-                                .scaleEffect(1.5)
-                        )
+                    // Show custom splash screen while app initializes
+                    SplashScreenView()
                 }
             } else {
                 AuthView()

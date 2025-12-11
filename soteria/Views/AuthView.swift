@@ -27,13 +27,9 @@ struct AuthView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [Color(red: 0.95, green: 0.98, blue: 0.95), Color.white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // Background - REVER Dream gradient for calm, welcoming feel
+            Color.reverDreamGradient
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(spacing: 0) {
@@ -46,21 +42,19 @@ struct AuthView: View {
                             .font(.system(size: 70))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [Color.themePrimaryLight, Color.themePrimaryDark],
+                                    colors: [Color.reverBlueLight, Color.reverBlueDark],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .shadow(color: Color.themePrimary.opacity(0.3), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.reverBlue.opacity(0.3), radius: 10, x: 0, y: 5)
                         
                         Text("SOTERIA")
-                            .font(.system(size: 42, weight: .bold, design: .default))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .reverH1()
                         
                         Text("Your behavioral finance companion")
-                            .font(.subheadline)
-                            .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
-                            .padding(.top, 4)
+                            .reverBody()
+                            .padding(.top, .spacingSmall)
                     }
                     .padding(.bottom, 50)
                     
@@ -79,12 +73,12 @@ struct AuthView: View {
                                 if isSignUp {
                                     HStack(spacing: 6) {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                             .font(.footnote)
                                         Text("Choose your email")
                                             .font(.footnote)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                     }
                                     .transition(.opacity.combined(with: .scale))
                                 }
@@ -92,7 +86,7 @@ struct AuthView: View {
                             
                             TextField(isSignUp ? "Enter your desired email" : "Enter your email", text: $email)
                                 .textFieldStyle(.plain)
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                                 .keyboardType(.emailAddress)
                                 .autocapitalization(.none)
                                 .autocorrectionDisabled()
@@ -101,13 +95,13 @@ struct AuthView: View {
                                 .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                        .fill(Color.mistGray)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
                                                     focusedField == .email 
-                                                        ? (isEmailValid || email.isEmpty ? Color.themePrimary : Color.red)
-                                                        : (isSignUp && email.isEmpty ? Color.themePrimary.opacity(0.3) : Color.clear),
+                                                        ? (isEmailValid || email.isEmpty ? Color.reverBlue : Color.red)
+                                                        : (isSignUp && email.isEmpty ? Color.reverBlue.opacity(0.3) : Color.clear),
                                                     lineWidth: 2
                                                 )
                                         )
@@ -143,12 +137,12 @@ struct AuthView: View {
                                 if isSignUp {
                                     HStack(spacing: 6) {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                             .font(.footnote)
                                         Text("Choose your password")
                                             .font(.footnote)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                     }
                                     .transition(.opacity.combined(with: .scale))
                                 }
@@ -159,12 +153,12 @@ struct AuthView: View {
                                     if isPasswordVisible {
                                         TextField(isSignUp ? "Enter your desired password" : "Enter your password", text: $password)
                                             .textFieldStyle(.plain)
-                                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                            .foregroundColor(Color.midnightSlate)
                                             .accentColor(.green)
                                     } else {
                                         SecureField(isSignUp ? "Enter your desired password" : "Enter your password", text: $password)
                                             .textFieldStyle(.plain)
-                                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                            .foregroundColor(Color.midnightSlate)
                                             .accentColor(.green)
                                     }
                                 }
@@ -182,10 +176,10 @@ struct AuthView: View {
                             }
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                    .fill(Color.mistGray)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(focusedField == .password ? Color.themePrimary : (isSignUp && password.isEmpty ? Color.themePrimary.opacity(0.3) : Color.clear), lineWidth: 2)
+                                            .stroke(focusedField == .password ? Color.reverBlue : (isSignUp && password.isEmpty ? Color.reverBlue.opacity(0.3) : Color.clear), lineWidth: 2)
                                     )
                             )
                             
@@ -242,7 +236,7 @@ struct AuthView: View {
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                         
-                        // Sign In/Up Button
+                        // Sign In/Up Button - REVER Primary Button
                         Button(action: {
                             Task {
                                 await performAuth()
@@ -254,26 +248,13 @@ struct AuthView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
                                     Text(isSignUp ? "Create Account" : "Sign In")
-                                        .font(.headline)
-                                        .foregroundColor(.white)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                LinearGradient(
-                                    colors: email.isEmpty || password.isEmpty || isLoading
-                                        ? [Color.gray.opacity(0.3), Color.gray.opacity(0.3)]
-                                        : [Color.themePrimaryLight, Color.themePrimaryDark],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(16)
-                            .shadow(color: (email.isEmpty || password.isEmpty || isLoading) ? Color.clear : Color.themePrimary.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
+                        .reverPrimaryButton()
                         .disabled(isLoading || email.isEmpty || password.isEmpty || !isEmailValid || (isSignUp && !isPasswordValid))
-                        .padding(.top, 8)
+                        .opacity((email.isEmpty || password.isEmpty || isLoading) ? 0.5 : 1.0)
+                        .padding(.top, .spacingSmall)
                         
                         // Toggle Sign In/Sign Up
                         Button(action: {
@@ -285,7 +266,7 @@ struct AuthView: View {
                         }) {
                             HStack(spacing: 4) {
                                 Text(isSignUp ? "Already have an account?" : "Don't have an account?")
-                                    .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
+                                    .reverBody()
                                 Text(isSignUp ? "Sign In" : "Sign Up")
                                     .foregroundColor(.green)
                                     .fontWeight(.semibold)
@@ -524,7 +505,7 @@ struct ForgotPasswordView: View {
                                 .fill(Color(.systemGray6))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isEmailFocused ? Color.themePrimary : Color.clear, lineWidth: 2)
+                                        .stroke(isEmailFocused ? Color.reverBlue : Color.clear, lineWidth: 2)
                                 )
                         )
                 }
@@ -564,13 +545,13 @@ struct ForgotPasswordView: View {
                         LinearGradient(
                             colors: email.isEmpty || isLoading
                                 ? [Color.gray.opacity(0.3), Color.gray.opacity(0.3)]
-                                : [Color.themePrimaryLight, Color.themePrimaryDark],
+                                : [Color.reverBlueLight, Color.reverBlueDark],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .cornerRadius(16)
-                    .shadow(color: (email.isEmpty || isLoading) ? Color.clear : Color.themePrimary.opacity(0.3), radius: 10, x: 0, y: 5)
+                    .shadow(color: (email.isEmpty || isLoading) ? Color.clear : Color.reverBlue.opacity(0.3), radius: 10, x: 0, y: 5)
                 }
                 .disabled(isLoading || email.isEmpty)
                 .padding(.horizontal, 32)

@@ -127,25 +127,62 @@ class PurchaseIntentService: ObservableObject {
     static let shared = PurchaseIntentService()
     
     @Published var purchaseIntents: [PurchaseIntent] = []
+    @Published var useAWS: Bool = false // Toggle to enable/disable AWS sync
     
     private let purchaseIntentsKey = "purchase_intents"
+    private let awsDataService = AWSDataService.shared
     
     private init() {
         loadData()
     }
     
-    // Load data from UserDefaults
+    // Load data from UserDefaults or AWS
     private func loadData() {
+        // Try AWS first if enabled
+        if useAWS {
+            Task {
+                do {
+                    let awsData: [PurchaseIntent] = try await awsDataService.getData(dataType: .purchaseIntents)
+                    await MainActor.run {
+                        self.purchaseIntents = awsData
+                        // Also save to UserDefaults as cache
+                        if let encoded = try? JSONEncoder().encode(awsData) {
+                            UserDefaults.standard.set(encoded, forKey: self.purchaseIntentsKey)
+                        }
+                    }
+                    print("✅ [PurchaseIntentService] Purchase intents loaded from AWS")
+                    return
+                } catch {
+                    print("⚠️ [PurchaseIntentService] Failed to load purchase intents from AWS: \(error.localizedDescription)")
+                    // Fall through to UserDefaults
+                }
+            }
+        }
+        
+        // Fallback to UserDefaults
         if let data = UserDefaults.standard.data(forKey: purchaseIntentsKey),
            let decoded = try? JSONDecoder().decode([PurchaseIntent].self, from: data) {
             purchaseIntents = decoded
         }
     }
     
-    // Save data to UserDefaults
+    // Save data to UserDefaults and AWS
     private func saveData() {
+        // Save to UserDefaults (always, as fallback)
         if let encoded = try? JSONEncoder().encode(purchaseIntents) {
             UserDefaults.standard.set(encoded, forKey: purchaseIntentsKey)
+        }
+        
+        // Sync to AWS if enabled
+        if useAWS {
+            Task {
+                do {
+                    try await awsDataService.batchSync(purchaseIntents, dataType: .purchaseIntents)
+                    print("✅ [PurchaseIntentService] Purchase intents synced to AWS")
+                } catch {
+                    print("⚠️ [PurchaseIntentService] Failed to sync purchase intents to AWS: \(error.localizedDescription)")
+                }
+            }
         }
     }
     

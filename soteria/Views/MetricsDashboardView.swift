@@ -70,7 +70,7 @@ struct MetricsDashboardView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(red: 0.98, green: 0.98, blue: 0.98)
+                Color.cloudWhite
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -107,7 +107,7 @@ struct MetricsDashboardView: View {
                                         showPaywall = true
                                     }
                                     .font(.caption)
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 }
                             }
                         }
@@ -136,7 +136,7 @@ struct MetricsDashboardView: View {
                             Text("Unblock Requests")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                             
                             let unblockMetrics = deviceActivityService.getUnblockMetrics()
                             let (startDate, endDate) = getDateRange()
@@ -157,7 +157,7 @@ struct MetricsDashboardView: View {
                                         title: "Planned",
                                         value: "\(unblockMetrics.plannedUnblocks)",
                                         icon: "calendar.circle.fill",
-                                        color: Color.themePrimary
+                                        color: Color.reverBlue
                                     )
                                     
                                     MetricCard(
@@ -196,7 +196,7 @@ struct MetricsDashboardView: View {
                                         PatternBreakdownCard(
                                             title: "Planned Purchase Categories",
                                             icon: "calendar.circle.fill",
-                                            color: Color.themePrimary,
+                                            color: Color.reverBlue,
                                             breakdown: categoryBreakdown,
                                             formatLabel: formatCategoryName,
                                             onTap: {
@@ -273,7 +273,7 @@ struct MetricsDashboardView: View {
                             Text("App Usage")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                             
                             let usageStats = getUsageStats()
                             
@@ -424,7 +424,7 @@ struct MetricCard: View {
                 Text(value)
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
             }
             
             Spacer()
@@ -453,7 +453,7 @@ struct CategoryBarChartRow: View {
             HStack {
                 Text(label)
                     .font(.subheadline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
                 
@@ -466,7 +466,7 @@ struct CategoryBarChartRow: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .fill(Color.mistGray)
                         .frame(height: 8)
                     
                     RoundedRectangle(cornerRadius: 4)
@@ -488,12 +488,12 @@ struct UsageCard: View {
         HStack {
             Image(systemName: "app.fill")
                 .font(.system(size: 24))
-                .foregroundColor(Color.themePrimary)
+                .foregroundColor(Color.reverBlue)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(appName)
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 HStack(spacing: 16) {
                     Label(formatTime(totalTime), systemImage: "clock.fill")

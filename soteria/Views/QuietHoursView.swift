@@ -16,7 +16,7 @@ struct QuietHoursView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
@@ -29,17 +29,17 @@ struct QuietHoursView: View {
                         HStack {
                             Image(systemName: quietHoursService.isQuietModeActive ? "moon.fill" : "moon")
                                 .font(.system(size: 24))
-                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.themePrimary : .gray)
+                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.reverBlue : .gray)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(quietHoursService.isQuietModeActive ? "Financial Quiet Mode Active" : "Financial Quiet Mode Inactive")
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 if quietHoursService.isQuietModeActive {
                                     Text("Your sanctuary is protecting you")
                                         .font(.system(size: 12))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(Color.reverBlue)
                                 }
                                 
                                 if let schedule = quietHoursService.currentActiveSchedule {
@@ -77,7 +77,7 @@ struct QuietHoursView: View {
                             
                             Text("Financial Quiet Mode is your sanctuary, not a restriction.\nCreate protective boundaries during vulnerable times.")
                                 .font(.system(size: 14))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                             
@@ -96,7 +96,7 @@ struct QuietHoursView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.themePrimary)
+                                            .fill(Color.reverBlue)
                                     )
                             }
                         }
@@ -140,7 +140,7 @@ struct QuietHoursView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.themePrimary)
+                                    .fill(Color.reverBlue)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -154,7 +154,7 @@ struct QuietHoursView: View {
             VStack(spacing: 2) {
                 Text("Financial Quiet Mode")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Text("Your sanctuary, not a restriction")
                     .font(.system(size: 12))
@@ -230,7 +230,7 @@ struct QuietHoursScheduleCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(schedule.name)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                     
                     Text(timeString)
                         .font(.system(size: 14))
@@ -267,10 +267,10 @@ struct QuietHoursScheduleCard: View {
             if schedule.isCurrentlyActive() {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                     Text("Currently Active")
                         .font(.system(size: 12))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                 }
             }
         }
@@ -386,7 +386,7 @@ struct CreateQuietHoursScheduleView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "crown.fill")
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 Text("Premium Features")
                                     .font(.headline)
                             }
@@ -424,7 +424,7 @@ struct CreateQuietHoursScheduleView: View {
                                     .padding(.vertical, 10)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.themePrimary)
+                                            .fill(Color.reverBlue)
                                     )
                             }
                             .padding(.top, 4)

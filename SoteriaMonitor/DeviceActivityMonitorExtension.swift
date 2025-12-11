@@ -164,17 +164,25 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
     }
     
-    override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
-        super.eventDidReachThreshold(event, activity: activity)
-        print("🔔 [Extension] ════════════════════════════════════════")
-        print("🔔 [Extension] eventDidReachThreshold FIRED!")
-        print("🔔 [Extension] Event: \(event)")
-        print("🔔 [Extension] Activity: \(activity)")
-        print("🔔 [Extension] User tapped through blocking screen - app opened")
-        print("🔔 [Extension] ════════════════════════════════════════")
-        
-        // Track that shopping app was opened
-        recordShoppingSessionStart()
+           override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
+               super.eventDidReachThreshold(event, activity: activity)
+               print("🔔 [Extension] ════════════════════════════════════════")
+               print("🔔 [Extension] eventDidReachThreshold FIRED!")
+               print("🔔 [Extension] Event: \(event)")
+               print("🔔 [Extension] Activity: \(activity)")
+               print("🔔 [Extension] User tapped through blocking screen - app opened")
+               print("🔔 [Extension] ════════════════════════════════════════")
+               
+               // Track that shopping app was opened
+               recordShoppingSessionStart()
+               
+               // Notify main app that a shopping app came to foreground
+               // This helps track actual usage (foreground vs background)
+               UserDefaults.standard.set(true, forKey: "shoppingAppOpened")
+               UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "shoppingAppOpenedTime")
+               
+               // Note: We can't determine which specific app was opened from the extension
+               // The main app will track usage when it detects the app is active
         
         // Set flag so SOTERIA shows prompt when it becomes active
         UserDefaults.standard.set(true, forKey: "shouldShowPurchaseIntentPrompt")

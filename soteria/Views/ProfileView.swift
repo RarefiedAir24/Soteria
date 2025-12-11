@@ -65,7 +65,7 @@ struct ProfileView: View {
                                     Circle()
                                         .fill(
                                             LinearGradient(
-                                                colors: [Color.themePrimaryDark, Color.themePrimaryLight],
+                                                colors: [Color.reverBlueDark, Color.reverBlueLight],
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
                                             )
@@ -114,11 +114,11 @@ struct ProfileView: View {
                     VStack(spacing: 4) {
                         Text(userName)
                             .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         Text(userEmail)
                             .font(.system(size: 14))
-                            .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                            .foregroundColor(Color.softGraphite)
                     }
                 }
                 .padding(.top, 20)
@@ -128,7 +128,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Account Settings")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                         .padding(.horizontal, 20)
                     
                     // Change Password
@@ -138,29 +138,29 @@ struct ProfileView: View {
                         HStack {
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 16))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                                 .frame(width: 24)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Change Password")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 Text("Update your account password")
                                     .font(.system(size: 13))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             
                             Spacer()
                             
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                         }
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                .fill(Color.mistGray)
                         )
                     }
                     .padding(.horizontal, 20)
@@ -169,17 +169,17 @@ struct ProfileView: View {
                     HStack {
                         Image(systemName: subscriptionService.isPremium ? "crown.fill" : "crown")
                             .font(.system(size: 16))
-                            .foregroundColor(subscriptionService.isPremium ? Color(red: 1.0, green: 0.84, blue: 0.0) : Color(red: 0.5, green: 0.5, blue: 0.5))
+                            .foregroundColor(subscriptionService.isPremium ? Color(red: 1.0, green: 0.84, blue: 0.0) : Color.softGraphite)
                             .frame(width: 24)
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text(subscriptionService.isPremium ? "Premium Member" : "Free Plan")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                             
                             Text(subscriptionService.isPremium ? "Full access to all features" : "Upgrade for unlimited apps")
                                 .font(.system(size: 13))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                         }
                         
                         Spacer()
@@ -194,14 +194,14 @@ struct ProfileView: View {
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.themePrimary)
+                                    .fill(Color.reverBlue)
                             )
                         }
                     }
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                            .fill(Color.mistGray)
                     )
                     .padding(.horizontal, 20)
                 }
@@ -211,7 +211,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Banking & Savings")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                         .padding(.horizontal, 20)
                     
                     // Connect Bank Account
@@ -222,29 +222,29 @@ struct ProfileView: View {
                             HStack {
                                 Image(systemName: "building.columns.fill")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                     .frame(width: 24)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Connect Bank Account")
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                     
                                     Text("Enable automatic savings transfers")
                                         .font(.system(size: 13))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                 }
                                 
                                 Spacer()
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                    .fill(Color.mistGray)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -263,12 +263,12 @@ struct ProfileView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("\(plaid.connectedAccounts.count) Account\(plaid.connectedAccounts.count == 1 ? "" : "s") Connected")
                                             .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                            .foregroundColor(Color.midnightSlate)
                                         
                                         if let checkingAccount = plaid.checkingAccount {
                                             Text("\(checkingAccount.name) ••••\(checkingAccount.mask)")
                                                 .font(.system(size: 13))
-                                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                                .foregroundColor(Color.softGraphite)
                                         }
                                     }
                                     
@@ -276,12 +276,12 @@ struct ProfileView: View {
                                     
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                 }
                                 .padding(16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                        .fill(Color.mistGray)
                                 )
                             }
                             .padding(.horizontal, 20)
@@ -294,7 +294,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Preferences")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                         .padding(.horizontal, 20)
                     
                     // Notification Settings
@@ -302,29 +302,29 @@ struct ProfileView: View {
                         HStack {
                             Image(systemName: "bell.fill")
                                 .font(.system(size: 16))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                                 .frame(width: 24)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Notifications")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 Text("Manage notification preferences")
                                     .font(.system(size: 13))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             
                             Spacer()
                             
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                         }
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                .fill(Color.mistGray)
                         )
                     }
                     .padding(.horizontal, 20)

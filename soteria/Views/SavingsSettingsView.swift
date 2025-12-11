@@ -65,7 +65,7 @@ struct SavingsSettingsView: View {
                                     .foregroundColor(plaidService.protectionAmount == amount ? .white : .primary)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
-                                    .background(plaidService.protectionAmount == amount ? Color.themePrimary : Color.gray.opacity(0.2))
+                                    .background(plaidService.protectionAmount == amount ? Color.reverBlue : Color.gray.opacity(0.2))
                                     .cornerRadius(8)
                             }
                         }
@@ -102,7 +102,7 @@ struct SavingsSettingsView: View {
                                     if let balance = savingsAccount.balance {
                                         Text("$\(balance, specifier: "%.2f")")
                                             .font(.title2.bold())
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                     } else {
                                         ProgressView()
                                     }
@@ -121,7 +121,7 @@ struct SavingsSettingsView: View {
                                 
                                 Text("$\(plaidService.virtualSavings, specifier: "%.2f")")
                                     .font(.title2.bold())
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                             }
                             
                             Text("Create a savings account to enable automatic transfers")
@@ -153,7 +153,7 @@ struct SavingsSettingsView: View {
                             Image(systemName: "plus.circle.fill")
                             Text("Connect Accounts")
                         }
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                     }
                 } else {
                     Button(role: .destructive, action: {
@@ -203,7 +203,7 @@ struct SavingsSettingsView: View {
             .foregroundColor(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .background(plaidService.savingsMode == .automatic ? Color.themePrimary : Color.gray)
+            .background(plaidService.savingsMode == .automatic ? Color.reverBlue : Color.gray)
             .cornerRadius(8)
     }
 }

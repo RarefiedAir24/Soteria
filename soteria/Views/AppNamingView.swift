@@ -24,12 +24,12 @@ struct AppNamingView: View {
                     VStack(spacing: 24) {
                         Image(systemName: "tag.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(Color.themePrimary)
+                            .foregroundColor(Color.reverBlue)
                         
                         Text("Name Your Apps")
                             .font(.title)
                             .fontWeight(.bold)
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         Text("Give each app a name so we can track which one you use most during Quiet Hours")
                             .font(.subheadline)
@@ -73,7 +73,7 @@ struct AppNamingView: View {
                                 .foregroundColor(.white)
                                 .padding(.vertical, 14)
                                 .frame(maxWidth: .infinity)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.themePrimary))
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.reverBlue))
                         }
                         .padding(.horizontal, 32)
                         .padding(.top, 20)

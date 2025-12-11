@@ -51,7 +51,7 @@ struct PauseView: View {
                         Text("SOTERIA Moment")
                             .font(.title)
                             .fontWeight(.bold)
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         Text("The pause that protects")
                             .font(.subheadline)
@@ -70,7 +70,7 @@ struct PauseView: View {
                             VStack(spacing: 20) {
                                 Text("Is this a planned activity or impulse?")
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                     .multilineTextAlignment(.center)
                                 
                                 HStack(spacing: 16) {
@@ -118,7 +118,7 @@ struct PauseView: View {
                             VStack(spacing: 16) {
                                 Text("What category is this activity?")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                     .multilineTextAlignment(.center)
                                 
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -137,7 +137,7 @@ struct PauseView: View {
                                             .padding(.vertical, 16)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                    .fill(Color.mistGray)
                                             )
                                         }
                                     }
@@ -154,12 +154,12 @@ struct PauseView: View {
                             VStack(spacing: 8) {
                                 Text("Take a moment to reflect")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                     .multilineTextAlignment(.center)
                                 
                                 Text("This pause helps you reconnect with your intentions")
                                     .font(.system(size: 13))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                                     .multilineTextAlignment(.center)
                             }
                             .padding(.vertical, 12)
@@ -185,11 +185,11 @@ struct PauseView: View {
                                     TextField("Skip this step", text: $plannedSpend)
                                         .textFieldStyle(.plain)
                                         .keyboardType(.decimalPad)
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                         .padding()
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                .fill(Color.mistGray)
                                         )
                                 }
                                 .padding(.horizontal, 32)
@@ -218,7 +218,7 @@ struct PauseView: View {
                                             .padding(.vertical, 12)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .fill(currentMood == mood ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                    .fill(currentMood == mood ? Color.reverBlue : Color.mistGray)
                                             )
                                         }
                                     }
@@ -243,7 +243,7 @@ struct PauseView: View {
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                            .fill(Color.mistGray)
                                     )
                                 }
                                 .padding(.horizontal, 32)
@@ -253,7 +253,7 @@ struct PauseView: View {
                             if let confirmation = showConfirmation {
                                 Text(confirmation)
                                     .font(.subheadline)
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
@@ -290,7 +290,7 @@ struct PauseView: View {
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .tint(Color.themePrimary)
+                                .tint(Color.reverBlue)
                                 .disabled(isProcessingTransfer)
                                 .padding(.horizontal, 32)
                                 

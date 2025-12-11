@@ -23,12 +23,12 @@ struct FamilyActivityPickerWrapper: View {
         Group {
             if isPickerReady {
                 FamilyActivityPicker(selection: $selection)
-                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                    .background(Color.mistGray)
             } else {
                 // Placeholder while picker loads
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                    .background(Color.mistGray)
             }
         }
         .task {
@@ -62,7 +62,7 @@ struct AppSelectionView: View {
     var body: some View {
         ZStack(alignment: .top) {
             // Background
-            Color(red: 0.95, green: 0.95, blue: 0.95)
+            Color.mistGray
                 .ignoresSafeArea(.all)
             
             // Main content
@@ -81,7 +81,7 @@ struct AppSelectionView: View {
                         
                         Text("Authorization Required")
                             .font(.headline)
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         Text("Please grant Screen Time permissions to select apps.")
                             .font(.subheadline)
@@ -93,7 +93,7 @@ struct AppSelectionView: View {
                             requestAuthorization()
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Color.themePrimary)
+                        .tint(Color.reverBlue)
                         
                         // Debug info
                         Text("Status: \(authorizationCenter.authorizationStatus.rawValue)")
@@ -112,7 +112,7 @@ struct AppSelectionView: View {
                 HStack {
                     Text("Select Apps to Monitor")
                         .font(.system(size: 24, weight: .semibold, design: .default))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                     Spacer()
                     Button(action: {
                         // Immediately dismiss - let SwiftUI handle cleanup
@@ -125,7 +125,7 @@ struct AppSelectionView: View {
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.themePrimary)
+                                    .fill(Color.reverBlue)
                             )
                     }
                 }
@@ -136,7 +136,7 @@ struct AppSelectionView: View {
                 if isAuthorized {
                     Text("Note: The app picker uses Apple's system interface")
                         .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                        .foregroundColor(Color.softGraphite)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 4)
                 }
@@ -148,7 +148,7 @@ struct AppSelectionView: View {
             )
             .zIndex(100)
         }
-        .background(Color(red: 0.95, green: 0.95, blue: 0.95).ignoresSafeArea())
+        .background(Color.mistGray.ignoresSafeArea())
         .onAppear {
             // Check authorization status
             checkAuthorization()

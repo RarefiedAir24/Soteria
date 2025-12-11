@@ -13,11 +13,10 @@ struct GoalsView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            // Consistent background that extends to safe area
-            Color(red: 0.95, green: 0.95, blue: 0.95)
+            // REVER background
+            Color.mistGray
                 .ignoresSafeArea(.all, edges: .top)
-            // Background
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
@@ -40,7 +39,7 @@ struct GoalsView: View {
                             
                             Text("Create a goal to start saving for trips, purchases, or emergencies")
                                 .font(.system(size: 14, weight: .regular, design: .default))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                             
@@ -54,7 +53,7 @@ struct GoalsView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.themePrimary)
+                                            .fill(Color.deepReverBlue)
                                     )
                             }
                         }
@@ -82,7 +81,7 @@ struct GoalsView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.themePrimary)
+                                    .fill(Color.reverBlue)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -96,7 +95,7 @@ struct GoalsView: View {
             VStack(spacing: 2) {
                 Text("Savings Goals")
                     .font(.system(size: 24, weight: .semibold, design: .default))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
@@ -140,16 +139,16 @@ struct GoalCard: View {
             HStack {
                 Image(systemName: goal.category.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundColor(Color.reverBlue)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(goal.name)
                         .font(.system(size: 18, weight: .semibold, design: .default))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                     
                     Text(goal.category.rawValue)
                         .font(.system(size: 13, weight: .regular, design: .default))
-                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                        .foregroundColor(Color.softGraphite)
                 }
                 
                 Spacer()
@@ -157,7 +156,7 @@ struct GoalCard: View {
                 if goalsService.activeGoal?.id == goal.id {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                 }
             }
             
@@ -166,17 +165,17 @@ struct GoalCard: View {
                 HStack {
                     Text(formattedCurrent)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                     
                     Text("of \(formattedTarget)")
                         .font(.system(size: 14, weight: .regular, design: .default))
-                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                        .foregroundColor(Color.softGraphite)
                     
                     Spacer()
                     
                     Text("\(progressPercentage)%")
                         .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                 }
                 
                 GeometryReader { geometry in
@@ -186,7 +185,7 @@ struct GoalCard: View {
                             .frame(height: 8)
                         
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.themePrimary)
+                            .fill(Color.reverBlue)
                             .frame(width: geometry.size.width * CGFloat(goal.progress), height: 8)
                     }
                 }
@@ -200,7 +199,7 @@ struct GoalCard: View {
                 }) {
                     Text("Set as Active Goal")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(

@@ -102,17 +102,17 @@ struct SettingsView: View {
         }()
         
         return ZStack(alignment: .top) {
-            // Consistent background that extends to safe area
-            Color(red: 0.95, green: 0.95, blue: 0.95)
+            // REVER background
+            Color.mistGray
                 .ignoresSafeArea(.all, edges: .top)
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
                 Color.clear
                     .frame(height: 60)
                 
-                VStack(spacing: 20) {
+                VStack(spacing: .spacingCard) {
                     // Account & Subscription Card
                     VStack(alignment: .leading, spacing: 16) {
                         Button(action: {
@@ -133,7 +133,7 @@ struct SettingsView: View {
                                             Circle()
                                                 .fill(
                                                     LinearGradient(
-                                                        colors: [Color.themePrimaryDark, Color.themePrimaryLight],
+                                                        colors: [Color.deepReverBlue, Color.reverBlue],
                                                         startPoint: .topLeading,
                                                         endPoint: .bottomTrailing
                                                     )
@@ -158,16 +158,16 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Account")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                     
                                     if let user = authService.currentUser {
                                         Text(user.email ?? "Unknown")
                                             .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                            .foregroundColor(Color.midnightSlate)
                                         
                                         Text("Manage account, banking & preferences")
                                             .font(.system(size: 13))
-                                            .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                            .foregroundColor(Color.softGraphite)
                                     }
                                 }
                                 
@@ -175,7 +175,7 @@ struct SettingsView: View {
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             .contentShape(Rectangle())
                         }
@@ -187,12 +187,13 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: subscriptionService.isPremium ? "crown.fill" : "crown")
                                 .font(.system(size: 20))
-                                .foregroundColor(subscriptionService.isPremium ? Color.themePrimary : .gray)
+                                .foregroundColor(subscriptionService.isPremium ? Color.reverBlue : .softGraphite)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(subscriptionService.isPremium ? "Premium" : "Free")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .reverBody()
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.midnightSlate)
                                 
                                 if !subscriptionService.isPremium {
                                     Text("Upgrade for advanced features")
@@ -214,33 +215,28 @@ struct SettingsView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.themePrimary)
+                                                .fill(Color.reverBlue)
                                         )
                                 }
                             }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                    )
-                    .padding(.horizontal, 20)
+                    .reverCard()
+                    .padding(.horizontal, .spacingCard)
                     
                     // Behavioral Features Section
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Behavioral Features")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         // Quiet Hours
                         SettingsRow(
                             icon: "moon.fill",
                             title: "Quiet Hours",
                             subtitle: quietHoursService.isQuietModeActive ? "Active" : "Inactive",
-                            color: quietHoursService.isQuietModeActive ? Color.themePrimary : .gray
+                            color: quietHoursService.isQuietModeActive ? Color.reverBlue : .gray
                         ) {
                             showQuietHours = true
                         }
@@ -252,7 +248,7 @@ struct SettingsView: View {
                             icon: "heart.fill",
                             title: "Mood Check-In",
                             subtitle: "Track your mood",
-                            color: Color.themePrimary
+                            color: Color.reverBlue
                         ) {
                             showMoodCheckIn = true
                         }
@@ -270,24 +266,19 @@ struct SettingsView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                    )
-                    .padding(.horizontal, 20)
+                    .reverCard()
+                    .padding(.horizontal, .spacingCard)
                     
                     // App Monitoring Card
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Image(systemName: "app.badge.checkmark")
                                 .font(.system(size: 24))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                             
                             Text("App Monitoring")
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                             
                             Spacer()
                         }
@@ -305,16 +296,16 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Select Apps to Monitor")
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                     
                                     if deviceActivityService.cachedAppsCount > 0 {
                                         Text("\(deviceActivityService.cachedAppsCount) app\(deviceActivityService.cachedAppsCount == 1 ? "" : "s") selected")
                                             .font(.system(size: 13))
-                                            .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                            .foregroundColor(Color.softGraphite)
                                     } else {
                                         Text("No apps selected")
                                             .font(.system(size: 13))
-                                            .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                            .foregroundColor(Color.softGraphite)
                                     }
                                 }
                                 
@@ -322,12 +313,12 @@ struct SettingsView: View {
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                    .fill(Color.mistGray)
                             )
                         }
                         
@@ -340,23 +331,23 @@ struct SettingsView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Manage App Names")
                                             .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                            .foregroundColor(Color.midnightSlate)
                                         
                                         Text("Rename or review selected apps")
                                             .font(.system(size: 13))
-                                            .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                            .foregroundColor(Color.softGraphite)
                                     }
                                     
                                     Spacer()
                                     
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                 }
                                 .padding(16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                        .fill(Color.mistGray)
                                 )
                             }
                         }
@@ -369,27 +360,27 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("View Metrics")
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                     
                                     Text("Unblock requests and app usage")
                                         .font(.system(size: 13))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                 }
                                 
                                 Spacer()
                                 
                                 Image(systemName: "chart.bar.fill")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                    .fill(Color.mistGray)
                             )
                         }
                         
@@ -400,27 +391,27 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Savings Settings")
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                     
                                     Text("Connect accounts & manage savings")
                                         .font(.system(size: 13))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                 }
                                 
                                 Spacer()
                                 
                                 Image(systemName: "building.columns.fill")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    .foregroundColor(Color.softGraphite)
                             }
                             .padding(16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                    .fill(Color.mistGray)
                             )
                         }
                         */
@@ -433,16 +424,16 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Monitoring")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 if isStartingMonitoring {
                                     HStack(spacing: 8) {
                                         ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: Color.themePrimary))
+                                            .progressViewStyle(CircularProgressViewStyle(tint: Color.reverBlue))
                                             .frame(width: 14, height: 14)
                                         Text("Starting monitoring...")
                                             .font(.system(size: 13))
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                     }
                                 } else if cachedIsMonitoring {
                                     HStack(spacing: 6) {
@@ -456,7 +447,7 @@ struct SettingsView: View {
                                 } else {
                                     Text("Inactive")
                                         .font(.system(size: 13))
-                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(Color.softGraphite)
                                 }
                             }
                             
@@ -465,7 +456,7 @@ struct SettingsView: View {
                             Group {
                                 if isStartingMonitoring {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.themePrimary))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.reverBlue))
                                         .frame(width: 30, height: 30)
                                 } else {
                                     Toggle("", isOn: Binding(
@@ -484,25 +475,20 @@ struct SettingsView: View {
                                         }
                                     ))
                                     .toggleStyle(.switch)
-                                    .tint(Color.themePrimary)
+                                    .tint(Color.reverBlue)
                                 }
                             }
                         }
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                .fill(Color.mistGray)
                         )
                         .disabled(deviceActivityService.cachedAppsCount == 0 || isStartingMonitoring)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                    )
-                    .padding(.horizontal, 20)
+                    .reverCard()
+                    .padding(.horizontal, .spacingCard)
                     
                     // Sign Out Button
                     Button(action: {
@@ -532,7 +518,7 @@ struct SettingsView: View {
             VStack(spacing: 2) {
                 Text("Settings")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
@@ -679,7 +665,7 @@ struct SettingsView: View {
         // when setting up the observation, and that evaluation blocks.
         // Instead, we update the count in .task and when selection actually changes
         // (which happens when showAppSelection closes)
-        .onChange(of: deviceActivityService.isMonitoring) { newValue in
+        .onChange(of: deviceActivityService.isMonitoring) { oldValue, newValue in
             // Update cached value when it changes
             // Use the parameter instead of accessing the property again
             cachedIsMonitoring = newValue
@@ -799,23 +785,23 @@ struct SettingsRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                     
                     Text(subtitle)
                         .font(.system(size: 13))
-                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                        .foregroundColor(Color.softGraphite)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14))
-                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                    .foregroundColor(Color.softGraphite)
             }
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                    .fill(Color.mistGray)
             )
         }
     }

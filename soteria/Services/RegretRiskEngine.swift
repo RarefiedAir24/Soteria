@@ -22,7 +22,7 @@ struct RegretRiskAssessment: Identifiable {
         case weekend = "weekend"
         case payday = "payday"
         case prePayday = "pre_payday"
-        case recentRegret = "recent_regret"
+        case recentRegret = "recent_regret" // Now used for "high activity pattern"
         case quietHoursOff = "quiet_hours_off"
         case highEnergy = "high_energy"
         case lowEnergy = "low_energy"
@@ -30,11 +30,11 @@ struct RegretRiskAssessment: Identifiable {
         var displayName: String {
             switch self {
             case .lateNight: return "Late Night"
-            case .stressMood: return "Stressed Mood"
+            case .stressMood: return "High Impulse Pattern"
             case .weekend: return "Weekend"
             case .payday: return "Payday"
             case .prePayday: return "Pre-Payday"
-            case .recentRegret: return "Recent Regret"
+            case .recentRegret: return "High Activity Pattern"
             case .quietHoursOff: return "Quiet Hours Disabled"
             case .highEnergy: return "High Energy"
             case .lowEnergy: return "Low Energy"
@@ -63,10 +63,9 @@ class RegretRiskEngine: ObservableObject {
     @Published var currentRisk: RegretRiskAssessment? = nil
     @Published var riskHistory: [RegretRiskAssessment] = []
     
-    private let moodService = MoodTrackingService.shared
     // Lazy to avoid circular dependency with QuietHoursService
     private lazy var quietHoursService = QuietHoursService.shared
-    private let regretService = RegretLoggingService.shared
+    private let deviceActivityService = DeviceActivityService.shared
     
     @Published var lastAlertSent: Date? = nil
     private let alertCooldownMinutes: Int = 60 // Don't send alerts more than once per hour
@@ -76,24 +75,46 @@ class RegretRiskEngine: ObservableObject {
     private var proactiveAlertTimer: Timer?
     
     private init() {
-        requestNotificationAuthorization()
-        assessCurrentRisk()
-        startPeriodicAssessment()
-    }
-    
-    // Request notification permission
-    private func requestNotificationAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if let error = error {
-                print("❌ [RegretRiskEngine] Notification authorization error: \(error)")
-            } else {
-                print("✅ [RegretRiskEngine] Notification authorization granted: \(granted)")
+        let initStart = Date()
+        print("✅ [RegretRiskEngine] Init started at \(initStart) (all work deferred)")
+        // Defer everything - no synchronous work
+        Task { @MainActor in
+            // Don't request notification authorization here - SoteriaApp handles it
+            // requestNotificationAuthorization()
+            let assessmentStart = Date()
+            print("🟡 [RegretRiskEngine] Starting periodic assessment at \(assessmentStart)")
+            // DISABLED: Defer startPeriodicAssessment to prevent blocking
+            // It creates Timers which might block
+            print("🟡 [RegretRiskEngine] Deferring startPeriodicAssessment() - will start later")
+            // self?.startPeriodicAssessment()
+            
+            // Defer risk assessment
+            print("🟡 [RegretRiskEngine] Deferring assessCurrentRisk() - will assess later")
+            // DISABLED: Defer assessCurrentRisk to prevent blocking
+            /*
+            Task.detached(priority: .background) {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                await self?.assessCurrentRisk()
             }
+            */
+            let initEnd = Date()
+            print("✅ [RegretRiskEngine] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
         }
     }
     
+    // Request notification permission (disabled - handled by SoteriaApp)
+    // private func requestNotificationAuthorization() {
+    //     UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+    //         if let error = error {
+    //             print("❌ [RegretRiskEngine] Notification authorization error: \(error)")
+    //         } else {
+    //             print("✅ [RegretRiskEngine] Notification authorization granted: \(granted)")
+    //         }
+    //     }
+    // }
+    
     // Assess current regret risk
-    func assessCurrentRisk() {
+    func assessCurrentRisk() async {
         let now = Date()
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: now)
@@ -114,23 +135,35 @@ class RegretRiskEngine: ObservableObject {
             riskScore += RegretRiskAssessment.RiskFactor.weekend.weight
         }
         
-        // Current mood risk
-        if let currentMood = moodService.currentMood {
-            let moodRisk = currentMood.regretRisk
-            if moodRisk > 0.6 {
-                factors.append(.stressMood)
-                riskScore += RegretRiskAssessment.RiskFactor.stressMood.weight * moodRisk
+        // High unblock frequency risk (automatic - no user input)
+        // Access unblockEvents safely to avoid blocking
+        let recentUnblocks = await MainActor.run {
+            deviceActivityService.getRecentUnblockEvents(hours: 1)
+        }
+        if recentUnblocks.count >= 3 {
+            factors.append(.recentRegret) // Reuse this factor for "high activity"
+            riskScore += RegretRiskAssessment.RiskFactor.recentRegret.weight
+        }
+        
+        // High impulse ratio risk (automatic - from unblock events)
+        let todayUnblocks = await MainActor.run {
+            deviceActivityService.getRecentUnblockEvents(hours: 24)
+        }
+        if !todayUnblocks.isEmpty {
+            let impulseCount = todayUnblocks.filter { $0.purchaseType == "impulse" }.count
+            let impulseRatio = Double(impulseCount) / Double(todayUnblocks.count)
+            if impulseRatio >= 0.6 { // 60%+ impulse purchases today
+                factors.append(.stressMood) // Reuse for "high impulse pattern"
+                riskScore += RegretRiskAssessment.RiskFactor.stressMood.weight * impulseRatio
             }
         }
         
-        // Recent regret risk
-        let recentRegrets = regretService.regretEntries.filter {
-            calendar.dateInterval(of: .day, for: $0.date)?.contains(now) ?? false ||
-            calendar.isDate($0.date, inSameDayAs: calendar.date(byAdding: .day, value: -1, to: now) ?? now)
-        }
-        if !recentRegrets.isEmpty {
-            factors.append(.recentRegret)
-            riskScore += RegretRiskAssessment.RiskFactor.recentRegret.weight
+        // Rapid unblock pattern (multiple unblocks in short time - automatic)
+        if recentUnblocks.count >= 2 {
+            let timeBetween = recentUnblocks.last?.timeSinceLastUnblock ?? 0
+            if timeBetween < 30 * 60 { // Less than 30 minutes between unblocks
+                riskScore += 0.2 // Additional risk for rapid pattern
+            }
         }
         
         // Quiet hours status
@@ -153,7 +186,7 @@ class RegretRiskEngine: ObservableObject {
             recommendation: recommendation
         )
         
-        DispatchQueue.main.async {
+        await MainActor.run {
             self.currentRisk = assessment
             self.riskHistory.append(assessment)
             
@@ -282,7 +315,9 @@ class RegretRiskEngine: ObservableObject {
         
         // Assess every 15 minutes
         riskAssessmentTimer = Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { [weak self] _ in
-            self?.assessCurrentRisk()
+            Task { @MainActor [weak self] in
+                await self?.assessCurrentRisk()
+            }
         }
         
         // Check for proactive alerts every hour

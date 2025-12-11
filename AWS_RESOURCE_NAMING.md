@@ -1,5 +1,7 @@
 # AWS Resource Naming Convention for Rever
 
+**⚠️ DEPRECATED: This document is for the old "Rever" naming. See `AWS_SOTERIA_RESOURCE_NAMING.md` for the new Soteria naming convention.**
+
 This document defines the naming convention for all AWS resources used by Rever to ensure complete isolation from Wordflect and other projects.
 
 ## Naming Convention

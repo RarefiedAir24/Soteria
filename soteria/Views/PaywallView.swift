@@ -25,12 +25,12 @@ struct PaywallView: View {
                         VStack(spacing: 12) {
                             Image(systemName: "crown.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                             
                             Text("Unlock Premium")
                                 .font(.title)
                                 .fontWeight(.bold)
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                             
                             Text("Get deeper insights and advanced protection")
                                 .font(.subheadline)
@@ -122,7 +122,7 @@ struct PaywallView: View {
                                 .padding(.vertical, 16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.themePrimary)
+                                        .fill(Color.reverBlue)
                                 )
                                 .foregroundColor(.white)
                             }
@@ -187,13 +187,13 @@ struct FeatureRow: View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 24))
-                .foregroundColor(Color.themePrimary)
+                .foregroundColor(Color.reverBlue)
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Text(description)
                     .font(.subheadline)
@@ -217,12 +217,12 @@ struct PricingCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(product.displayName)
                         .font(.headline)
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                     
                     Text(product.displayPrice)
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                     
                     if product.id.contains("yearly") {
                         Text("Best Value")
@@ -235,17 +235,17 @@ struct PricingCard: View {
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                         .font(.system(size: 24))
                 }
             }
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color(red: 0.95, green: 0.98, blue: 0.95) : Color(red: 0.95, green: 0.95, blue: 0.95))
+                    .fill(isSelected ? Color(red: 0.95, green: 0.98, blue: 0.95) : Color.mistGray)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color.themePrimary : Color.clear, lineWidth: 2)
+                            .stroke(isSelected ? Color.reverBlue : Color.clear, lineWidth: 2)
                     )
             )
         }

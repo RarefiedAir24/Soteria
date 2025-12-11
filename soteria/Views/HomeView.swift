@@ -67,7 +67,7 @@ struct HomeView: View {
         } else if risk.riskLevel >= 0.4 {
             return .orange
         } else {
-            return Color.themePrimary
+            return Color.reverBlue
         }
     }
     
@@ -89,14 +89,14 @@ struct HomeView: View {
         }()
         
         return ZStack(alignment: .top) {
-            // Consistent background that extends to safe area
-            Color(red: 0.95, green: 0.95, blue: 0.95)
+            // REVER background - Mist Gray for calm, dreamlike feel
+            Color.mistGray
                 .ignoresSafeArea(.all, edges: .top)
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: .spacingSection) {
                     // Regret Risk Alert Card
                     if let risk = regretRiskEngine.currentRisk, risk.riskLevel >= 0.4 {
                         VStack(alignment: .leading, spacing: 12) {
@@ -107,13 +107,11 @@ struct HomeView: View {
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(riskLevelText)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .reverH3()
                                     
                                     if let recommendation = risk.recommendation {
                                         Text(recommendation)
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.gray)
+                                            .reverBody()
                                             .lineLimit(2)
                                     }
                                 }
@@ -139,13 +137,8 @@ struct HomeView: View {
                                 }
                             }
                         }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
-                        .padding(.horizontal, 20)
+                        .reverCard()
+                        .padding(.horizontal, .spacingCard)
                         .padding(.top, 60)
                     }
                     
@@ -154,17 +147,16 @@ struct HomeView: View {
                         HStack {
                             Image(systemName: quietHoursService.isQuietModeActive ? "moon.fill" : "moon")
                                 .font(.system(size: 24))
-                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.themePrimary : .gray)
+                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.reverBlue : .softGraphite)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(quietHoursService.isQuietModeActive ? "Financial Quiet Mode Active" : "Financial Quiet Mode Inactive")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .reverH3()
                                 
                                 if quietHoursService.isQuietModeActive {
                                     Text("Your sanctuary is protecting you")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(Color.themePrimary)
+                                        .reverCaption()
+                                        .foregroundColor(.reverBlue)
                                 } else if let schedule = quietHoursService.currentActiveSchedule {
                                     Text(schedule.name)
                                         .font(.system(size: 14))
@@ -194,15 +186,15 @@ struct HomeView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Protection Moments")
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(.softGraphite)
                                 
                                 Text("\(savingsService.soteriaMomentsCount)")
                                     .font(.system(size: 52, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(.reverBlue)
                                 
                                 Text("times you chose protection")
                                     .font(.system(size: 13))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(.softGraphite)
                             }
                             
                             Spacer()
@@ -214,7 +206,7 @@ struct HomeView: View {
                                         .font(.system(size: 32))
                                     Text("\(streakService.currentStreak)")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(.reverBlue)
                                     Text("day streak")
                                         .font(.system(size: 10))
                                         .foregroundColor(.gray)
@@ -234,7 +226,7 @@ struct HomeView: View {
                                     
                                     Text("\(Int(activeGoal.progress * 100))%")
                                         .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(.reverBlue)
                                 }
                                 
                                 // Progress Bar
@@ -245,7 +237,7 @@ struct HomeView: View {
                                             .frame(height: 6)
                                         
                                         RoundedRectangle(cornerRadius: 4)
-                                            .fill(Color.themePrimary)
+                                            .fill(Color.reverBlue)
                                             .frame(width: geometry.size.width * activeGoal.progress, height: 6)
                                     }
                                 }
@@ -290,11 +282,11 @@ struct HomeView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("This Week")
                                     .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(.softGraphite)
                                 
                                 Text("\(unblockMetrics.totalUnblocks)")
                                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 Text("unblock requests")
                                     .font(.system(size: 10))
@@ -312,7 +304,7 @@ struct HomeView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Impulse Rate")
                                     .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                        .foregroundColor(.softGraphite)
                                 
                                 if unblockMetrics.totalUnblocks > 0 {
                                     let impulseRate = Double(unblockMetrics.impulseUnblocks) / Double(unblockMetrics.totalUnblocks) * 100
@@ -354,19 +346,14 @@ struct HomeView: View {
                                     
                                     Text(currentMood.displayName)
                                         .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(.midnightSlate)
                                 }
                                 
                                 Spacer()
                             }
                         }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
-                        .padding(.horizontal, 20)
+                        .reverCard()
+                        .padding(.horizontal, .spacingCard)
                     }
                     
                     // Behavioral Insights Card
@@ -375,11 +362,11 @@ struct HomeView: View {
                             HStack {
                                 Image(systemName: "chart.bar.fill")
                                     .font(.system(size: 24))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(.reverBlue)
                                 
                                 Text("Your Insights")
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                 
                                 Spacer()
                             }
@@ -392,7 +379,7 @@ struct HomeView: View {
                                         .foregroundColor(.gray)
                                     Text("\(unblockMetrics.totalUnblocks)")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(.midnightSlate)
                                 }
                                 
                                 Spacer()
@@ -403,7 +390,7 @@ struct HomeView: View {
                                         .foregroundColor(.gray)
                                     Text("\(unblockMetrics.plannedUnblocks)")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(.reverBlue)
                                 }
                                 
                                 VStack(alignment: .trailing, spacing: 4) {
@@ -459,22 +446,17 @@ struct HomeView: View {
                                 HStack {
                                     Text("View Full Metrics")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(.reverBlue)
                                     Spacer()
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 12))
-                                        .foregroundColor(Color.themePrimary)
+                                        .foregroundColor(.reverBlue)
                                 }
                                 .padding(.top, 4)
                             }
                         }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
-                        .padding(.horizontal, 20)
+                        .reverCard()
+                        .padding(.horizontal, .spacingCard)
                     }
                     
                     // Regret Summary Card
@@ -492,19 +474,14 @@ struct HomeView: View {
                                     
                                     Text("\(regretService.recentRegretCount)")
                                         .font(.system(size: 24, weight: .bold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(.midnightSlate)
                                 }
                                 
                                 Spacer()
                             }
                         }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
-                        .padding(.horizontal, 20)
+                        .reverCard()
+                        .padding(.horizontal, .spacingCard)
                     }
                     
                     Spacer(minLength: 40)
@@ -526,7 +503,7 @@ struct HomeView: View {
                                 Circle()
                                     .fill(
                                         LinearGradient(
-                                            colors: [Color.themePrimaryDark, Color.themePrimaryLight],
+                                            colors: [Color.reverBlueDark, Color.reverBlueLight],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
@@ -552,7 +529,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Hi, \(userEmail)")
                         .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        .foregroundColor(Color.midnightSlate)
                     
                     Text("Welcome back")
                         .font(.system(size: 13))

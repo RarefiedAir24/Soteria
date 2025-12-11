@@ -61,7 +61,7 @@ class QuietHoursService: ObservableObject {
     @Published var schedules: [QuietHoursSchedule] = []
     @Published var isQuietModeActive: Bool = false
     @Published var currentActiveSchedule: QuietHoursSchedule? = nil
-    @Published var autoActivatedByMood: Bool = false // Track if auto-activated by mood
+    @Published var autoActivatedByMood: Bool = false // Track if auto-activated by behavioral patterns
     
     private let schedulesKey = "quiet_hours_schedules"
     private var timer: Timer?
@@ -71,9 +71,31 @@ class QuietHoursService: ObservableObject {
     private lazy var regretRiskEngine = RegretRiskEngine.shared
     
     private init() {
-        loadSchedules()
-        startMonitoring()
-        startMoodBasedMonitoring()
+        let initStart = Date()
+        print("✅ [QuietHoursService] Init started at \(initStart) (all work deferred)")
+        // Defer everything - no synchronous work
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            let loadStart = Date()
+            print("🟡 [QuietHoursService] Loading schedules at \(loadStart)")
+            self.loadSchedules()
+            let loadEnd = Date()
+            print("🟡 [QuietHoursService] Schedules loaded at \(loadEnd) (took \(loadEnd.timeIntervalSince(loadStart))s)")
+            
+            // Start monitoring in background (low priority)
+            print("🟡 [QuietHoursService] Deferring startMonitoring() - will start later")
+            // DISABLED: Defer startMonitoring to prevent blocking
+            /*
+            Task.detached(priority: .background) {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                await MainActor.run {
+                    self.startMonitoring()
+                }
+            }
+            */
+            let initEnd = Date()
+            print("✅ [QuietHoursService] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
+        }
     }
     
     deinit {
@@ -99,31 +121,45 @@ class QuietHoursService: ObservableObject {
     
     // Start monitoring quiet hours
     private func startMonitoring() {
-        // Check immediately
-        checkQuietHoursStatus()
+        // Check immediately (async, non-blocking)
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            await self.checkQuietHoursStatus()
+        }
         
         // Check every minute
         timer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-            self?.checkQuietHoursStatus()
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                await self.checkQuietHoursStatus()
+            }
         }
     }
     
     // Check if quiet hours are currently active
-    private func checkQuietHoursStatus() {
+    private func checkQuietHoursStatus() async {
         let activeSchedule = schedules.first { $0.isCurrentlyActive() }
         let wasActive = isQuietModeActive
         
-        DispatchQueue.main.async {
-            self.isQuietModeActive = activeSchedule != nil
-            self.currentActiveSchedule = activeSchedule
-            
-            // Notify DeviceActivityService when Quiet Hours status changes
-            if wasActive != self.isQuietModeActive {
-                print("🔄 [QuietHoursService] Quiet Hours status changed: \(self.isQuietModeActive ? "ACTIVE" : "INACTIVE")")
-                Task {
-                    await DeviceActivityService.shared.updateBlockingStatus()
-                }
-            }
+        isQuietModeActive = activeSchedule != nil
+        currentActiveSchedule = activeSchedule
+        
+        // Always notify DeviceActivityService to ensure blocking is applied
+        // This handles the case where Quiet Hours are already active on app launch
+        if wasActive != isQuietModeActive {
+            print("🔄 [QuietHoursService] Quiet Hours status changed: \(isQuietModeActive ? "ACTIVE" : "INACTIVE")")
+        } else if isQuietModeActive {
+            print("🔄 [QuietHoursService] Quiet Hours are active - ensuring blocking is applied")
+        }
+        
+        // Always update blocking status if monitoring is active
+        // This ensures blocking is applied even if status didn't "change" (e.g., on app launch)
+        // Defer this significantly to avoid blocking UI during app launch
+        // Use detached task with low priority to ensure it doesn't interfere with UI
+        Task.detached(priority: .background) {
+            // Wait 5 seconds to ensure app UI is fully responsive and user can interact
+            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+            await DeviceActivityService.shared.updateBlockingStatus()
         }
     }
     
@@ -131,7 +167,9 @@ class QuietHoursService: ObservableObject {
     func addSchedule(_ schedule: QuietHoursSchedule) {
         schedules.append(schedule)
         saveSchedules()
-        checkQuietHoursStatus()
+        Task { @MainActor in
+            await checkQuietHoursStatus()
+        }
     }
     
     // Update an existing schedule
@@ -139,7 +177,9 @@ class QuietHoursService: ObservableObject {
         if let index = schedules.firstIndex(where: { $0.id == schedule.id }) {
             schedules[index] = schedule
             saveSchedules()
-            checkQuietHoursStatus()
+            Task { @MainActor in
+                await checkQuietHoursStatus()
+            }
         }
     }
     
@@ -147,7 +187,9 @@ class QuietHoursService: ObservableObject {
     func deleteSchedule(_ schedule: QuietHoursSchedule) {
         schedules.removeAll { $0.id == schedule.id }
         saveSchedules()
-        checkQuietHoursStatus()
+        Task { @MainActor in
+            await checkQuietHoursStatus()
+        }
     }
     
     // Toggle schedule active state
@@ -155,7 +197,9 @@ class QuietHoursService: ObservableObject {
         if let index = schedules.firstIndex(where: { $0.id == schedule.id }) {
             schedules[index].isActive.toggle()
             saveSchedules()
-            checkQuietHoursStatus()
+            Task { @MainActor in
+                await checkQuietHoursStatus()
+            }
         }
     }
     
@@ -172,41 +216,63 @@ class QuietHoursService: ObservableObject {
         )
     }
     
-    // Start monitoring mood for auto-activation
-    private func startMoodBasedMonitoring() {
+    // Start monitoring behavioral patterns for auto-activation (Premium feature)
+    // Uses automatic behavioral patterns - no user input required
+    private func startBehavioralMonitoring(isPremium: Bool = false) {
+        // Only enable behavioral monitoring for premium users
+        guard isPremium else {
+            print("ℹ️ [QuietHoursService] Behavioral auto-activation is a Premium feature")
+            return
+        }
+        
         // Invalidate existing timer if any
         moodCheckTimer?.invalidate()
         
-        // Check every 5 minutes for mood-based activation
+        // Check every 5 minutes for behavioral risk patterns
         moodCheckTimer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { [weak self] _ in
-            self?.checkMoodBasedActivation()
+            self?.checkBehavioralActivation()
         }
     }
     
-    // Check if we should auto-activate based on emotional state
-    private func checkMoodBasedActivation() {
+    // Update premium status for behavioral monitoring
+    func updatePremiumStatus(_ isPremium: Bool) {
+        if isPremium {
+            startBehavioralMonitoring(isPremium: true)
+        } else {
+            moodCheckTimer?.invalidate()
+            moodCheckTimer = nil
+        }
+    }
+    
+    // Check if we should auto-activate based on automatic behavioral patterns
+    private func checkBehavioralActivation() {
         // Only auto-activate if no schedule is currently active
         guard !isQuietModeActive else { return }
         
-        // Check current mood risk
-        if let currentMood = moodService.currentMood {
-            let moodRisk = currentMood.regretRisk
-            
-            // Auto-activate if mood risk is very high (>= 0.8)
-            if moodRisk >= 0.8 {
-                autoActivateForMood(mood: currentMood, risk: moodRisk)
-            }
-        }
-        
-        // Also check regret risk engine
+        // Use RegretRiskEngine - it automatically tracks patterns without user input
+        // Factors include: late night, weekend, recent regrets, unblock frequency, etc.
         if let risk = regretRiskEngine.currentRisk, risk.riskLevel >= 0.8 {
             autoActivateForHighRisk(risk: risk)
         }
+        
+        // Also check unblock frequency patterns (automatic tracking)
+        // Use getUnblockMetrics which is public
+        let deviceActivityService = DeviceActivityService.shared
+        let metrics = deviceActivityService.getUnblockMetrics()
+        
+        // If user has unblocked 3+ times today, that's a vulnerability signal
+        // This is automatic - no user input required
+        if metrics.totalUnblocks >= 3 {
+            // Check if recent (within last hour)
+            let recentEvents = deviceActivityService.getRecentUnblockEvents(hours: 1)
+            if recentEvents.count >= 3 {
+                autoActivateForHighFrequency()
+            }
+        }
     }
     
-    // Auto-activate quiet hours for high mood risk
-    private func autoActivateForMood(mood: MoodLevel, risk: Double) {
-        // Create a temporary 2-hour protection window
+    // Auto-activate for high unblock frequency (automatic detection)
+    private func autoActivateForHighFrequency() {
         let now = Date()
         let calendar = Calendar.current
         let currentHour = calendar.component(.hour, from: now)
@@ -215,20 +281,21 @@ class QuietHoursService: ObservableObject {
         let endHour = (currentHour + 2) % 24
         
         let tempSchedule = QuietHoursSchedule(
-            name: "Auto-Protection: \(mood.displayName) Mood",
+            name: "Auto-Protection: High Activity Detected",
             startTime: DateComponents(hour: currentHour, minute: currentMinute),
             endTime: DateComponents(hour: endHour, minute: currentMinute),
             daysOfWeek: Set([calendar.component(.weekday, from: now)]),
             isActive: true
         )
         
-        // Add as temporary schedule
         schedules.append(tempSchedule)
         saveSchedules()
-        checkQuietHoursStatus()
         autoActivatedByMood = true
+        Task { @MainActor in
+            await checkQuietHoursStatus()
+        }
         
-        print("🛡️ [QuietHoursService] Auto-activated protection for \(mood.displayName) mood (risk: \(risk))")
+        print("🛡️ [QuietHoursService] Auto-activated protection for high unblock frequency")
     }
     
     // Auto-activate for high general risk
@@ -250,8 +317,10 @@ class QuietHoursService: ObservableObject {
         
         schedules.append(tempSchedule)
         saveSchedules()
-        checkQuietHoursStatus()
         autoActivatedByMood = true
+        Task { @MainActor in
+            await checkQuietHoursStatus()
+        }
         
         print("🛡️ [QuietHoursService] Auto-activated protection for high risk (level: \(risk.riskLevel))")
     }

@@ -18,7 +18,7 @@ struct MoodCheckInView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
@@ -38,7 +38,7 @@ struct MoodCheckInView: View {
                             
                             Text(currentMood.displayName)
                                 .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                         }
                         .padding(20)
                         .background(
@@ -53,7 +53,7 @@ struct MoodCheckInView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("How are you feeling?")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                             ForEach(MoodLevel.allCases, id: \.self) { mood in
@@ -72,7 +72,7 @@ struct MoodCheckInView: View {
                                     .padding(.vertical, 16)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(selectedMood == mood ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                            .fill(selectedMood == mood ? Color.reverBlue : Color.mistGray)
                                     )
                                 }
                             }
@@ -90,7 +90,7 @@ struct MoodCheckInView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Energy Level")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         HStack {
                             Text("Low")
@@ -109,7 +109,7 @@ struct MoodCheckInView: View {
                         
                         Text("\(energyLevel)/10")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color.themePrimary)
+                            .foregroundColor(Color.reverBlue)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .padding(20)
@@ -124,14 +124,14 @@ struct MoodCheckInView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Notes (Optional)")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         TextField("What's on your mind?", text: $notes, axis: .vertical)
                             .lineLimit(3...6)
                             .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                    .fill(Color.mistGray)
                             )
                     }
                     .padding(20)
@@ -153,7 +153,7 @@ struct MoodCheckInView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedMood != nil ? Color.themePrimary : Color.gray)
+                                    .fill(selectedMood != nil ? Color.reverBlue : Color.gray)
                             )
                     }
                     .disabled(selectedMood == nil)
@@ -166,11 +166,11 @@ struct MoodCheckInView: View {
                         Text("Daily Reflection")
                             .frame(maxWidth: .infinity)
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color.themePrimary)
+                            .foregroundColor(Color.reverBlue)
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.themePrimary, lineWidth: 2)
+                                    .stroke(Color.reverBlue, lineWidth: 2)
                             )
                     }
                     .padding(.horizontal, 20)
@@ -183,7 +183,7 @@ struct MoodCheckInView: View {
             VStack(spacing: 2) {
                 Text("Mood Check-In")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)

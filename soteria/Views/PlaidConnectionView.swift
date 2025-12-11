@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-// import LinkKit  // Temporarily disabled - will implement lazy loading
+import LinkKit
 
 struct PlaidConnectionView: View {
     @EnvironmentObject var plaidService: PlaidService
@@ -25,7 +25,7 @@ struct PlaidConnectionView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "building.columns.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                     
                     Text("Connect Your Accounts")
                         .font(.title.bold())
@@ -79,7 +79,7 @@ struct PlaidConnectionView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.themePrimary)
+                    .background(Color.reverBlue)
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
@@ -139,7 +139,11 @@ struct PlaidConnectionView: View {
                 // Provide more helpful error message
                 let errorDesc = error.localizedDescription
                 if errorDesc.contains("Internal server error") {
+                    #if DEBUG
+                    errorMessage = "Backend error. Please check:\n1. Local dev server is running (http://localhost:8000)\n2. Plaid credentials are configured in .env\n3. Server logs for details"
+                    #else
                     errorMessage = "Backend error. Please check:\n1. Lambda function is deployed\n2. Plaid credentials are configured\n3. CloudWatch logs for details"
+                    #endif
                 } else {
                     errorMessage = errorDesc
                 }
@@ -195,7 +199,7 @@ class PlaidLinkViewController: UIViewController {
     let linkToken: String
     let onSuccess: (String) -> Void
     let onExit: () -> Void
-    var linkHandler: Any? // Handler?  // Temporarily disabled
+    var linkHandler: Handler?
     
     init(linkToken: String, onSuccess: @escaping (String) -> Void, onExit: @escaping () -> Void) {
         self.linkToken = linkToken
@@ -211,41 +215,60 @@ class PlaidLinkViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Create Plaid Link configuration
-        // TEMPORARILY DISABLED - will implement lazy loading
-        /*
-        var configuration = LinkTokenConfiguration(
+        view.backgroundColor = .systemBackground
+        
+        // Don't present LinkKit here - view is not in window hierarchy yet
+        // Presentation will happen in viewDidAppear when view is visible
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        // Only present LinkKit once when view appears
+        // Check if we've already initialized to prevent re-presentation
+        guard linkHandler == nil else { return }
+        
+        // Initialize Plaid Link with LinkKit v4.7.9
+        var linkConfiguration = LinkTokenConfiguration(
             token: linkToken,
             onSuccess: { [weak self] linkSuccess in
-                print("✅ [PlaidLinkViewController] Success: \(linkSuccess.publicToken)")
-                self?.onSuccess(linkSuccess.publicToken)
-                self?.dismiss(animated: true)
+                guard let self = self else { return }
+                // Extract public token from success result
+                let publicToken = linkSuccess.publicToken
+                print("✅ [PlaidLinkViewController] Link success - public token: \(publicToken)")
+                // Dismiss this view controller first, then call success callback
+                DispatchQueue.main.async {
+                    self.dismiss(animated: true) {
+                        self.onSuccess(publicToken)
+                    }
+                }
             }
         )
         
-        configuration.onExit = { [weak self] linkExit in
-            if let error = linkExit.error {
-                print("⚠️ [PlaidLinkViewController] Exit with error: \(error.localizedDescription)")
-            } else {
-                print("⚠️ [PlaidLinkViewController] User exited")
+        // Set onExit handler
+        linkConfiguration.onExit = { [weak self] linkExit in
+            guard let self = self else { return }
+            print("⚠️ [PlaidLinkViewController] Link exited")
+            // Dismiss this view controller first, then call the exit callback
+            DispatchQueue.main.async {
+                self.dismiss(animated: true) {
+                    self.onExit()
+                }
             }
-            self?.onExit()
-            self?.dismiss(animated: true)
         }
         
-        // Create and present Plaid Link
-        let result = Plaid.create(configuration)
+        // Create and open Link handler
+        // Now 'self' is in the window hierarchy, so presentation will work
+        let result = Plaid.create(linkConfiguration)
         switch result {
         case .success(let handler):
-            linkHandler = handler
-            linkHandler?.open(presentUsing: .viewController(self))
+            self.linkHandler = handler
+            handler.open(presentUsing: .viewController(self))
+            
         case .failure(let error):
-            print("❌ [PlaidLinkViewController] Failed to create Plaid Link: \(error)")
-            onExit()
+            print("❌ [PlaidLinkViewController] Failed to create Link handler: \(error)")
+            self.onExit()
         }
-        */
-        print("⚠️ [PlaidLinkViewController] Plaid temporarily disabled - implementing lazy loading")
-        onExit()
     }
     
     deinit {
@@ -262,7 +285,7 @@ struct BenefitRow: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundColor(Color.themePrimary)
+                .foregroundColor(Color.reverBlue)
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: 4) {

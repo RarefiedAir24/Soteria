@@ -21,11 +21,11 @@ struct BehavioralPatternsView: View {
             HStack {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundColor(Color.reverBlue)
                 
                 Text("Behavioral Patterns")
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
             }
@@ -56,7 +56,7 @@ struct BehavioralPatternsView: View {
                     
                     PatternStatRow(
                         icon: "checkmark.circle.fill",
-                        iconColor: Color.themePrimary,
+                        iconColor: Color.reverBlue,
                         label: "App Usage Rate",
                         value: "\(String(format: "%.1f", behavioralPatterns.usageRate))%"
                     )
@@ -81,7 +81,7 @@ struct BehavioralPatternsView: View {
                     
                     PatternStatRow(
                         icon: "chart.line.uptrend.xyaxis",
-                        iconColor: Color.themePrimary,
+                        iconColor: Color.reverBlue,
                         label: "Avg Per Day",
                         value: String(format: "%.1f", behavioralPatterns.avgUnblocksPerDay)
                     )
@@ -119,7 +119,7 @@ struct PatternStatRow: View {
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                .foregroundColor(Color.midnightSlate)
         }
     }
 }
@@ -133,12 +133,12 @@ struct FilterChip: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
+                .foregroundColor(isSelected ? .white : Color.midnightSlate)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .fill(isSelected ? Color.reverBlue : Color.mistGray)
                 )
         }
     }
@@ -161,7 +161,7 @@ struct PatternBreakdownCard: View {
                 
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
                 
@@ -221,7 +221,7 @@ struct DayOfWeekChartCard: View {
                 
                 Text("Day of Week Distribution")
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
                 
@@ -274,7 +274,7 @@ struct QuietHoursPatternCard: View {
                 
                 Text("Quiet Hours Activity")
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
             }
@@ -295,7 +295,7 @@ struct QuietHoursPatternCard: View {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                            .fill(Color.mistGray)
                             .frame(height: 20)
                         
                         RoundedRectangle(cornerRadius: 8)
@@ -333,12 +333,12 @@ struct AppUsagePatternCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundColor(Color.reverBlue)
                     .font(.system(size: 18))
                 
                 Text("App Usage After Unblock")
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
             }
@@ -348,7 +348,7 @@ struct AppUsagePatternCard: View {
                 VStack(spacing: 4) {
                     Text("\(String(format: "%.1f", usageRate))%")
                         .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(Color.themePrimary)
+                        .foregroundColor(Color.reverBlue)
                     
                     Text("of unblocks led to app usage")
                         .font(.subheadline)
@@ -360,7 +360,7 @@ struct AppUsagePatternCard: View {
                     VStack(spacing: 4) {
                         Text("\(appsUsedCount)")
                             .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Color.themePrimary)
+                            .foregroundColor(Color.reverBlue)
                         Text("Used")
                             .font(.caption)
                             .foregroundColor(.gray)
@@ -380,7 +380,7 @@ struct AppUsagePatternCard: View {
                 GeometryReader { geometry in
                     HStack(spacing: 0) {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.themePrimary)
+                            .fill(Color.reverBlue)
                             .frame(width: geometry.size.width * CGFloat(usageRate / 100.0), height: 20)
                         
                         RoundedRectangle(cornerRadius: 8)
@@ -421,7 +421,7 @@ struct PatternDetailView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(red: 0.98, green: 0.98, blue: 0.98)
+                Color.cloudWhite
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -653,14 +653,14 @@ struct DetailedCategoryRow: View {
     let count: Int
     let total: Int
     let percentage: Double
-    var color: Color = Color.themePrimary
+    var color: Color = Color.reverBlue
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(label)
                     .font(.headline)
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
                 
                 Spacer()
                 
@@ -679,7 +679,7 @@ struct DetailedCategoryRow: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .fill(Color.mistGray)
                         .frame(height: 12)
                     
                     RoundedRectangle(cornerRadius: 6)

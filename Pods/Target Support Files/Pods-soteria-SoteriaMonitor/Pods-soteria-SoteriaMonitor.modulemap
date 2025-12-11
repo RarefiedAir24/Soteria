@@ -1,0 +1,6 @@
+framework module Pods_soteria_SoteriaMonitor {
+  umbrella header "Pods-soteria-SoteriaMonitor-umbrella.h"
+
+  export *
+  module * { export * }
+}

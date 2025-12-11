@@ -52,13 +52,13 @@ struct MainTabView: View {
         }
         // Set consistent toolbar appearance to prevent color changes when switching tabs
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(Color(red: 0.95, green: 0.95, blue: 0.95), for: .tabBar)
+        .toolbarBackground(Color.mistGray, for: .tabBar)
         // Also set consistent navigation bar appearance for all tabs
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(Color(red: 0.95, green: 0.95, blue: 0.95), for: .navigationBar)
+        .toolbarBackground(Color.mistGray, for: .navigationBar)
         // Set consistent status bar style
         .preferredColorScheme(.light)
-        .onChange(of: selectedTab) { newValue in
+        .onChange(of: selectedTab) { oldValue, newValue in
             // When Settings tab is selected, wait a moment before creating the view
             // This gives the app time to finish any initialization
             if newValue == 2 && !shouldCreateSettingsView {

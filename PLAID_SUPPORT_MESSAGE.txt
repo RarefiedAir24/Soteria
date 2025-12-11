@@ -1,0 +1,99 @@
+Subject: Two Issues - Link Token Configuration Fixed, but LinkKit Framework Causes dyld Crash
+
+Hello Plaid Support,
+
+I'm working on an iOS mobile app integration with Plaid and have encountered two issues:
+
+**Issue 1: RESOLVED** ✅
+- Initially had INVALID_CONFIGURATION error: "link token can only be configured for one Link flow"
+- Fixed by changing products from ["auth", "balance"] to ["auth", "transactions"]
+- Link token creation now works successfully (Request ID: pmudhgGuGC2hoNO, 200 OK)
+
+**Issue 2: CRITICAL - dyld Crash at App Startup** ❌
+- The Plaid LinkKit framework causes a dyld crash when the app launches
+- Error: `dyld`__abort_with_payload` at app startup
+- This happens BEFORE any Swift code runs (during framework loading)
+- The framework is loaded by the dynamic linker at app startup, even with conditional imports
+- Request ID (successful link token): pmudhgGuGC2hoNO
+- Environment: Sandbox
+- Client ID: 69352338b821ae002254a4e1
+
+App Details:
+- Platform: iOS
+- Bundle ID: io.montebay.soteria
+- Integration Type: Native iOS app using Plaid LinkKit SDK (CocoaPods)
+- SDK Version: Plaid Node v21.0.0
+
+What I've Verified:
+1. ✅ No Redirect URIs configured in dashboard (Allowed redirect URIs section is empty)
+2. ✅ No webhook URLs configured (for testing)
+3. ✅ Link token request does NOT include:
+   - redirect_uri (not included)
+   - webhook (not included)
+   - ios_bundle_id (not a valid parameter for this endpoint)
+4. ✅ Code follows Plaid iOS integration guidelines
+
+Link Token Request Body (Working):
+{
+  "user": {
+    "client_user_id": "[Firebase user ID]"
+  },
+  "client_name": "Soteria",
+  "products": ["auth", "transactions"],
+  "country_codes": ["US"],
+  "language": "en"
+}
+
+Request Structure Validation:
+✅ client_name: Present (string)
+✅ language: Present ("en")
+✅ country_codes: Present (array with "US")
+✅ user: Present (object)
+✅ user.client_user_id: Present (string, unique per user)
+✅ products: Present (array with "auth" and "transactions")
+❌ redirect_uri: NOT included (correct for mobile)
+❌ webhook: NOT included (correct for mobile)
+
+The request structure matches Plaid's documentation exactly. Link token creation is working (200 OK).
+
+Dashboard Configuration:
+- I cannot find a field to set/confirm iOS Bundle ID in the dashboard
+- No redirect URIs are configured
+- No webhook URLs are configured
+- Environment: Sandbox
+
+Current Status:
+✅ Link token creation: WORKING (200 OK, Request ID: pmudhgGuGC2hoNO)
+✅ Backend API integration: WORKING
+✅ Exchange token endpoint: WORKING
+❌ LinkKit framework: CRASHES at app startup (dyld crash)
+
+The Problem:
+The Plaid LinkKit framework (v3.1.1 via CocoaPods) causes a dyld crash when the app launches. This happens:
+- During framework loading by the dynamic linker
+- BEFORE any Swift code executes
+- Even with conditional imports (#if canImport(LinkKit))
+- The framework is linked at build time, so dyld tries to load it at startup
+
+Integration Details:
+- Platform: iOS 15.0+
+- Integration Method: CocoaPods (pod 'Plaid', '~> 3.0')
+- Framework Version: 3.1.1
+- Xcode: Latest
+- Device: Physical iPhone (also crashes on simulator)
+
+Request:
+Could you please help with:
+1. Investigate why LinkKit framework causes dyld crash at app startup
+2. Provide guidance on proper integration to prevent startup crash
+3. Check if there are known issues with LinkKit v3.1.1 and iOS 15+
+4. Recommend best practices for integrating LinkKit without causing startup crashes
+5. Consider if weak linking or lazy loading options are available
+
+The backend integration is working perfectly - only the LinkKit UI framework has the crash issue.
+
+Thank you for your assistance!
+
+Best regards,
+[Your Name]
+

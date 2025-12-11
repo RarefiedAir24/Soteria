@@ -22,7 +22,7 @@ struct AppManagementView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(red: 0.98, green: 0.98, blue: 0.98)
+                Color.cloudWhite
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -31,12 +31,12 @@ struct AppManagementView: View {
                         VStack(spacing: 8) {
                             Image(systemName: "app.badge.checkmark")
                                 .font(.system(size: 60))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                             
                             Text("Manage Apps")
                                 .font(.title)
                                 .fontWeight(.bold)
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                             
                             Text("\(appsCount) app\(appsCount == 1 ? "" : "s") selected")
                                 .font(.subheadline)
@@ -68,7 +68,7 @@ struct AppManagementView: View {
                                     HStack {
                                         Image(systemName: "app.fill")
                                             .font(.system(size: 24))
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                         
                                         if editingIndex == index {
                                             // Editing mode
@@ -99,7 +99,7 @@ struct AppManagementView: View {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(deviceActivityService.getAppName(forIndex: index))
                                                     .font(.headline)
-                                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                    .foregroundColor(Color.midnightSlate)
                                                 
                                                 Text("App \(index + 1)")
                                                     .font(.caption)
@@ -112,7 +112,7 @@ struct AppManagementView: View {
                                                 startEditing(index: index)
                                             }) {
                                                 Image(systemName: "pencil.circle.fill")
-                                                    .foregroundColor(Color.themePrimary)
+                                                    .foregroundColor(Color.reverBlue)
                                                     .font(.system(size: 24))
                                             }
                                         }

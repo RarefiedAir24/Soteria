@@ -9,16 +9,23 @@ import Foundation
 import Combine
 
 class SavingsService: ObservableObject {
-    @Published var totalSaved: Double = 0
-    @Published var soteriaMomentsCount: Int = 0
-    @Published var lastSavedAmount: Double? = nil
-    @Published var totalTransferredToSavings: Double = 0 // Money transferred to bank accounts
+    // Note: These are user-reported estimates, not actual purchase tracking
+    // We cannot track actual purchases - users manually enter amounts when they skip a purchase
+    @Published var totalSaved: Double = 0 // User-reported estimated amount avoided
+    @Published var soteriaMomentsCount: Int = 0 // Number of times user chose protection
+    @Published var lastSavedAmount: Double? = nil // Last user-reported estimated amount
+    @Published var totalTransferredToSavings: Double = 0 // Money transferred to bank accounts (if Plaid integration used)
     
+    // Record when user skips a purchase and reports estimated amount
+    // This is NOT actual purchase tracking - it's user-reported data
+    // Amount is optional - the protection moment is what matters
     func recordSkipAndSave(amount: Double) {
-        guard amount > 0 else { return }
-        totalSaved += amount
-            soteriaMomentsCount += 1
-        lastSavedAmount = amount
+        soteriaMomentsCount += 1 // Count of protection moments (always increment)
+        
+        if amount > 0 {
+            totalSaved += amount // User-reported estimated amount they avoided spending
+            lastSavedAmount = amount
+        }
     }
     
     // Record transfer to savings account

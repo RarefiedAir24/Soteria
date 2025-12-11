@@ -1,0 +1,10 @@
+{
+  "name": "soteria-plaid-create-link-token",
+  "version": "1.0.0",
+  "description": "Lambda function to create Plaid Link tokens for Soteria",
+  "main": "index.js",
+  "dependencies": {
+    "plaid": "^21.0.0"
+  }
+}
+

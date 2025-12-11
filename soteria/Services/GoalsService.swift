@@ -15,6 +15,7 @@ struct SavingsGoal: Identifiable, Codable {
     var currentAmount: Double
     var targetDate: Date?
     var category: GoalCategory
+    var protectionAmount: Double = 10.0 // Amount added to goal each time user chooses protection
     
     enum GoalCategory: String, Codable, CaseIterable {
         case trip = "Trip"
@@ -51,7 +52,10 @@ class GoalsService: ObservableObject {
     private let goalsKey = "saved_goals"
     
     private init() {
-        loadGoals()
+        // Defer loading to avoid blocking UI
+        Task { @MainActor [weak self] in
+            self?.loadGoals()
+        }
     }
     
     // Load goals from UserDefaults
@@ -129,6 +133,25 @@ class GoalsService: ObservableObject {
     // Get total saved across all goals
     var totalSavedAcrossGoals: Double {
         return goals.reduce(0) { $0 + $1.currentAmount }
+    }
+    
+    // Add protection amount to active goal (automatic when user chooses protection)
+    func addProtectionToActiveGoal() {
+        guard let activeGoal = activeGoal else { return }
+        addToGoal(goalId: activeGoal.id, amount: activeGoal.protectionAmount)
+    }
+    
+    // Update protection amount for a goal
+    func updateProtectionAmount(goalId: String, amount: Double) {
+        guard let index = goals.firstIndex(where: { $0.id == goalId }) else { return }
+        var goal = goals[index]
+        goal.protectionAmount = max(0, amount) // Ensure non-negative
+        goals[index] = goal
+        
+        if activeGoal?.id == goalId {
+            self.activeGoal = goal
+        }
+        saveGoals()
     }
 }
 

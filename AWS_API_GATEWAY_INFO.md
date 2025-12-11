@@ -1,8 +1,10 @@
 # AWS API Gateway Information - Rever
 
+**⚠️ DEPRECATED: This is for the old "rever-plaid-api". See `AWS_MIGRATION_PLAN.md` for migrating to "soteria-api".**
+
 ## API Gateway Details
 
-**API Name:** `rever-plaid-api`
+**API Name:** `rever-plaid-api` (OLD - Use `soteria-api` instead)
 **API ID:** `vus7x2s6o7`
 **Region:** `us-east-1`
 **Created:** December 7, 2025

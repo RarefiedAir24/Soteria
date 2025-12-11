@@ -57,7 +57,7 @@ struct PremiumLock: ViewModifier {
                                 .padding(.vertical, 10)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.themePrimary)
+                                        .fill(Color.deepReverBlue)
                                 )
                         }
                     }

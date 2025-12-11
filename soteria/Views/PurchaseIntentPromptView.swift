@@ -32,7 +32,7 @@ struct PurchaseIntentPromptView: View {
                     VStack(spacing: 30) {
                         Image(systemName: "app.badge.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(Color.themePrimary)
+                            .foregroundColor(Color.reverBlue)
                         
                         // First, ask which app they were trying to open
                         if selectedAppIndex == nil {
@@ -40,7 +40,7 @@ struct PurchaseIntentPromptView: View {
                                 Text("Which app were you trying to open?")
                                     .font(.title2)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal)
                                 
@@ -64,11 +64,11 @@ struct PurchaseIntentPromptView: View {
                                                 HStack {
                                                     Image(systemName: "app.fill")
                                                         .font(.system(size: 24))
-                                                        .foregroundColor(selectedAppIndex == index ? .white : Color.themePrimary)
+                                                        .foregroundColor(selectedAppIndex == index ? .white : Color.reverBlue)
                                                     
                                                     Text(deviceActivityService.getAppName(forIndex: index))
                                                         .font(.headline)
-                                                        .foregroundColor(selectedAppIndex == index ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                        .foregroundColor(selectedAppIndex == index ? .white : Color.midnightSlate)
                                                     
                                                     Spacer()
                                                     
@@ -80,7 +80,7 @@ struct PurchaseIntentPromptView: View {
                                                 .padding()
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 12)
-                                                        .fill(selectedAppIndex == index ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                        .fill(selectedAppIndex == index ? Color.reverBlue : Color.mistGray)
                                                 )
                                             }
                                         }
@@ -94,7 +94,7 @@ struct PurchaseIntentPromptView: View {
                             Text("Is this a planned activity or impulse?")
                                 .font(.title2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                .foregroundColor(Color.midnightSlate)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                             
@@ -108,10 +108,10 @@ struct PurchaseIntentPromptView: View {
                                         VStack(spacing: 12) {
                                             Image(systemName: "calendar.circle.fill")
                                                 .font(.system(size: 50))
-                                                .foregroundColor(Color.themePrimary)
+                                                .foregroundColor(Color.reverBlue)
                                             Text("Planned")
                                                 .font(.headline)
-                                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                .foregroundColor(Color.midnightSlate)
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 24)
@@ -131,7 +131,7 @@ struct PurchaseIntentPromptView: View {
                                                 .foregroundColor(.orange)
                                             Text("Impulse")
                                                 .font(.headline)
-                                                .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                .foregroundColor(Color.midnightSlate)
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 24)
@@ -151,7 +151,7 @@ struct PurchaseIntentPromptView: View {
                                 if selectedCategory == nil {
                                     Text("What category is this activity?")
                                         .font(.headline)
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                         .multilineTextAlignment(.center)
                                     
                                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
@@ -163,17 +163,17 @@ struct PurchaseIntentPromptView: View {
                                                 VStack(spacing: 8) {
                                                     Image(systemName: category.icon)
                                                         .font(.system(size: 32))
-                                                        .foregroundColor(selectedCategory == category ? .white : Color.themePrimary)
+                                                        .foregroundColor(selectedCategory == category ? .white : Color.reverBlue)
                                                     Text(category.displayName)
                                                         .font(.subheadline)
-                                                        .foregroundColor(selectedCategory == category ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                        .foregroundColor(selectedCategory == category ? .white : Color.midnightSlate)
                                                         .multilineTextAlignment(.center)
                                                 }
                                                 .frame(maxWidth: .infinity)
                                                 .padding(.vertical, 16)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 12)
-                                                        .fill(selectedCategory == category ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                        .fill(selectedCategory == category ? Color.reverBlue : Color.mistGray)
                                                 )
                                             }
                                         }
@@ -183,7 +183,7 @@ struct PurchaseIntentPromptView: View {
                                     VStack(spacing: 20) {
                                         Text("Selected: \(selectedCategory?.displayName ?? "")")
                                             .font(.headline)
-                                            .foregroundColor(Color.themePrimary)
+                                            .foregroundColor(Color.reverBlue)
                                         
                                         Button(action: {
                                             print("✅ [PurchaseIntentPromptView] Continue button tapped for planned purchase")
@@ -194,7 +194,7 @@ struct PurchaseIntentPromptView: View {
                                                 .foregroundColor(.white)
                                                 .padding(.vertical, 14)
                                                 .frame(maxWidth: .infinity)
-                                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.themePrimary))
+                                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.reverBlue))
                                         }
                                         .padding(.horizontal, 32)
                                         
@@ -217,7 +217,7 @@ struct PurchaseIntentPromptView: View {
                                 if selectedMood == nil {
                                     Text("How are you feeling?")
                                         .font(.headline)
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .foregroundColor(Color.midnightSlate)
                                         .multilineTextAlignment(.center)
                                     
                                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
@@ -235,7 +235,7 @@ struct PurchaseIntentPromptView: View {
                                                         .foregroundColor(selectedMood == mood ? .white : .orange)
                                                     Text(mood.displayName)
                                                         .font(.subheadline)
-                                                        .foregroundColor(selectedMood == mood ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
+                                                        .foregroundColor(selectedMood == mood ? .white : Color.midnightSlate)
                                                         .multilineTextAlignment(.center)
                                                 }
                                                 .frame(maxWidth: .infinity)
@@ -259,7 +259,7 @@ struct PurchaseIntentPromptView: View {
                                                 .padding(12)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 12)
-                                                        .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                        .fill(Color.mistGray)
                                                 )
                                                 .lineLimit(3...6)
                                         }
@@ -283,7 +283,7 @@ struct PurchaseIntentPromptView: View {
                                                     .padding(12)
                                                     .background(
                                                         RoundedRectangle(cornerRadius: 12)
-                                                            .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                            .fill(Color.mistGray)
                                                     )
                                                     .lineLimit(3...6)
                                             }
@@ -322,11 +322,11 @@ struct PurchaseIntentPromptView: View {
                             VStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 50))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 
                                 Text(confirmation)
                                     .font(.headline)
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                    .foregroundColor(Color.midnightSlate)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal)
                             }

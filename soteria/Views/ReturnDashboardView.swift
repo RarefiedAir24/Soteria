@@ -36,7 +36,7 @@ struct ReturnDashboardView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color(red: 0.98, green: 0.98, blue: 0.98)
+            Color.cloudWhite
                 .ignoresSafeArea()
             
             ScrollView {
@@ -48,7 +48,7 @@ struct ReturnDashboardView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Return Support Dashboard")
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                         
                         Text("We provide the maximum support permitted by law")
                             .font(.system(size: 13))
@@ -63,7 +63,7 @@ struct ReturnDashboardView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("\(regretService.getReturnableRegrets().count)")
                                     .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 Text("Pending Returns")
                                     .font(.system(size: 12))
                                     .foregroundColor(.gray)
@@ -81,7 +81,7 @@ struct ReturnDashboardView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("\(regretService.regretEntries.filter { $0.returnStatus == .returned }.count)")
                                     .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(Color.themePrimary)
+                                    .foregroundColor(Color.reverBlue)
                                 Text("Completed")
                                     .font(.system(size: 12))
                                     .foregroundColor(.gray)
@@ -123,7 +123,7 @@ struct ReturnDashboardView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(Color.themePrimary)
+                                .foregroundColor(Color.reverBlue)
                             
                             Text("No Returns to Track")
                                 .font(.system(size: 20, weight: .semibold))
@@ -131,7 +131,7 @@ struct ReturnDashboardView: View {
                             
                             Text("All your returns are organized and tracked")
                                 .font(.system(size: 14))
-                                .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                .foregroundColor(Color.softGraphite)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                         }
@@ -154,7 +154,7 @@ struct ReturnDashboardView: View {
             VStack(spacing: 2) {
                 Text("Return Dashboard")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    .foregroundColor(Color.midnightSlate)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
@@ -176,12 +176,12 @@ struct FilterButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
+                .foregroundColor(isSelected ? .white : Color.midnightSlate)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .fill(isSelected ? Color.reverBlue : Color.mistGray)
                 )
         }
     }
@@ -205,7 +205,7 @@ struct ReturnDashboardCard: View {
             } else if days <= 3 {
                 return ("\(days) days left", .orange)
             } else {
-                return ("\(days) days left", Color.themePrimary)
+                return ("\(days) days left", Color.reverBlue)
             }
         }
         return ("Deadline: \(formatDate(deadline))", .gray)
@@ -218,7 +218,7 @@ struct ReturnDashboardCard: View {
                     if let merchant = regret.merchant {
                         Text(merchant)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .foregroundColor(Color.midnightSlate)
                     }
                     
                     if let amount = regret.amount {
@@ -238,9 +238,9 @@ struct ReturnDashboardCard: View {
                             .padding(.vertical, 4)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(status == .returned ? Color.themePrimary.opacity(0.2) : Color.orange.opacity(0.2))
+                                    .fill(status == .returned ? Color.reverBlue.opacity(0.2) : Color.orange.opacity(0.2))
                             )
-                            .foregroundColor(status == .returned ? Color.themePrimary : .orange)
+                            .foregroundColor(status == .returned ? Color.reverBlue : .orange)
                     }
                     
                     Text(deadlineStatus.text)
