@@ -21,6 +21,7 @@ struct PurchaseIntentPromptView: View {
     @State private var showConfirmation: String? = nil
     // Track which app index user selected (simpler than storing token)
     @State private var selectedAppIndex: Int? = nil
+    @State private var appsCount: Int = 0 // Cache to avoid blocking access
     
     var body: some View {
         NavigationView {
@@ -29,9 +30,9 @@ struct PurchaseIntentPromptView: View {
                 
                 ScrollView {
                     VStack(spacing: 30) {
-                        Image(systemName: "cart.fill")
+                        Image(systemName: "app.badge.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                            .foregroundColor(Color.themePrimary)
                         
                         // First, ask which app they were trying to open
                         if selectedAppIndex == nil {
@@ -44,10 +45,9 @@ struct PurchaseIntentPromptView: View {
                                     .padding(.horizontal)
                                 
                                 // Show list of selected apps
-                                let selectedApps = deviceActivityService.selectedApps
-                                if selectedApps.applicationTokens.count == 1 {
+                                if appsCount == 1 {
                                     // Only one app - auto-select it
-                                    Text("Opening \(selectedApps.applicationTokens.count) app")
+                                    Text("Opening \(appsCount) app")
                                         .font(.subheadline)
                                         .foregroundColor(.gray)
                                         .onAppear {
@@ -56,14 +56,15 @@ struct PurchaseIntentPromptView: View {
                                 } else {
                                     // Multiple apps - let user select
                                     VStack(spacing: 12) {
-                                        ForEach(Array(selectedApps.applicationTokens.enumerated()), id: \.element) { index, token in
+                                        // Use cached count to avoid blocking
+                                        ForEach(0..<appsCount, id: \.self) { index in
                                             Button(action: {
                                                 selectedAppIndex = index
                                             }) {
                                                 HStack {
                                                     Image(systemName: "app.fill")
                                                         .font(.system(size: 24))
-                                                        .foregroundColor(selectedAppIndex == index ? .white : Color(red: 0.1, green: 0.6, blue: 0.3))
+                                                        .foregroundColor(selectedAppIndex == index ? .white : Color.themePrimary)
                                                     
                                                     Text(deviceActivityService.getAppName(forIndex: index))
                                                         .font(.headline)
@@ -79,7 +80,7 @@ struct PurchaseIntentPromptView: View {
                                                 .padding()
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 12)
-                                                        .fill(selectedAppIndex == index ? Color(red: 0.1, green: 0.6, blue: 0.3) : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                        .fill(selectedAppIndex == index ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
                                                 )
                                             }
                                         }
@@ -88,9 +89,9 @@ struct PurchaseIntentPromptView: View {
                                 }
                             }
                         }
-                        // Then ask purchase type (only if app is selected)
+                        // Then ask activity type (only if app is selected)
                         else if selectedAppIndex != nil && purchaseType == nil {
-                            Text("Is this a planned purchase or impulse?")
+                            Text("Is this a planned activity or impulse?")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
@@ -107,7 +108,7 @@ struct PurchaseIntentPromptView: View {
                                         VStack(spacing: 12) {
                                             Image(systemName: "calendar.circle.fill")
                                                 .font(.system(size: 50))
-                                                .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                                .foregroundColor(Color.themePrimary)
                                             Text("Planned")
                                                 .font(.headline)
                                                 .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
@@ -148,7 +149,7 @@ struct PurchaseIntentPromptView: View {
                         else if purchaseType == .planned {
                             VStack(spacing: 20) {
                                 if selectedCategory == nil {
-                                    Text("What category is this purchase?")
+                                    Text("What category is this activity?")
                                         .font(.headline)
                                         .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
                                         .multilineTextAlignment(.center)
@@ -162,7 +163,7 @@ struct PurchaseIntentPromptView: View {
                                                 VStack(spacing: 8) {
                                                     Image(systemName: category.icon)
                                                         .font(.system(size: 32))
-                                                        .foregroundColor(selectedCategory == category ? .white : Color(red: 0.1, green: 0.6, blue: 0.3))
+                                                        .foregroundColor(selectedCategory == category ? .white : Color.themePrimary)
                                                     Text(category.displayName)
                                                         .font(.subheadline)
                                                         .foregroundColor(selectedCategory == category ? .white : Color(red: 0.1, green: 0.1, blue: 0.1))
@@ -172,7 +173,7 @@ struct PurchaseIntentPromptView: View {
                                                 .padding(.vertical, 16)
                                                 .background(
                                                     RoundedRectangle(cornerRadius: 12)
-                                                        .fill(selectedCategory == category ? Color(red: 0.1, green: 0.6, blue: 0.3) : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                        .fill(selectedCategory == category ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
                                                 )
                                             }
                                         }
@@ -182,7 +183,7 @@ struct PurchaseIntentPromptView: View {
                                     VStack(spacing: 20) {
                                         Text("Selected: \(selectedCategory?.displayName ?? "")")
                                             .font(.headline)
-                                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .foregroundColor(Color.themePrimary)
                                         
                                         Button(action: {
                                             print("✅ [PurchaseIntentPromptView] Continue button tapped for planned purchase")
@@ -193,7 +194,7 @@ struct PurchaseIntentPromptView: View {
                                                 .foregroundColor(.white)
                                                 .padding(.vertical, 14)
                                                 .frame(maxWidth: .infinity)
-                                                .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.1, green: 0.6, blue: 0.3)))
+                                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.themePrimary))
                                         }
                                         .padding(.horizontal, 32)
                                         
@@ -321,7 +322,7 @@ struct PurchaseIntentPromptView: View {
                             VStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 50))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                 
                                 Text(confirmation)
                                     .font(.headline)
@@ -337,9 +338,18 @@ struct PurchaseIntentPromptView: View {
             }
             .navigationTitle("Purchase Intent")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                // Load apps count asynchronously to avoid blocking
+                Task { @MainActor in
+                    // Small delay to ensure view is rendered
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                    self.appsCount = self.deviceActivityService.selectedApps.applicationTokens.count
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Skip") {
+                    Button("Continue Block") {
+                        // Dismiss without unblocking - apps remain blocked
                         dismiss()
                     }
                 }
@@ -376,17 +386,18 @@ struct PurchaseIntentPromptView: View {
             purchaseType: purchaseType?.rawValue,
             category: purchaseType == .planned ? selectedCategory?.rawValue : nil,
             mood: purchaseType == .impulse ? selectedMood?.rawValue : nil,
+            moodNotes: purchaseType == .impulse && !moodNotes.isEmpty ? moodNotes : nil,
             appIndex: appIndex
         )
         print("✅ [PurchaseIntentPromptView] Apps unblocked (app index: \(appIndex ?? -1))")
         
         // Show confirmation message before dismissing
         // Note: We unblock all selected apps since we can't identify the specific app that was blocked
-        let appCount = deviceActivityService.selectedApps.applicationTokens.count
-        if appCount == 1 {
+        // Use cached count to avoid blocking
+        if appsCount == 1 {
             showConfirmation = "App is unblocked for 15 minutes.\nYou can now open it."
         } else {
-            showConfirmation = "All \(appCount) selected apps are unblocked for 15 minutes.\nYou can now open the app you want to use."
+            showConfirmation = "All \(appsCount) selected apps are unblocked for 15 minutes.\nYou can now open the app you want to use."
         }
         
         // Dismiss after showing confirmation

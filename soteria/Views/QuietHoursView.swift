@@ -9,8 +9,10 @@ import SwiftUI
 
 struct QuietHoursView: View {
     @EnvironmentObject var quietHoursService: QuietHoursService
+    @EnvironmentObject var subscriptionService: SubscriptionService
     @State private var showCreateSchedule = false
     @State private var editingSchedule: QuietHoursSchedule? = nil
+    @State private var showPaywall = false
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -27,7 +29,7 @@ struct QuietHoursView: View {
                         HStack {
                             Image(systemName: quietHoursService.isQuietModeActive ? "moon.fill" : "moon")
                                 .font(.system(size: 24))
-                                .foregroundColor(quietHoursService.isQuietModeActive ? Color(red: 0.1, green: 0.6, blue: 0.3) : .gray)
+                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.themePrimary : .gray)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(quietHoursService.isQuietModeActive ? "Financial Quiet Mode Active" : "Financial Quiet Mode Inactive")
@@ -37,7 +39,7 @@ struct QuietHoursView: View {
                                 if quietHoursService.isQuietModeActive {
                                     Text("Your sanctuary is protecting you")
                                         .font(.system(size: 12))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                 }
                                 
                                 if let schedule = quietHoursService.currentActiveSchedule {
@@ -80,7 +82,12 @@ struct QuietHoursView: View {
                                 .padding(.horizontal, 40)
                             
                             Button(action: {
-                                showCreateSchedule = true
+                                // Free tier: Can create 1 schedule
+                                if !subscriptionService.isPremium && quietHoursService.schedules.count >= 1 {
+                                    showPaywall = true
+                                } else {
+                                    showCreateSchedule = true
+                                }
                             }) {
                                 Text("Create Schedule")
                                     .font(.system(size: 16, weight: .semibold))
@@ -89,7 +96,7 @@ struct QuietHoursView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .fill(Color.themePrimary)
                                     )
                             }
                         }
@@ -99,15 +106,29 @@ struct QuietHoursView: View {
                             ForEach(quietHoursService.schedules) { schedule in
                                 QuietHoursScheduleCard(schedule: schedule)
                                     .environmentObject(quietHoursService)
+                                    .environmentObject(subscriptionService)
+                                    .onTapGesture {
+                                        // Free tier: Show paywall if trying to edit
+                                        if !subscriptionService.isPremium {
+                                            showPaywall = true
+                                        } else {
+                                            editingSchedule = schedule
+                                        }
+                                    }
                             }
                         }
                         .padding(.horizontal, 20)
                     }
                     
-                    // Create Schedule Button
+                    // Create Schedule Button (Premium only if already have 1)
                     if !quietHoursService.schedules.isEmpty {
                         Button(action: {
-                            showCreateSchedule = true
+                            // Free tier: Can't create more than 1
+                            if !subscriptionService.isPremium && quietHoursService.schedules.count >= 1 {
+                                showPaywall = true
+                            } else {
+                                showCreateSchedule = true
+                            }
                         }) {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
@@ -119,7 +140,7 @@ struct QuietHoursView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .fill(Color.themePrimary)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -150,18 +171,33 @@ struct QuietHoursView: View {
         .sheet(isPresented: $showCreateSchedule) {
             CreateQuietHoursScheduleView()
                 .environmentObject(quietHoursService)
+                .environmentObject(subscriptionService)
         }
         .sheet(item: $editingSchedule) { schedule in
             CreateQuietHoursScheduleView(editingSchedule: schedule)
                 .environmentObject(quietHoursService)
+                .environmentObject(subscriptionService)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionService)
+        }
+        .onAppear {
+            // Update premium status for mood-based monitoring
+            quietHoursService.updatePremiumStatus(subscriptionService.isPremium)
+        }
+        .onChange(of: subscriptionService.isPremium) { oldValue, newValue in
+            quietHoursService.updatePremiumStatus(newValue)
         }
     }
 }
 
 struct QuietHoursScheduleCard: View {
     @EnvironmentObject var quietHoursService: QuietHoursService
+    @EnvironmentObject var subscriptionService: SubscriptionService
     let schedule: QuietHoursSchedule
     @State private var showDeleteConfirmation = false
+    @State private var showPaywall = false
     
     private var timeString: String {
         let startHour = schedule.startTime.hour ?? 0
@@ -208,13 +244,15 @@ struct QuietHoursScheduleCard: View {
                 Spacer()
                 
                 HStack(spacing: 12) {
-                    // Delete button
-                    Button(action: {
-                        showDeleteConfirmation = true
-                    }) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 16))
-                            .foregroundColor(.red)
+                    // Delete button (Premium only)
+                    if subscriptionService.isPremium {
+                        Button(action: {
+                            showDeleteConfirmation = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 16))
+                                .foregroundColor(.red)
+                        }
                     }
                     
                     Toggle("", isOn: Binding(
@@ -229,10 +267,10 @@ struct QuietHoursScheduleCard: View {
             if schedule.isCurrentlyActive() {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .foregroundColor(Color.themePrimary)
                     Text("Currently Active")
                         .font(.system(size: 12))
-                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .foregroundColor(Color.themePrimary)
                 }
             }
         }
@@ -243,11 +281,17 @@ struct QuietHoursScheduleCard: View {
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                quietHoursService.deleteSchedule(schedule)
-            } label: {
-                Label("Delete", systemImage: "trash")
+            if subscriptionService.isPremium {
+                Button(role: .destructive) {
+                    quietHoursService.deleteSchedule(schedule)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
             }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionService)
         }
         .alert("Delete Schedule", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -263,6 +307,9 @@ struct QuietHoursScheduleCard: View {
 struct CreateQuietHoursScheduleView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var quietHoursService: QuietHoursService
+    @EnvironmentObject var subscriptionService: SubscriptionService
+    @State private var showPaywall = false
+    @State private var showLimitAlert = false
     
     let editingSchedule: QuietHoursSchedule?
     
@@ -332,6 +379,59 @@ struct CreateQuietHoursScheduleView: View {
                         ))
                     }
                 }
+                
+                // Premium Features Section
+                if !subscriptionService.isPremium {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "crown.fill")
+                                    .foregroundColor(Color.themePrimary)
+                                Text("Premium Features")
+                                    .font(.headline)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Image(systemName: "brain.head.profile")
+                                        .foregroundColor(.gray)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Smart Auto-Protection")
+                                            .font(.subheadline)
+                                        Text("Automatically protects based on behavior patterns - no input needed")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                
+                                HStack {
+                                    Image(systemName: "tag.fill")
+                                        .foregroundColor(.gray)
+                                    Text("Category Restrictions")
+                                        .font(.subheadline)
+                                }
+                            }
+                            .padding(.leading, 28)
+                            
+                            Button(action: {
+                                showPaywall = true
+                            }) {
+                                Text("Upgrade to Premium")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.themePrimary)
+                                    )
+                            }
+                            .padding(.top, 4)
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
             }
             .navigationTitle(editingSchedule == nil ? "New Schedule" : "Edit Schedule")
             .navigationBarTitleDisplayMode(.inline)
@@ -347,6 +447,10 @@ struct CreateQuietHoursScheduleView: View {
                     }
                     .disabled(name.isEmpty || selectedDays.isEmpty)
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(subscriptionService)
             }
         }
     }

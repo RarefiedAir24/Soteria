@@ -46,12 +46,12 @@ struct AuthView: View {
                             .font(.system(size: 70))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [Color(red: 0.2, green: 0.7, blue: 0.4), Color(red: 0.1, green: 0.6, blue: 0.3)],
+                                    colors: [Color.themePrimaryLight, Color.themePrimaryDark],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .shadow(color: Color.green.opacity(0.3), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.themePrimary.opacity(0.3), radius: 10, x: 0, y: 5)
                         
                         Text("SOTERIA")
                             .font(.system(size: 42, weight: .bold, design: .default))
@@ -79,12 +79,12 @@ struct AuthView: View {
                                 if isSignUp {
                                     HStack(spacing: 6) {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .foregroundColor(Color.themePrimary)
                                             .font(.footnote)
                                         Text("Choose your email")
                                             .font(.footnote)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .foregroundColor(Color.themePrimary)
                                     }
                                     .transition(.opacity.combined(with: .scale))
                                 }
@@ -106,8 +106,8 @@ struct AuthView: View {
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
                                                     focusedField == .email 
-                                                        ? (isEmailValid || email.isEmpty ? Color.green : Color.red)
-                                                        : (isSignUp && email.isEmpty ? Color.green.opacity(0.3) : Color.clear),
+                                                        ? (isEmailValid || email.isEmpty ? Color.themePrimary : Color.red)
+                                                        : (isSignUp && email.isEmpty ? Color.themePrimary.opacity(0.3) : Color.clear),
                                                     lineWidth: 2
                                                 )
                                         )
@@ -143,12 +143,12 @@ struct AuthView: View {
                                 if isSignUp {
                                     HStack(spacing: 6) {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .foregroundColor(Color.themePrimary)
                                             .font(.footnote)
                                         Text("Choose your password")
                                             .font(.footnote)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .foregroundColor(Color.themePrimary)
                                     }
                                     .transition(.opacity.combined(with: .scale))
                                 }
@@ -185,7 +185,7 @@ struct AuthView: View {
                                     .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(focusedField == .password ? Color.green : (isSignUp && password.isEmpty ? Color.green.opacity(0.3) : Color.clear), lineWidth: 2)
+                                            .stroke(focusedField == .password ? Color.themePrimary : (isSignUp && password.isEmpty ? Color.themePrimary.opacity(0.3) : Color.clear), lineWidth: 2)
                                     )
                             )
                             
@@ -264,13 +264,13 @@ struct AuthView: View {
                                 LinearGradient(
                                     colors: email.isEmpty || password.isEmpty || isLoading
                                         ? [Color.gray.opacity(0.3), Color.gray.opacity(0.3)]
-                                        : [Color(red: 0.2, green: 0.7, blue: 0.4), Color(red: 0.1, green: 0.6, blue: 0.3)],
+                                        : [Color.themePrimaryLight, Color.themePrimaryDark],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                             .cornerRadius(16)
-                            .shadow(color: (email.isEmpty || password.isEmpty || isLoading) ? Color.clear : Color.green.opacity(0.3), radius: 10, x: 0, y: 5)
+                            .shadow(color: (email.isEmpty || password.isEmpty || isLoading) ? Color.clear : Color.themePrimary.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                         .disabled(isLoading || email.isEmpty || password.isEmpty || !isEmailValid || (isSignUp && !isPasswordValid))
                         .padding(.top, 8)
@@ -524,7 +524,7 @@ struct ForgotPasswordView: View {
                                 .fill(Color(.systemGray6))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isEmailFocused ? Color.green : Color.clear, lineWidth: 2)
+                                        .stroke(isEmailFocused ? Color.themePrimary : Color.clear, lineWidth: 2)
                                 )
                         )
                 }
@@ -564,13 +564,13 @@ struct ForgotPasswordView: View {
                         LinearGradient(
                             colors: email.isEmpty || isLoading
                                 ? [Color.gray.opacity(0.3), Color.gray.opacity(0.3)]
-                                : [Color(red: 0.2, green: 0.7, blue: 0.4), Color(red: 0.1, green: 0.6, blue: 0.3)],
+                                : [Color.themePrimaryLight, Color.themePrimaryDark],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .cornerRadius(16)
-                    .shadow(color: (email.isEmpty || isLoading) ? Color.clear : Color.green.opacity(0.3), radius: 10, x: 0, y: 5)
+                    .shadow(color: (email.isEmpty || isLoading) ? Color.clear : Color.themePrimary.opacity(0.3), radius: 10, x: 0, y: 5)
                 }
                 .disabled(isLoading || email.isEmpty)
                 .padding(.horizontal, 32)

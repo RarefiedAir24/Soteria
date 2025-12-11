@@ -10,18 +10,52 @@ import FamilyControls
 import UIKit
 
 // Simple wrapper that just returns the picker with background
+// IMPORTANT: This view accesses selection.applicationTokens which can block
+// It should only be created when the sheet is actually shown
 struct FamilyActivityPickerWrapper: View {
     @Binding var selection: FamilyActivitySelection
+    var maxApps: Int?
+    @Binding var showLimitAlert: Bool
+    
+    @State private var isPickerReady = false
     
     var body: some View {
-        FamilyActivityPicker(selection: $selection)
-            .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+        Group {
+            if isPickerReady {
+                FamilyActivityPicker(selection: $selection)
+                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+            } else {
+                // Placeholder while picker loads
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+            }
+        }
+        .task {
+            // Defer FamilyActivityPicker creation to avoid blocking
+            // Wait a bit to ensure view is fully rendered
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            isPickerReady = true
+        }
+    }
+}
+
+// Wrapper to make AppSelectionView truly lazy
+struct LazyAppSelectionView: View {
+    @Binding var selection: FamilyActivitySelection
+    @Binding var isPresented: Bool
+    var maxApps: Int? = nil
+    
+    var body: some View {
+        AppSelectionView(selection: $selection, isPresented: $isPresented, maxApps: maxApps)
     }
 }
 
 struct AppSelectionView: View {
     @Binding var selection: FamilyActivitySelection
     @Binding var isPresented: Bool
+    var maxApps: Int? = nil // Limit for free tier (1 app)
+    @State private var showLimitAlert = false
     @State private var authorizationCenter = AuthorizationCenter.shared
     @State private var isAuthorized = false
     
@@ -39,7 +73,7 @@ struct AppSelectionView: View {
                 
                 if isAuthorized {
                     // App Selection - simple, no complex background manipulation
-                    FamilyActivityPickerWrapper(selection: $selection)
+                    FamilyActivityPickerWrapper(selection: $selection, maxApps: maxApps, showLimitAlert: $showLimitAlert)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     VStack(spacing: 20) {
@@ -59,7 +93,7 @@ struct AppSelectionView: View {
                             requestAuthorization()
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .tint(Color.themePrimary)
                         
                         // Debug info
                         Text("Status: \(authorizationCenter.authorizationStatus.rawValue)")
@@ -91,7 +125,7 @@ struct AppSelectionView: View {
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .fill(Color.themePrimary)
                             )
                     }
                 }
@@ -122,6 +156,11 @@ struct AppSelectionView: View {
         .task {
             // Check authorization status when view appears (async)
             checkAuthorization()
+        }
+        .alert("App Limit Reached", isPresented: $showLimitAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Free tier includes 1 app. Upgrade to Premium to monitor multiple apps.")
         }
     }
     

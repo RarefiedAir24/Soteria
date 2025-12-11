@@ -24,7 +24,7 @@ struct PurchaseLogPromptView: View {
             VStack(spacing: 24) {
                 Image(systemName: "cart.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                    .foregroundColor(Color.themePrimary)
                 
                 Text("Did you make a purchase?")
                     .font(.title2)
@@ -140,7 +140,7 @@ struct PurchaseLogPromptView: View {
                             .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .fill(Color.themePrimary)
                             )
                             .foregroundColor(.white)
                     }

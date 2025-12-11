@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseStorage
 
 struct HomeView: View {
     @EnvironmentObject var authService: AuthService
@@ -24,9 +25,15 @@ struct HomeView: View {
     @State private var unblockMetrics: (totalUnblocks: Int, plannedUnblocks: Int, impulseUnblocks: Int, mostCommonCategory: String?, mostCommonMood: String?, mostRequestedAppIndex: Int?, mostRequestedAppName: String?) = (0, 0, 0, nil, nil, nil, nil)
     @State private var isLoadingMetrics = true
     @State private var behavioralPatterns: DeviceActivityService.BehavioralPatterns? = nil
+    @State private var avatarImage: UIImage? = nil
+    @State private var showProfile = false
     
     private var userEmail: String {
         authService.currentUser?.email?.components(separatedBy: "@").first ?? "there"
+    }
+    
+    private var userName: String {
+        authService.currentUser?.displayName ?? authService.currentUser?.email?.components(separatedBy: "@").first ?? "User"
     }
     
     private var formattedTotalSaved: String {
@@ -60,7 +67,7 @@ struct HomeView: View {
         } else if risk.riskLevel >= 0.4 {
             return .orange
         } else {
-            return Color(red: 0.1, green: 0.6, blue: 0.3)
+            return Color.themePrimary
         }
     }
     
@@ -147,7 +154,7 @@ struct HomeView: View {
                         HStack {
                             Image(systemName: quietHoursService.isQuietModeActive ? "moon.fill" : "moon")
                                 .font(.system(size: 24))
-                                .foregroundColor(quietHoursService.isQuietModeActive ? Color(red: 0.1, green: 0.6, blue: 0.3) : .gray)
+                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.themePrimary : .gray)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(quietHoursService.isQuietModeActive ? "Financial Quiet Mode Active" : "Financial Quiet Mode Inactive")
@@ -157,7 +164,7 @@ struct HomeView: View {
                                 if quietHoursService.isQuietModeActive {
                                     Text("Your sanctuary is protecting you")
                                         .font(.system(size: 13))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                 } else if let schedule = quietHoursService.currentActiveSchedule {
                                     Text(schedule.name)
                                         .font(.system(size: 14))
@@ -191,7 +198,7 @@ struct HomeView: View {
                                 
                                 Text("\(savingsService.soteriaMomentsCount)")
                                     .font(.system(size: 52, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                 
                                 Text("times you chose protection")
                                     .font(.system(size: 13))
@@ -207,7 +214,7 @@ struct HomeView: View {
                                         .font(.system(size: 32))
                                     Text("\(streakService.currentStreak)")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                     Text("day streak")
                                         .font(.system(size: 10))
                                         .foregroundColor(.gray)
@@ -227,7 +234,7 @@ struct HomeView: View {
                                     
                                     Text("\(Int(activeGoal.progress * 100))%")
                                         .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                 }
                                 
                                 // Progress Bar
@@ -238,7 +245,7 @@ struct HomeView: View {
                                             .frame(height: 6)
                                         
                                         RoundedRectangle(cornerRadius: 4)
-                                            .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .fill(Color.themePrimary)
                                             .frame(width: geometry.size.width * activeGoal.progress, height: 6)
                                     }
                                 }
@@ -368,7 +375,7 @@ struct HomeView: View {
                             HStack {
                                 Image(systemName: "chart.bar.fill")
                                     .font(.system(size: 24))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                 
                                 Text("Your Insights")
                                     .font(.system(size: 18, weight: .semibold))
@@ -396,7 +403,7 @@ struct HomeView: View {
                                         .foregroundColor(.gray)
                                     Text("\(unblockMetrics.plannedUnblocks)")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                 }
                                 
                                 VStack(alignment: .trailing, spacing: 4) {
@@ -452,11 +459,11 @@ struct HomeView: View {
                                 HStack {
                                     Text("View Full Metrics")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                     Spacer()
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 12))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                 }
                                 .padding(.top, 4)
                             }
@@ -505,16 +512,57 @@ struct HomeView: View {
             }
             
             // Fixed Header
-            VStack(spacing: 2) {
-                Text("Hi, \(userEmail)")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+            HStack(spacing: 12) {
+                // Avatar
+                NavigationLink(destination: LazyProfileView()) {
+                    ZStack {
+                        if let avatarImage = avatarImage {
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            // Default avatar
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.themePrimaryDark, Color.themePrimaryLight],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                
+                                Text(String(userName.prefix(1)).uppercased())
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white, lineWidth: 2)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+                .buttonStyle(PlainButtonStyle())
                 
-                Text("Welcome back")
-                    .font(.system(size: 13))
-                    .foregroundColor(.gray)
+                // User name and welcome text
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Hi, \(userEmail)")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                    
+                    Text("Welcome back")
+                        .font(.system(size: 13))
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
             }
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, 20)
             .padding(.vertical, 6)
             .background(
                 Color(red: 0.92, green: 0.97, blue: 0.94)
@@ -538,6 +586,13 @@ struct HomeView: View {
             // Just set isLoadingMetrics to false immediately
             isLoadingMetrics = false
             print("🟡 [HomeView] Set isLoadingMetrics = false immediately")
+            
+            // Load avatar
+            loadAvatar()
+            
+            // Load avatar
+            loadAvatar()
+            
             let taskEndTime = Date()
             print("🟢 [HomeView] .task completed at \(taskEndTime) (total: \(taskEndTime.timeIntervalSince(taskStartTime))s)")
             
@@ -576,6 +631,39 @@ struct HomeView: View {
                 print("🟢 [HomeView] .task completed at \(taskEndTime) (total: \(taskEndTime.timeIntervalSince(taskStartTime))s)")
             }
             */
+        }
+    }
+    
+    private func loadAvatar() {
+        // First try to load from UserDefaults (fast, local cache)
+        if let data = UserDefaults.standard.data(forKey: "user_avatar"),
+           let image = UIImage(data: data) {
+            avatarImage = image
+        }
+        
+        // Then try to load from Firebase Storage (async, for cross-device sync)
+        if let userId = authService.currentUser?.uid {
+            Task {
+                let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
+                
+                do {
+                    let data = try await storageRef.data(maxSize: 5 * 1024 * 1024) // 5MB max
+                    if let image = UIImage(data: data) {
+                        await MainActor.run {
+                            avatarImage = image
+                            // Update UserDefaults cache
+                            if let imageData = image.jpegData(compressionQuality: 0.8) {
+                                UserDefaults.standard.set(imageData, forKey: "user_avatar")
+                            }
+                        }
+                        print("✅ [HomeView] Avatar loaded from Firebase Storage")
+                    }
+                } catch {
+                    // Avatar doesn't exist in Firebase Storage yet, or error loading
+                    // This is fine - UserDefaults might have it, or user hasn't uploaded one
+                    print("ℹ️ [HomeView] Avatar not found in Firebase Storage (this is OK)")
+                }
+            }
         }
     }
 }

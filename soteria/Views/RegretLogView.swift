@@ -48,7 +48,7 @@ struct RegretLogView: View {
                                 
                                 Text("\(regretService.recentRegretCount)")
                                     .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                             }
                         }
                         
@@ -106,7 +106,7 @@ struct RegretLogView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                .foregroundColor(Color.themePrimary)
                             
                             Text("No Regrets Logged")
                                 .font(.system(size: 20, weight: .semibold))
@@ -144,7 +144,7 @@ struct RegretLogView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .fill(Color.themePrimary)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -268,9 +268,9 @@ struct RegretEntryCard: View {
                             .padding(.vertical, 4)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(status == .returned ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
+                                    .fill(status == .returned ? Color.themePrimary.opacity(0.2) : Color.orange.opacity(0.2))
                             )
-                            .foregroundColor(status == .returned ? .green : .orange)
+                            .foregroundColor(status == .returned ? Color.themePrimary : .orange)
                     }
                     
                     // Deadline indicator
@@ -493,7 +493,7 @@ struct RegretDetailView: View {
                             HStack {
                                 Image(systemName: regret.isDeadlineExpired ? "exclamationmark.triangle.fill" : "clock.fill")
                                     .font(.system(size: 20))
-                                    .foregroundColor(regret.isDeadlineExpired ? .red : (regret.isDeadlineApproaching ? .orange : Color(red: 0.1, green: 0.6, blue: 0.3)))
+                                    .foregroundColor(regret.isDeadlineExpired ? .red : (regret.isDeadlineApproaching ? .orange : Color.themePrimary))
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     if regret.isDeadlineExpired {
@@ -591,7 +591,7 @@ struct RegretDetailView: View {
                                             Text("Copy Template")
                                         }
                                         .font(.system(size: 14))
-                                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                        .foregroundColor(Color.themePrimary)
                                     }
                                 }
                             }

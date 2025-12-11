@@ -9,6 +9,9 @@ import SwiftUI
 import FirebaseAuth
 import UIKit
 import FamilyControls
+#if canImport(FirebaseStorage)
+import FirebaseStorage
+#endif
 
 // Separate view to ensure binding is only created when sheet is shown
 struct AppSelectionSheetContent: View {
@@ -27,6 +30,17 @@ struct AppSelectionSheetContent: View {
         )
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Lazy Profile View Wrapper
+
+struct LazyProfileView: View {
+    var body: some View {
+        // ProfileView is pushed onto the existing NavigationView stack from MainTabView
+        // It already has .navigationTitle("Profile") set, so it should work correctly
+        ProfileView()
+            .navigationBarBackButtonHidden(false)
     }
 }
 
@@ -78,6 +92,8 @@ struct SettingsView: View {
     @State private var isViewReady = false  // Track if view is ready to observe changes
     @State private var isAppFullyLoaded = false  // Track if app initialization is complete
     @State private var cachedIsMonitoring = false  // Cache to avoid accessing @Published during view evaluation
+    @State private var avatarImage: UIImage? = nil
+    @State private var showProfileView = false
     
     var body: some View {
         let _ = {
@@ -99,25 +115,71 @@ struct SettingsView: View {
                 VStack(spacing: 20) {
                     // Account & Subscription Card
                     VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Account")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
-                                
-                                if let user = authService.currentUser {
-                                    Text(user.email ?? "Unknown")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                        Button(action: {
+                            print("🔵 [SettingsView] Account button tapped - setting showProfileView = true")
+                            showProfileView = true
+                            print("🔵 [SettingsView] showProfileView is now: \(showProfileView)")
+                        }) {
+                            HStack(spacing: 12) {
+                                // Avatar - wrapped in Group to prevent re-evaluation from affecting navigation
+                                Group {
+                                    if let avatarImage = avatarImage {
+                                        Image(uiImage: avatarImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else {
+                                        // Default avatar
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [Color.themePrimaryDark, Color.themePrimaryLight],
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                            
+                                            if let user = authService.currentUser {
+                                                Text(String((user.email?.components(separatedBy: "@").first ?? "U").prefix(1)).uppercased())
+                                                    .font(.system(size: 14, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
                                 }
+                                .frame(width: 40, height: 40)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white, lineWidth: 2)
+                                )
+                                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Account")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    
+                                    if let user = authService.currentUser {
+                                        Text(user.email ?? "Unknown")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        
+                                        Text("Manage account, banking & preferences")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
                             }
-                            
-                            Spacer()
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         
                         Divider()
                         
@@ -125,7 +187,7 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: subscriptionService.isPremium ? "crown.fill" : "crown")
                                 .font(.system(size: 20))
-                                .foregroundColor(subscriptionService.isPremium ? Color(red: 0.1, green: 0.6, blue: 0.3) : .gray)
+                                .foregroundColor(subscriptionService.isPremium ? Color.themePrimary : .gray)
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(subscriptionService.isPremium ? "Premium" : "Free")
@@ -152,7 +214,7 @@ struct SettingsView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                                .fill(Color.themePrimary)
                                         )
                                 }
                             }
@@ -178,7 +240,7 @@ struct SettingsView: View {
                             icon: "moon.fill",
                             title: "Quiet Hours",
                             subtitle: quietHoursService.isQuietModeActive ? "Active" : "Inactive",
-                            color: quietHoursService.isQuietModeActive ? Color(red: 0.1, green: 0.6, blue: 0.3) : .gray
+                            color: quietHoursService.isQuietModeActive ? Color.themePrimary : .gray
                         ) {
                             showQuietHours = true
                         }
@@ -190,7 +252,7 @@ struct SettingsView: View {
                             icon: "heart.fill",
                             title: "Mood Check-In",
                             subtitle: "Track your mood",
-                            color: Color(red: 0.1, green: 0.6, blue: 0.3)
+                            color: Color.themePrimary
                         ) {
                             showMoodCheckIn = true
                         }
@@ -221,7 +283,7 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "app.badge.checkmark")
                                 .font(.system(size: 24))
-                                .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                .foregroundColor(Color.themePrimary)
                             
                             Text("App Monitoring")
                                 .font(.system(size: 18, weight: .semibold))
@@ -318,7 +380,7 @@ struct SettingsView: View {
                                 
                                 Image(systemName: "chart.bar.fill")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
@@ -331,7 +393,7 @@ struct SettingsView: View {
                             )
                         }
                         
-                        // Savings Settings button (temporarily disabled - Plaid removed)
+                        // Savings Settings button (temporarily disabled - Plaid lazy loading in progress)
                         /*
                         NavigationLink(destination: SavingsSettingsView()) {
                             HStack {
@@ -347,9 +409,9 @@ struct SettingsView: View {
                                 
                                 Spacer()
                                 
-                                Image(systemName: "bank.fill")
+                                Image(systemName: "building.columns.fill")
                                     .font(.system(size: 16))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                 
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
@@ -376,11 +438,11 @@ struct SettingsView: View {
                                 if isStartingMonitoring {
                                     HStack(spacing: 8) {
                                         ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.1, green: 0.6, blue: 0.3)))
+                                            .progressViewStyle(CircularProgressViewStyle(tint: Color.themePrimary))
                                             .frame(width: 14, height: 14)
                                         Text("Starting monitoring...")
                                             .font(.system(size: 13))
-                                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .foregroundColor(Color.themePrimary)
                                     }
                                 } else if cachedIsMonitoring {
                                     HStack(spacing: 6) {
@@ -403,7 +465,7 @@ struct SettingsView: View {
                             Group {
                                 if isStartingMonitoring {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.1, green: 0.6, blue: 0.3)))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.themePrimary))
                                         .frame(width: 30, height: 30)
                                 } else {
                                     Toggle("", isOn: Binding(
@@ -422,7 +484,7 @@ struct SettingsView: View {
                                         }
                                     ))
                                     .toggleStyle(.switch)
-                                    .tint(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .tint(Color.themePrimary)
                                 }
                             }
                         }
@@ -559,6 +621,25 @@ struct SettingsView: View {
                     }
             }
         }
+        .sheet(isPresented: $showProfileView) {
+            NavigationView {
+                LazyProfileView()
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                print("🔵 [SettingsView] Done button tapped - setting showProfileView = false")
+                                showProfileView = false
+                            }
+                        }
+                    }
+            }
+            .onAppear {
+                print("🔵 [SettingsView] Profile sheet appeared")
+            }
+        }
+        .onChange(of: showProfileView) { oldValue, newValue in
+            print("🔵 [SettingsView] showProfileView changed from \(oldValue) to \(newValue)")
+        }
         .onChange(of: showAppSelection) {
             if !showAppSelection {
                 viewId = UUID()
@@ -577,6 +658,9 @@ struct SettingsView: View {
             // Cache isMonitoring immediately to avoid accessing @Published during view evaluation
             cachedIsMonitoring = deviceActivityService.isMonitoring
             print("🟡 [SettingsView] Cached isMonitoring: \(cachedIsMonitoring)")
+            
+            // Load avatar (only once)
+            loadAvatar()
             
             // Mark view as ready immediately - no need to wait
             isViewReady = true
@@ -639,6 +723,41 @@ struct SettingsView: View {
         .onChange(of: isStartingMonitoring) {
             viewId = UUID()
         }
+    }
+    
+    private func loadAvatar() {
+        // First try to load from UserDefaults (fast, local cache)
+        if let data = UserDefaults.standard.data(forKey: "user_avatar"),
+           let image = UIImage(data: data) {
+            avatarImage = image
+        }
+        
+        // Then try to load from Firebase Storage (async, for cross-device sync)
+        #if canImport(FirebaseStorage)
+        if let userId = authService.currentUser?.uid {
+            Task {
+                let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
+                
+                do {
+                    let data = try await storageRef.data(maxSize: 5 * 1024 * 1024) // 5MB max
+                    if let image = UIImage(data: data) {
+                        await MainActor.run {
+                            avatarImage = image
+                            // Update UserDefaults cache
+                            if let imageData = image.jpegData(compressionQuality: 0.8) {
+                                UserDefaults.standard.set(imageData, forKey: "user_avatar")
+                            }
+                        }
+                        print("✅ [SettingsView] Avatar loaded from Firebase Storage")
+                    }
+                } catch {
+                    // Avatar doesn't exist in Firebase Storage yet, or error loading
+                    // This is fine - UserDefaults might have it, or user hasn't uploaded one
+                    print("ℹ️ [SettingsView] Avatar not found in Firebase Storage (this is OK)")
+                }
+            }
+        }
+        #endif
     }
 }
 

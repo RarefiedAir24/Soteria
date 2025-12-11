@@ -15,6 +15,8 @@ struct PauseView: View {
     @EnvironmentObject var regretService: RegretLoggingService
     @EnvironmentObject var moodService: MoodTrackingService
     @EnvironmentObject var purchaseIntentService: PurchaseIntentService
+    @EnvironmentObject var streakService: StreakService
+    @EnvironmentObject var plaidService: PlaidService
     
     @State private var purchaseType: PurchaseType? = nil // Planned or Impulse
     @State private var selectedCategory: PlannedPurchaseCategory? = nil
@@ -23,6 +25,8 @@ struct PauseView: View {
     @State private var selectedGoalId: String? = nil
     @State private var currentMood: MoodLevel? = nil
     @State private var showRegretLog: Bool = false
+    @State private var showSaveMoneyPrompt: Bool = false
+    @State private var isProcessingTransfer: Bool = false
     
     private var formattedSavedAmount: String {
         guard let amount = Double(plannedSpend), amount > 0 else { return "$0.00" }
@@ -55,10 +59,16 @@ struct PauseView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         
+                        Text("Creating awareness, not restriction")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(red: 0.6, green: 0.6, blue: 0.6))
+                            .italic()
+                            .padding(.top, 4)
+                        
                         // Planned vs Impulse Prompt (FIRST QUESTION)
                         if purchaseType == nil {
                             VStack(spacing: 20) {
-                                Text("Is this a planned purchase or impulse?")
+                                Text("Is this a planned activity or impulse?")
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
                                     .multilineTextAlignment(.center)
@@ -106,7 +116,7 @@ struct PauseView: View {
                         // Category Selection (if Planned)
                         if purchaseType == .planned && selectedCategory == nil {
                             VStack(spacing: 16) {
-                                Text("What category is this purchase?")
+                                Text("What category is this activity?")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
                                     .multilineTextAlignment(.center)
@@ -132,46 +142,22 @@ struct PauseView: View {
                                         }
                                     }
                                 }
-                                
-                                // Quick continue button after selecting category
-                                Button(action: {
-                                    // Record planned purchase with category
-                                    let intent = PurchaseIntent(
-                                        purchaseType: .planned,
-                                        category: selectedCategory,
-                                        amount: Double(plannedSpend)
-                                    )
-                                    purchaseIntentService.recordIntent(intent)
-                                    showConfirmation = "Planned purchase recorded. Continue shopping mindfully."
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                        dismiss()
-                                    }
-                                }) {
-                                    Text("Continue Shopping")
-                                        .frame(maxWidth: .infinity)
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
-                                        )
-                                }
-                                .disabled(selectedCategory == nil)
                             }
                             .padding(.horizontal, 32)
                         }
                         
                         // Show rest of the flow only after purchase type is selected
-                        if purchaseType != nil {
+                        // For planned: show after category is selected
+                        // For impulse: show immediately
+                        if (purchaseType == .planned && selectedCategory != nil) || (purchaseType == .impulse) {
                             // Future Self Prompt
                             VStack(spacing: 8) {
-                                Text("What would your future self want?")
+                                Text("Take a moment to reflect")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
                                     .multilineTextAlignment(.center)
                                 
-                                Text("Your future self deserves a voice in every choice")
+                                Text("This pause helps you reconnect with your intentions")
                                     .font(.system(size: 13))
                                     .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
                                     .multilineTextAlignment(.center)
@@ -184,28 +170,30 @@ struct PauseView: View {
                             )
                             .padding(.horizontal, 32)
                         
-                            // Amount Input Field
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("How much were you about to spend?")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
-                                
-                                Text("This pause helps you reconnect with your intentions")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(red: 0.6, green: 0.6, blue: 0.6))
-                                    .italic()
-                                
-                                TextField("$0.00", text: $plannedSpend)
-                                    .textFieldStyle(.plain)
-                                    .keyboardType(.decimalPad)
-                                    .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
-                                    )
+                            // Amount Input Field (Optional - for tracking only, relevant for purchases)
+                            if purchaseType == .planned && selectedCategory != nil {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Estimated amount (Optional)")
+                                        .font(.subheadline)
+                                        .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
+                                    
+                                    Text("Skip if you prefer - the protection moment is what matters")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color(red: 0.6, green: 0.6, blue: 0.6))
+                                        .italic()
+                                    
+                                    TextField("Skip this step", text: $plannedSpend)
+                                        .textFieldStyle(.plain)
+                                        .keyboardType(.decimalPad)
+                                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                        .padding()
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color(red: 0.95, green: 0.95, blue: 0.95))
+                                        )
+                                }
+                                .padding(.horizontal, 32)
                             }
-                            .padding(.horizontal, 32)
                             
                             // Mood Check-in
                             VStack(alignment: .leading, spacing: 8) {
@@ -230,7 +218,7 @@ struct PauseView: View {
                                             .padding(.vertical, 12)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .fill(currentMood == mood ? Color(red: 0.1, green: 0.6, blue: 0.3) : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                                    .fill(currentMood == mood ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
                                             )
                                         }
                                     }
@@ -265,7 +253,7 @@ struct PauseView: View {
                             if let confirmation = showConfirmation {
                                 Text(confirmation)
                                     .font(.subheadline)
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
@@ -274,52 +262,71 @@ struct PauseView: View {
                                     .padding(.horizontal, 32)
                             }
                             
-                            VStack(spacing: 16) {
+                            // Unblock & Continue button - only show after mood is selected
+                            if currentMood != nil {
                                 Button(action: {
-                                    handleSkipAndSave()
+                                    // If Plaid is connected, show save money prompt
+                                    if plaidService.savingsMode != .manual {
+                                        showSaveMoneyPrompt = true
+                                    } else {
+                                        handleUnblockAndShop()
+                                    }
                                 }) {
-                                    VStack(spacing: 4) {
-                                        Text("Protect & Save")
-                                            .frame(maxWidth: .infinity)
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                        Text("Choose peace and stability")
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.9))
+                                    HStack {
+                                        if isProcessingTransfer {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        } else {
+                                            VStack(spacing: 4) {
+                                                Text("Unblock & Continue")
+                                                    .frame(maxWidth: .infinity)
+                                                    .font(.headline)
+                                                    .foregroundColor(.white)
+                                                Text("Temporarily unblock apps for 15 minutes")
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(.white.opacity(0.9))
+                                            }
+                                        }
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .tint(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                .tint(Color.themePrimary)
+                                .disabled(isProcessingTransfer)
+                                .padding(.horizontal, 32)
                                 
-                                Button(action: {
-                                    handleContinueShopping()
-                                }) {
-                                    VStack(spacing: 4) {
-                                        Text("Continue Shopping")
-                                            .frame(maxWidth: .infinity)
-                                        Text("We're here to protect, not restrict")
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.gray)
+                                // Secondary options
+                                VStack(spacing: 16) {
+                                    Button(action: {
+                                        handleSkipAndSave()
+                                    }) {
+                                        VStack(spacing: 4) {
+                                            Text("Continue Block")
+                                                .frame(maxWidth: .infinity)
+                                                .font(.subheadline)
+                                            Text("Keep apps blocked and protect yourself")
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.gray)
+                                        }
                                     }
-                                }
-                                .buttonStyle(.bordered)
-                                
-                                // Log as Regret button
-                                Button(action: {
-                                    showRegretLog = true
-                                }) {
-                                    VStack(spacing: 4) {
-                                        Text("I already made this purchase")
-                                            .frame(maxWidth: .infinity)
-                                            .font(.subheadline)
-                                        Text("Regret is a signal, not a failure")
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.orange)
+                                    .buttonStyle(.bordered)
+                                    
+                                    // Log as Regret button
+                                    Button(action: {
+                                        showRegretLog = true
+                                    }) {
+                                        VStack(spacing: 4) {
+                                            Text("I already made this purchase")
+                                                .frame(maxWidth: .infinity)
+                                                .font(.subheadline)
+                                            Text("Regret is a signal, not a failure")
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.orange)
+                                        }
                                     }
+                                    .buttonStyle(.bordered)
                                 }
-                                .buttonStyle(.bordered)
+                                .padding(.horizontal, 32)
                             }
-                            .padding(.horizontal, 32)
                         }
                         
                         Spacer()
@@ -345,6 +352,22 @@ struct PauseView: View {
                 LogRegretView(plannedAmount: plannedSpend, currentMood: currentMood ?? .neutral)
                     .environmentObject(regretService)
             }
+            .alert("Save Money?", isPresented: $showSaveMoneyPrompt) {
+                Button("Skip") {
+                    handleUnblockAndShop()
+                }
+                Button("Save $\(Int(plaidService.protectionAmount))") {
+                    Task {
+                        await handleUnblockWithTransfer()
+                    }
+                }
+            } message: {
+                if plaidService.savingsMode == .automatic {
+                    Text("Transfer $\(Int(plaidService.protectionAmount)) to your savings account?")
+                } else {
+                    Text("Track $\(Int(plaidService.protectionAmount)) as protected savings?")
+                }
+            }
         }
     }
     
@@ -361,31 +384,62 @@ struct PauseView: View {
             purchaseIntentService.recordIntent(intent)
         }
         
+        // Continue blocking - apps remain blocked
+        // Note: We don't call temporarilyUnblock, so blocking continues
+        
+        // Record protection moment (amount is optional)
+        savingsService.soteriaMomentsCount += 1
+        
+        // Record streak
+        streakService.recordProtection()
+        
+        // Auto-add to active goal (Protection = Goal Progress)
+        var goalProgressMessage = ""
+        if let activeGoal = goalsService.activeGoal {
+            let protectionAmount = activeGoal.protectionAmount
+            goalsService.addProtectionToActiveGoal()
+            
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.maximumFractionDigits = 0
+            let amountString = formatter.string(from: NSNumber(value: protectionAmount)) ?? "$\(Int(protectionAmount))"
+            
+            let progressPercent = Int(activeGoal.progress * 100)
+            goalProgressMessage = "\n\(amountString) added to '\(activeGoal.name)'\n\(progressPercent)% complete"
+        }
+        
+        // If user entered an amount, also add that to the selected goal (if different from active)
         if amount > 0 {
             savingsService.recordSkipAndSave(amount: amount)
             
-            // Add to selected goal if one is selected
-            if let goalId = selectedGoalId {
+            if let goalId = selectedGoalId, goalId != goalsService.activeGoal?.id {
                 goalsService.addToGoal(goalId: goalId, amount: amount)
                 if let goal = goalsService.goals.first(where: { $0.id == goalId }) {
-                    showConfirmation = "Your future self thanks you ✨\nAdded \(formattedSavedAmount) to '\(goal.name)'"
-                } else {
-                    showConfirmation = "Your future self thanks you ✨\nYou protected \(formattedSavedAmount)"
+                    goalProgressMessage += "\n+ \(formattedSavedAmount) to '\(goal.name)'"
                 }
-            } else {
-                showConfirmation = "Your future self thanks you ✨\nYou protected \(formattedSavedAmount)"
             }
-            
-            // Dismiss after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                dismiss()
-            }
-        } else {
-            showConfirmation = "Please enter an amount to see your protection in action"
+        }
+        
+        // Build confirmation message
+        var confirmation = "You chose protection ✨"
+        if !goalProgressMessage.isEmpty {
+            confirmation += goalProgressMessage
+        }
+        confirmation += "\nApps remain blocked"
+        
+        if streakService.currentStreak > 1 {
+            confirmation += "\n\(streakService.streakEmoji) \(streakService.currentStreak) day streak!"
+        }
+        
+        showConfirmation = confirmation
+        
+        // Dismiss after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            dismiss()
         }
     }
     
-    private func handleContinueShopping() {
+    private func handleUnblockAndShop() {
         // Record purchase intent
         if let purchaseType = purchaseType {
             let intent = PurchaseIntent(
@@ -397,9 +451,78 @@ struct PauseView: View {
         }
         
         // Temporarily unblock apps for 15 minutes
-        deviceActivityService.temporarilyUnblock(durationMinutes: 15)
-        showConfirmation = "We're here to protect, not restrict.\nShop mindfully for the next 15 minutes."
+        deviceActivityService.temporarilyUnblock(
+            durationMinutes: 15,
+            purchaseType: purchaseType?.rawValue,
+            category: purchaseType == .planned ? selectedCategory?.rawValue : nil,
+            mood: currentMood?.rawValue,
+            moodNotes: nil,
+            appIndex: nil
+        )
+        
+        showConfirmation = "Apps unblocked for 15 minutes.\nShop mindfully."
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            dismiss()
+        }
+    }
+    
+    private func handleUnblockWithTransfer() async {
+        isProcessingTransfer = true
+        
+        // Record purchase intent
+        if let purchaseType = purchaseType {
+            let intent = PurchaseIntent(
+                purchaseType: purchaseType,
+                category: purchaseType == .planned ? selectedCategory : nil,
+                amount: Double(plannedSpend)
+            )
+            purchaseIntentService.recordIntent(intent)
+        }
+        
+        // Handle transfer based on mode
+        do {
+            if plaidService.savingsMode == .automatic {
+                // Real transfer via Plaid
+                _ = try await plaidService.initiateTransfer(amount: plaidService.protectionAmount)
+                
+                await MainActor.run {
+                    let balance = String(format: "%.2f", plaidService.savingsAccount?.balance ?? 0)
+                    showConfirmation = "✅ Saved $\(Int(plaidService.protectionAmount))!\nYour savings: $\(balance)\n\nApps unblocked for 15 minutes."
+                }
+            } else {
+                // Virtual savings (no transfer)
+                plaidService.recordVirtualSavings(amount: plaidService.protectionAmount)
+                
+                await MainActor.run {
+                    let virtualSavings = String(format: "%.2f", plaidService.virtualSavings)
+                    showConfirmation = "✅ Protected $\(Int(plaidService.protectionAmount))!\nVirtual savings: $\(virtualSavings)\n\nConnect a savings account to enable automatic transfers.\n\nApps unblocked for 15 minutes."
+                }
+            }
+            
+            // Temporarily unblock apps
+            deviceActivityService.temporarilyUnblock(
+                durationMinutes: 15,
+                purchaseType: purchaseType?.rawValue,
+                category: purchaseType == .planned ? selectedCategory?.rawValue : nil,
+                mood: currentMood?.rawValue,
+                moodNotes: nil,
+                appIndex: nil
+            )
+            
+            // Record streak
+            streakService.recordProtection()
+            
+        } catch {
+            await MainActor.run {
+                showConfirmation = "⚠️ Transfer failed: \(error.localizedDescription)\n\nApps still unblocked for 15 minutes."
+            }
+        }
+        
+        await MainActor.run {
+            isProcessingTransfer = false
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             dismiss()
         }
     }

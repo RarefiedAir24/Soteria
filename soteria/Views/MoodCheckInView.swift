@@ -72,7 +72,7 @@ struct MoodCheckInView: View {
                                     .padding(.vertical, 16)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(selectedMood == mood ? Color(red: 0.1, green: 0.6, blue: 0.3) : Color(red: 0.95, green: 0.95, blue: 0.95))
+                                            .fill(selectedMood == mood ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
                                     )
                                 }
                             }
@@ -109,7 +109,7 @@ struct MoodCheckInView: View {
                         
                         Text("\(energyLevel)/10")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                            .foregroundColor(Color.themePrimary)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .padding(20)
@@ -153,7 +153,7 @@ struct MoodCheckInView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedMood != nil ? Color(red: 0.1, green: 0.6, blue: 0.3) : Color.gray)
+                                    .fill(selectedMood != nil ? Color.themePrimary : Color.gray)
                             )
                     }
                     .disabled(selectedMood == nil)
@@ -166,11 +166,11 @@ struct MoodCheckInView: View {
                         Text("Daily Reflection")
                             .frame(maxWidth: .infinity)
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                            .foregroundColor(Color.themePrimary)
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color(red: 0.1, green: 0.6, blue: 0.3), lineWidth: 2)
+                                    .stroke(Color.themePrimary, lineWidth: 2)
                             )
                     }
                     .padding(.horizontal, 20)

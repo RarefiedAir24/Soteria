@@ -13,6 +13,7 @@ struct AppNamingView: View {
     @EnvironmentObject var deviceActivityService: DeviceActivityService
     
     @State private var appNames: [Int: String] = [:]
+    @State private var appsCount: Int = 0 // Cache to avoid blocking access
     
     var body: some View {
         NavigationView {
@@ -23,7 +24,7 @@ struct AppNamingView: View {
                     VStack(spacing: 24) {
                         Image(systemName: "tag.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                            .foregroundColor(Color.themePrimary)
                         
                         Text("Name Your Apps")
                             .font(.title)
@@ -36,8 +37,8 @@ struct AppNamingView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         
-                        let selectedApps = deviceActivityService.selectedApps
-                        ForEach(Array(selectedApps.applicationTokens.enumerated()), id: \.element) { index, _ in
+                        // Use cached count to avoid blocking
+                        ForEach(0..<appsCount, id: \.self) { index in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("App \(index + 1)")
                                     .font(.caption)
@@ -55,11 +56,16 @@ struct AppNamingView: View {
                         
                         Button(action: {
                             // Save all app names
+                            print("💾 [AppNamingView] Save Names button - saving: \(appNames)")
                             for (index, name) in appNames {
                                 if !name.isEmpty {
+                                    print("💾 [AppNamingView] Saving '\(name)' for index \(index)")
                                     deviceActivityService.setAppName(name, forIndex: index)
                                 }
                             }
+                            // Force save one more time to ensure all names are persisted
+                            deviceActivityService.saveAppNamesMapping()
+                            print("💾 [AppNamingView] Done saving. Final appNames: \(deviceActivityService.appNames)")
                             dismiss()
                         }) {
                             Text("Save Names")
@@ -67,7 +73,7 @@ struct AppNamingView: View {
                                 .foregroundColor(.white)
                                 .padding(.vertical, 14)
                                 .frame(maxWidth: .infinity)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color(red: 0.1, green: 0.6, blue: 0.3)))
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.themePrimary))
                         }
                         .padding(.horizontal, 32)
                         .padding(.top, 20)
@@ -89,22 +95,34 @@ struct AppNamingView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         // Save all app names
+                        print("💾 [AppNamingView] Saving app names: \(appNames)")
                         for (index, name) in appNames {
                             if !name.isEmpty {
+                                print("💾 [AppNamingView] Saving '\(name)' for index \(index)")
                                 deviceActivityService.setAppName(name, forIndex: index)
                             }
                         }
+                        // Force save one more time to ensure all names are persisted
+                        deviceActivityService.saveAppNamesMapping()
+                        print("💾 [AppNamingView] Done saving. Final appNames: \(deviceActivityService.appNames)")
                         dismiss()
                     }
                 }
             }
-            .onAppear {
-                // Load current app names
-                let selectedApps = deviceActivityService.selectedApps
-                for index in 0..<selectedApps.applicationTokens.count {
-                    let currentName = deviceActivityService.getAppName(forIndex: index)
-                    if currentName != "App \(index + 1)" {
-                        appNames[index] = currentName
+            .task {
+                // Load apps count and names asynchronously to avoid blocking
+                Task { @MainActor in
+                    // Small delay to ensure view is rendered
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                    let selectedApps = self.deviceActivityService.selectedApps
+                    self.appsCount = selectedApps.applicationTokens.count
+                    
+                    // Load current app names
+                    for index in 0..<self.appsCount {
+                        let currentName = self.deviceActivityService.getAppName(forIndex: index)
+                        if currentName != "App \(index + 1)" {
+                            self.appNames[index] = currentName
+                        }
                     }
                 }
             }

@@ -63,7 +63,7 @@ struct ReturnDashboardView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("\(regretService.getReturnableRegrets().count)")
                                     .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .foregroundColor(Color.themePrimary)
                                 Text("Pending Returns")
                                     .font(.system(size: 12))
                                     .foregroundColor(.gray)
@@ -81,7 +81,7 @@ struct ReturnDashboardView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("\(regretService.regretEntries.filter { $0.returnStatus == .returned }.count)")
                                     .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(Color.themePrimary)
                                 Text("Completed")
                                     .font(.system(size: 12))
                                     .foregroundColor(.gray)
@@ -123,7 +123,7 @@ struct ReturnDashboardView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                .foregroundColor(Color.themePrimary)
                             
                             Text("No Returns to Track")
                                 .font(.system(size: 20, weight: .semibold))
@@ -181,7 +181,7 @@ struct FilterButton: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? Color(red: 0.1, green: 0.6, blue: 0.3) : Color(red: 0.95, green: 0.95, blue: 0.95))
+                        .fill(isSelected ? Color.themePrimary : Color(red: 0.95, green: 0.95, blue: 0.95))
                 )
         }
     }
@@ -205,7 +205,7 @@ struct ReturnDashboardCard: View {
             } else if days <= 3 {
                 return ("\(days) days left", .orange)
             } else {
-                return ("\(days) days left", Color(red: 0.1, green: 0.6, blue: 0.3))
+                return ("\(days) days left", Color.themePrimary)
             }
         }
         return ("Deadline: \(formatDate(deadline))", .gray)
@@ -238,9 +238,9 @@ struct ReturnDashboardCard: View {
                             .padding(.vertical, 4)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(status == .returned ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
+                                    .fill(status == .returned ? Color.themePrimary.opacity(0.2) : Color.orange.opacity(0.2))
                             )
-                            .foregroundColor(status == .returned ? .green : .orange)
+                            .foregroundColor(status == .returned ? Color.themePrimary : .orange)
                     }
                     
                     Text(deadlineStatus.text)

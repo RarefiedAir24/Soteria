@@ -54,7 +54,7 @@ struct GoalsView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                            .fill(Color.themePrimary)
                                     )
                             }
                         }
@@ -82,7 +82,7 @@ struct GoalsView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                                    .fill(Color.themePrimary)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -140,7 +140,7 @@ struct GoalCard: View {
             HStack {
                 Image(systemName: goal.category.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                    .foregroundColor(Color.themePrimary)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(goal.name)
@@ -157,7 +157,7 @@ struct GoalCard: View {
                 if goalsService.activeGoal?.id == goal.id {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .foregroundColor(Color.themePrimary)
                 }
             }
             
@@ -166,7 +166,7 @@ struct GoalCard: View {
                 HStack {
                     Text(formattedCurrent)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .foregroundColor(Color.themePrimary)
                     
                     Text("of \(formattedTarget)")
                         .font(.system(size: 14, weight: .regular, design: .default))
@@ -176,7 +176,7 @@ struct GoalCard: View {
                     
                     Text("\(progressPercentage)%")
                         .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .foregroundColor(Color.themePrimary)
                 }
                 
                 GeometryReader { geometry in
@@ -186,7 +186,7 @@ struct GoalCard: View {
                             .frame(height: 8)
                         
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(red: 0.1, green: 0.6, blue: 0.3))
+                            .fill(Color.themePrimary)
                             .frame(width: geometry.size.width * CGFloat(goal.progress), height: 8)
                     }
                 }
@@ -200,7 +200,7 @@ struct GoalCard: View {
                 }) {
                     Text("Set as Active Goal")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(red: 0.1, green: 0.6, blue: 0.3))
+                        .foregroundColor(Color.themePrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(
