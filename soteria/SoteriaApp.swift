@@ -339,6 +339,8 @@ struct RootView: View {
                 // CRITICAL: Only create MainTabView after app is ready
                 // This prevents TabView from evaluating all its children during startup
                 if isAppReady {
+                    // Use ZStack to ensure MainTabView appears immediately
+                    // Don't wrap in Group - that doesn't defer evaluation
                     MainTabView()
                 } else {
                     // Show custom splash screen while app initializes
@@ -360,8 +362,9 @@ struct RootView: View {
             // This prevents TabView from evaluating all its children during startup
             if authService.isAuthenticated {
                 print("🟡 [RootView] Waiting for app initialization...")
-                // Wait a bit to ensure all services are initialized
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                // Wait longer to ensure all services are fully initialized
+                // Services can take 8-10 seconds to initialize (RegretRiskEngine, QuietHoursService)
+                try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
                 await MainActor.run {
                     isAppReady = true
                     print("🟢 [RootView] App is ready - MainTabView will be created")

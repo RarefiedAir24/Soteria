@@ -27,24 +27,38 @@ struct HomeView: View {
     @State private var behavioralPatterns: DeviceActivityService.BehavioralPatterns? = nil
     @State private var avatarImage: UIImage? = nil
     @State private var showProfile = false
+    @State private var cachedRisk: RegretRiskAssessment? = nil  // Cache to avoid blocking access
+    @State private var cachedTotalSaved: Double = 0.0  // Cache to avoid blocking access
+    @State private var cachedIsQuietModeActive: Bool = false  // Cache to avoid blocking access
+    @State private var cachedActiveGoal: SavingsGoal? = nil  // Cache to avoid blocking access
+    @State private var cachedCurrentStreak: Int = 0  // Cache to avoid blocking access
+    @State private var cachedSoteriaMomentsCount: Int = 0  // Cache to avoid blocking access
+    @State private var cachedLastSavedAmount: Double? = nil  // Cache to avoid blocking access
+    @State private var cachedCurrentActiveSchedule: QuietHoursSchedule? = nil  // Cache to avoid blocking access
+    @State private var cachedStreakEmoji: String = "🔥"  // Cache to avoid blocking access
+    @State private var cachedCurrentMood: MoodLevel? = nil  // Cache to avoid blocking access
+    @State private var cachedRecentRegretCount: Int = 0  // Cache to avoid blocking access
+    @State private var cachedUserEmail: String = "there"  // Cache to avoid blocking access
+    @State private var cachedUserName: String = "User"  // Cache to avoid blocking access
     
     private var userEmail: String {
-        authService.currentUser?.email?.components(separatedBy: "@").first ?? "there"
+        cachedUserEmail
     }
     
     private var userName: String {
-        authService.currentUser?.displayName ?? authService.currentUser?.email?.components(separatedBy: "@").first ?? "User"
+        cachedUserName
     }
     
     private var formattedTotalSaved: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
-        return formatter.string(from: NSNumber(value: savingsService.totalSaved)) ?? "$0.00"
+        // Use cached value to avoid blocking access
+        return formatter.string(from: NSNumber(value: cachedTotalSaved)) ?? "$0.00"
     }
     
     private var formattedLastSaved: String {
-        guard let lastSaved = savingsService.lastSavedAmount else { return "" }
+        guard let lastSaved = cachedLastSavedAmount else { return "" }
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = "USD"
@@ -61,7 +75,8 @@ struct HomeView: View {
     }
     
     private var riskLevelColor: Color {
-        guard let risk = regretRiskEngine.currentRisk else { return .gray }
+        // Use cached value to avoid blocking access
+        guard let risk = cachedRisk else { return .gray }
         if risk.riskLevel >= 0.7 {
             return .red
         } else if risk.riskLevel >= 0.4 {
@@ -72,7 +87,8 @@ struct HomeView: View {
     }
     
     private var riskLevelText: String {
-        guard let risk = regretRiskEngine.currentRisk else { return "Unknown" }
+        // Use cached value to avoid blocking access
+        guard let risk = cachedRisk else { return "Unknown" }
         if risk.riskLevel >= 0.7 {
             return "High Risk"
         } else if risk.riskLevel >= 0.4 {
@@ -97,8 +113,8 @@ struct HomeView: View {
             
             ScrollView {
                 VStack(spacing: .spacingSection) {
-                    // Regret Risk Alert Card
-                    if let risk = regretRiskEngine.currentRisk, risk.riskLevel >= 0.4 {
+                    // Regret Risk Alert Card - use cached value to avoid blocking
+                    if let risk = cachedRisk, risk.riskLevel >= 0.4 {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: risk.riskLevel >= 0.7 ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
@@ -145,19 +161,19 @@ struct HomeView: View {
                     // Quiet Mode Status Card
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Image(systemName: quietHoursService.isQuietModeActive ? "moon.fill" : "moon")
+                            Image(systemName: cachedIsQuietModeActive ? "moon.fill" : "moon")
                                 .font(.system(size: 24))
-                                .foregroundColor(quietHoursService.isQuietModeActive ? Color.reverBlue : .softGraphite)
+                                .foregroundColor(cachedIsQuietModeActive ? Color.reverBlue : .softGraphite)
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(quietHoursService.isQuietModeActive ? "Financial Quiet Mode Active" : "Financial Quiet Mode Inactive")
+                                Text(cachedIsQuietModeActive ? "Financial Quiet Mode Active" : "Financial Quiet Mode Inactive")
                                     .reverH3()
                                 
-                                if quietHoursService.isQuietModeActive {
+                                if cachedIsQuietModeActive {
                                     Text("Your sanctuary is protecting you")
                                         .reverCaption()
                                         .foregroundColor(.reverBlue)
-                                } else if let schedule = quietHoursService.currentActiveSchedule {
+                                } else if let schedule = cachedCurrentActiveSchedule {
                                     Text(schedule.name)
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
@@ -178,7 +194,7 @@ struct HomeView: View {
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                     )
                     .padding(.horizontal, 20)
-                    .padding(.top, quietHoursService.isQuietModeActive || (regretRiskEngine.currentRisk?.riskLevel ?? 0) >= 0.4 ? 0 : 60)
+                    .padding(.top, cachedIsQuietModeActive || (cachedRisk?.riskLevel ?? 0) >= 0.4 ? 0 : 60)
                     
                     // Protection Moments Card - Hero Card (Behavioral Focus)
                     VStack(alignment: .leading, spacing: 12) {
@@ -188,7 +204,7 @@ struct HomeView: View {
                                     .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(.softGraphite)
                                 
-                                Text("\(savingsService.soteriaMomentsCount)")
+                                Text("\(cachedSoteriaMomentsCount)")
                                     .font(.system(size: 52, weight: .bold, design: .rounded))
                                     .foregroundColor(.reverBlue)
                                 
@@ -200,11 +216,11 @@ struct HomeView: View {
                             Spacer()
                             
                             // Streak Badge
-                            if streakService.currentStreak > 0 {
+                            if cachedCurrentStreak > 0 {
                                 VStack(spacing: 4) {
-                                    Text(streakService.streakEmoji)
+                                    Text(cachedStreakEmoji)
                                         .font(.system(size: 32))
-                                    Text("\(streakService.currentStreak)")
+                                    Text("\(cachedCurrentStreak)")
                                         .font(.system(size: 20, weight: .bold))
                                         .foregroundColor(.reverBlue)
                                     Text("day streak")
@@ -215,7 +231,7 @@ struct HomeView: View {
                         }
                         
                         // Active Goal Progress (if exists)
-                        if let activeGoal = goalsService.activeGoal {
+                        if let activeGoal = cachedActiveGoal {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     Text(activeGoal.name)
@@ -333,7 +349,7 @@ struct HomeView: View {
                     }
                     
                     // Mood Insights Card
-                    if let currentMood = moodService.currentMood {
+                    if let currentMood = cachedCurrentMood {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text(currentMood.emoji)
@@ -460,7 +476,7 @@ struct HomeView: View {
                     }
                     
                     // Regret Summary Card
-                    if regretService.recentRegretCount > 0 {
+                    if cachedRecentRegretCount > 0 {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
@@ -472,7 +488,7 @@ struct HomeView: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
                                     
-                                    Text("\(regretService.recentRegretCount)")
+                                    Text("\(cachedRecentRegretCount)")
                                         .font(.system(size: 24, weight: .bold))
                                         .foregroundColor(.midnightSlate)
                                 }
@@ -564,8 +580,28 @@ struct HomeView: View {
             isLoadingMetrics = false
             print("🟡 [HomeView] Set isLoadingMetrics = false immediately")
             
-            // Load avatar
-            loadAvatar()
+            // Cache all environment object values asynchronously to avoid blocking body evaluation
+            // Load these in background after a short delay
+            // Use Task (not Task.detached) to maintain access to view properties
+            Task(priority: .utility) {
+                // Small delay to ensure UI is responsive first
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                // Access environment objects and update cached values
+                cachedRisk = regretRiskEngine.currentRisk
+                cachedTotalSaved = savingsService.totalSaved
+                cachedIsQuietModeActive = quietHoursService.isQuietModeActive
+                cachedActiveGoal = goalsService.activeGoal
+                cachedCurrentStreak = streakService.currentStreak
+                cachedSoteriaMomentsCount = savingsService.soteriaMomentsCount
+                cachedLastSavedAmount = savingsService.lastSavedAmount
+                cachedCurrentActiveSchedule = quietHoursService.currentActiveSchedule
+                cachedStreakEmoji = streakService.streakEmoji
+                cachedCurrentMood = moodService.currentMood
+                cachedRecentRegretCount = regretService.recentRegretCount
+                cachedUserEmail = authService.currentUser?.email?.components(separatedBy: "@").first ?? "there"
+                cachedUserName = authService.currentUser?.displayName ?? authService.currentUser?.email?.components(separatedBy: "@").first ?? "User"
+                print("🟡 [HomeView] Cached all environment object values")
+            }
             
             // Load avatar
             loadAvatar()
@@ -619,6 +655,7 @@ struct HomeView: View {
         }
         
         // Then try to load from Firebase Storage (async, for cross-device sync)
+        // Access authService.currentUser?.uid - this is safe as it's in a Task
         if let userId = authService.currentUser?.uid {
             Task {
                 let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")

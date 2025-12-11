@@ -241,7 +241,7 @@ class DeviceActivityService: ObservableObject {
         let initStart = Date()
         print("✅ [DeviceActivityService] Init started at \(initStart) (all work deferred)")
         
-        // Load everything asynchronously in background with significant delay
+        // Load everything asynchronously in background with minimal delay
         // This ensures the UI is fully rendered before we do any work
         Task.detached(priority: .background) { [weak self, initStart] in
             guard let self = self else { return }
@@ -249,12 +249,12 @@ class DeviceActivityService: ObservableObject {
             let taskStart = Date()
             print("🟡 [DeviceActivityService] Background task started at \(taskStart)")
             
-            // Long delay to ensure UI renders first and app is responsive
+            // Minimal delay to ensure UI renders first - reduced from 2s to 0.5s
             let sleep1Start = Date()
-            print("🟡 [DeviceActivityService] Starting 2s sleep at \(sleep1Start)")
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            print("🟡 [DeviceActivityService] Starting 0.5s sleep at \(sleep1Start)")
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             let sleep1End = Date()
-            print("🟡 [DeviceActivityService] 2s sleep completed at \(sleep1End) (took \(sleep1End.timeIntervalSince(sleep1Start))s)")
+            print("🟡 [DeviceActivityService] 0.5s sleep completed at \(sleep1End) (took \(sleep1End.timeIntervalSince(sleep1Start))s)")
             
             // Load critical data in separate background tasks - don't await MainActor.run
             // This prevents any blocking even if MainActor is busy
@@ -298,12 +298,8 @@ class DeviceActivityService: ObservableObject {
             let loadEnd = Date()
             print("🟡 [DeviceActivityService] Critical data loading tasks started at \(loadEnd) (took \(loadEnd.timeIntervalSince(loadStart))s) - tasks running in background")
             
-            // Additional delay before heavy operations
-            let sleep2Start = Date()
-            print("🟡 [DeviceActivityService] Starting 1s sleep at \(sleep2Start)")
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 more second
-            let sleep2End = Date()
-            print("🟡 [DeviceActivityService] 1s sleep completed at \(sleep2End) (took \(sleep2End.timeIntervalSince(sleep2Start))s)")
+            // No additional delay - operations are already in background tasks
+            // Removed the extra 1-second sleep to speed up startup
             
             // Load heavy data in background (JSON decoding can be slow)
             // DISABLED: Defer loadUnblockEvents() significantly to prevent blocking

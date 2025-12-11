@@ -73,26 +73,23 @@ class QuietHoursService: ObservableObject {
     private init() {
         let initStart = Date()
         print("✅ [QuietHoursService] Init started at \(initStart) (all work deferred)")
-        // Defer everything - no synchronous work
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
+        // Defer everything - no synchronous work, no MainActor blocking
+        // Use Task.detached to avoid blocking main thread
+        Task.detached(priority: .background) {
+            // Don't wait - load immediately in background
             let loadStart = Date()
             print("🟡 [QuietHoursService] Loading schedules at \(loadStart)")
-            self.loadSchedules()
-            let loadEnd = Date()
-            print("🟡 [QuietHoursService] Schedules loaded at \(loadEnd) (took \(loadEnd.timeIntervalSince(loadStart))s)")
-            
-            // Start monitoring in background (low priority)
-            print("🟡 [QuietHoursService] Deferring startMonitoring() - will start later")
-            // DISABLED: Defer startMonitoring to prevent blocking
-            /*
-            Task.detached(priority: .background) {
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-                await MainActor.run {
-                    self.startMonitoring()
-                }
+            // loadSchedules() is @MainActor, so call it on MainActor
+            await MainActor.run {
+                QuietHoursService.shared.loadSchedules()
             }
-            */
+            // Don't wait for it to complete - just log that we started
+            let loadEnd = Date()
+            print("🟡 [QuietHoursService] Schedule loading started (took \(loadEnd.timeIntervalSince(loadStart))s)")
+            
+            // Start monitoring in background (low priority) - DISABLED to prevent blocking
+            print("🟡 [QuietHoursService] Deferring startMonitoring() - will start later")
+            
             let initEnd = Date()
             print("✅ [QuietHoursService] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
         }
@@ -104,11 +101,18 @@ class QuietHoursService: ObservableObject {
         print("🧹 [QuietHoursService] Cleaned up timers")
     }
     
-    // Load schedules from UserDefaults
+    // Load schedules from UserDefaults - make this truly async to avoid blocking
+    @MainActor
     private func loadSchedules() {
-        if let data = UserDefaults.standard.data(forKey: schedulesKey),
-           let decoded = try? JSONDecoder().decode([QuietHoursSchedule].self, from: data) {
-            schedules = decoded
+        // This is called from MainActor context, but JSON decoding can still block
+        // Do it in a detached task to avoid blocking
+        Task.detached(priority: .utility) {
+            let data = UserDefaults.standard.data(forKey: "quiet_hours_schedules")
+            let decoded = data.flatMap { try? JSONDecoder().decode([QuietHoursSchedule].self, from: $0) }
+            await MainActor.run {
+                // Access schedules property on MainActor
+                QuietHoursService.shared.schedules = decoded ?? []
+            }
         }
     }
     
