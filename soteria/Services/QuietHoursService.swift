@@ -78,14 +78,13 @@ class QuietHoursService: ObservableObject {
         Task.detached(priority: .background) {
             // Don't wait - load immediately in background
             let loadStart = Date()
-            print("🟡 [QuietHoursService] Loading schedules at \(loadStart)")
-            // loadSchedules() is @MainActor, so call it on MainActor
-            await MainActor.run {
-                QuietHoursService.shared.loadSchedules()
-            }
-            // Don't wait for it to complete - just log that we started
+            print("🟡 [QuietHoursService] Starting schedule load at \(loadStart)")
+            // Call loadSchedules() directly - it's now truly async and won't block
+            // Don't await it - just start it and let it run in background
+            QuietHoursService.shared.loadSchedules()
+            // Log immediately - don't wait for loadSchedules to complete
             let loadEnd = Date()
-            print("🟡 [QuietHoursService] Schedule loading started (took \(loadEnd.timeIntervalSince(loadStart))s)")
+            print("🟡 [QuietHoursService] Schedule loading initiated (took \(loadEnd.timeIntervalSince(loadStart))s)")
             
             // Start monitoring in background (low priority) - DISABLED to prevent blocking
             print("🟡 [QuietHoursService] Deferring startMonitoring() - will start later")
@@ -102,16 +101,28 @@ class QuietHoursService: ObservableObject {
     }
     
     // Load schedules from UserDefaults - make this truly async to avoid blocking
-    @MainActor
+    // Remove @MainActor - this function should not block the main thread
     private func loadSchedules() {
-        // This is called from MainActor context, but JSON decoding can still block
-        // Do it in a detached task to avoid blocking
-        Task.detached(priority: .utility) {
+        // Start a detached task immediately - don't block anything
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            let loadStart = Date()
+            print("🟡 [QuietHoursService] loadSchedules() task started at \(loadStart)")
+            
+            // Read UserDefaults in background (fast, but do it off main thread)
             let data = UserDefaults.standard.data(forKey: "quiet_hours_schedules")
+            
+            // Decode JSON in background (can be slow with large arrays)
             let decoded = data.flatMap { try? JSONDecoder().decode([QuietHoursSchedule].self, from: $0) }
+            
+            let decodeEnd = Date()
+            print("🟡 [QuietHoursService] JSON decode completed (took \(decodeEnd.timeIntervalSince(loadStart))s)")
+            
+            // Update @Published property on MainActor (required for ObservableObject)
             await MainActor.run {
-                // Access schedules property on MainActor
-                QuietHoursService.shared.schedules = decoded ?? []
+                self.schedules = decoded ?? []
+                let updateEnd = Date()
+                print("✅ [QuietHoursService] Schedules loaded: \(self.schedules.count) (total: \(updateEnd.timeIntervalSince(loadStart))s)")
             }
         }
     }

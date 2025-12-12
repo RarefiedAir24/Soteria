@@ -358,16 +358,16 @@ struct RootView: View {
             let taskStart = Date()
             print("🟢 [RootView] .task started at \(taskStart), isAuthenticated: \(authService.isAuthenticated)")
             
-            // Wait for app initialization to complete before showing MainTabView
-            // This prevents TabView from evaluating all its children during startup
+            // With custom tab bar, we can create MainTabView quickly
+            // Only HomeView will be created (lazy loading for other tabs)
             if authService.isAuthenticated {
-                print("🟡 [RootView] Waiting for app initialization...")
-                // Wait longer to ensure all services are fully initialized
-                // Services can take 8-10 seconds to initialize (RegretRiskEngine, QuietHoursService)
-                try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+                print("🟡 [RootView] App is authenticated - showing splash screen briefly")
+                // Show splash screen for minimum 1.5 seconds for branding
+                // This is much shorter than the previous 10-second delay
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
                 await MainActor.run {
                     isAppReady = true
-                    print("🟢 [RootView] App is ready - MainTabView will be created")
+                    print("🟢 [RootView] App is ready - MainTabView will be created (only HomeView will load)")
                 }
             }
             

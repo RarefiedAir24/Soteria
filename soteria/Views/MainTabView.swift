@@ -3,85 +3,117 @@
 //  rever
 //
 //  Created by Frank Schioppa on 12/6/25.
+//  Updated: Custom tab bar implementation for lazy loading
 //
 
 import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
-    @State private var shouldCreateSettingsView = false  // Control when SettingsView is created
+    @State private var shouldCreateGoalsView = false  // Lazy load GoalsView
+    @State private var shouldCreateSettingsView = false  // Lazy load SettingsView
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationView {
-                HomeView()
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
-            .tabItem {
-                Label("Home", systemImage: "house.fill")
-            }
-            .tag(0)
-            
-            NavigationView {
-                GoalsView()
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
-            .tabItem {
-                Label("Goals", systemImage: "target")
-            }
-            .tag(1)
-            
-            // CRITICAL: Only create SettingsView when shouldCreateSettingsView is true
-            // This prevents SwiftUI from evaluating SettingsView during app startup
-            NavigationView {
-                Group {
-                    if shouldCreateSettingsView {
-                        SettingsView()
-                    } else {
-                        // Placeholder - SwiftUI won't render this
-                        Color.clear
-                            .frame(width: 0, height: 0)
+        let _ = {
+            let timestamp = Date()
+            print("🟢 [MainTabView] body evaluated at \(timestamp), selectedTab: \(selectedTab)")
+        }()
+        
+        return VStack(spacing: 0) {
+            // Only create the selected view - this is the key optimization!
+            Group {
+                switch selectedTab {
+                case 0:
+                    // HomeView is always created (it's the default tab)
+                    NavigationView {
+                        HomeView()
                     }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    
+                case 1:
+                    // GoalsView is only created when user selects Goals tab
+                    NavigationView {
+                        if shouldCreateGoalsView {
+                            GoalsView()
+                        } else {
+                            // Placeholder while we prepare to create the view
+                            Color.mistGray
+                                .ignoresSafeArea()
+                                .overlay(
+                                    ProgressView()
+                                        .scaleEffect(1.2)
+                                )
+                        }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .onAppear {
+                        // Create GoalsView when tab appears
+                        if !shouldCreateGoalsView {
+                            Task {
+                                // Small delay to ensure smooth transition
+                                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                                await MainActor.run {
+                                    shouldCreateGoalsView = true
+                                    print("🟢 [MainTabView] GoalsView will now be created")
+                                }
+                            }
+                        }
+                    }
+                    
+                case 2:
+                    // SettingsView is only created when user selects Settings tab
+                    NavigationView {
+                        if shouldCreateSettingsView {
+                            SettingsView()
+                        } else {
+                            // Placeholder while we prepare to create the view
+                            Color.mistGray
+                                .ignoresSafeArea()
+                                .overlay(
+                                    ProgressView()
+                                        .scaleEffect(1.2)
+                                )
+                        }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .onAppear {
+                        // Create SettingsView when tab appears
+                        if !shouldCreateSettingsView {
+                            Task {
+                                // Small delay to ensure smooth transition
+                                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                                await MainActor.run {
+                                    shouldCreateSettingsView = true
+                                    print("🟢 [MainTabView] SettingsView will now be created")
+                                }
+                            }
+                        }
+                    }
+                    
+                default:
+                    EmptyView()
                 }
             }
-            .navigationViewStyle(StackNavigationViewStyle())
-            .tabItem {
-                Label("Settings", systemImage: "gearshape.fill")
-            }
-            .tag(2)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // Custom tab bar at bottom
+            CustomTabBar(selectedTab: $selectedTab)
         }
-        // Set consistent toolbar appearance to prevent color changes when switching tabs
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(Color.mistGray, for: .tabBar)
-        // Also set consistent navigation bar appearance for all tabs
+        // Set consistent navigation bar appearance for all tabs
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(Color.mistGray, for: .navigationBar)
         // Set consistent status bar style
         .preferredColorScheme(.light)
-        .onChange(of: selectedTab) { oldValue, newValue in
-            // When Settings tab is selected, wait a moment before creating the view
-            // This gives the app time to finish any initialization
-            if newValue == 2 && !shouldCreateSettingsView {
-                Task {
-                    // Small delay to ensure app is fully initialized
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                    await MainActor.run {
-                        shouldCreateSettingsView = true
-                        print("🟢 [MainTabView] SettingsView will now be created")
-                    }
-                }
-            }
-        }
         .onAppear {
             let timestamp = Date()
-            print("🟢 [MainTabView] onAppear at \(timestamp)")
+            print("🟢 [MainTabView] onAppear at \(timestamp), selectedTab: \(selectedTab)")
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            print("🟢 [MainTabView] Tab changed from \(oldValue) to \(newValue)")
         }
         .task {
             let startTime = Date()
             print("🟢 [MainTabView] .task started at \(startTime)")
-            // DISABLED: Removed sleep to prevent blocking
-            // The sleep itself shouldn't block, but if something else is blocking the main thread,
-            // the await will wait indefinitely. Just return immediately.
             let endTime = Date()
             print("🟢 [MainTabView] .task completed at \(endTime) (took \(endTime.timeIntervalSince(startTime))s)")
         }

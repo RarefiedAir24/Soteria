@@ -77,8 +77,9 @@ class RegretRiskEngine: ObservableObject {
     private init() {
         let initStart = Date()
         print("✅ [RegretRiskEngine] Init started at \(initStart) (all work deferred)")
-        // Defer everything - no synchronous work
-        Task { @MainActor in
+        // Defer everything - no synchronous work, no MainActor blocking
+        // Use Task.detached to avoid blocking main thread
+        Task.detached(priority: .background) {
             // Don't request notification authorization here - SoteriaApp handles it
             // requestNotificationAuthorization()
             let assessmentStart = Date()
