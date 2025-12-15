@@ -4,11 +4,6 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>Plaid.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>Pods-soteria-SoteriaMonitor.xcscheme</key>
 		<dict>
 			<key>isShown</key>

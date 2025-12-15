@@ -23,11 +23,19 @@
  */
 
 const AWS = require('aws-sdk');
+const crypto = require('crypto');
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
 // These will be set via environment variables
 const USER_POOL_ID = process.env.USER_POOL_ID;
 const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
+// Helper function to compute SECRET_HASH for Cognito
+function computeSecretHash(username) {
+    const message = username + CLIENT_ID;
+    return crypto.createHmac('sha256', CLIENT_SECRET).update(message).digest('base64');
+}
 
 exports.handler = async (event) => {
     console.log('📥 [Lambda] Sign in request received');
@@ -66,14 +74,20 @@ exports.handler = async (event) => {
         }
         
         // Authenticate user with Cognito
+        const username = email.toLowerCase().trim();
         const authParams = {
             AuthFlow: 'USER_PASSWORD_AUTH',
             ClientId: CLIENT_ID,
             AuthParameters: {
-                USERNAME: email.toLowerCase().trim(),
+                USERNAME: username,
                 PASSWORD: password
             }
         };
+        
+        // Add SECRET_HASH if client secret is configured
+        if (CLIENT_SECRET) {
+            authParams.AuthParameters.SECRET_HASH = computeSecretHash(username);
+        }
         
         const authResult = await cognito.initiateAuth(authParams).promise();
         

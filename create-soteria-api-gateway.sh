@@ -87,6 +87,15 @@ DATA_RESOURCE_ID=$(aws apigateway create-resource \
     --query 'id' \
     --output text)
 
+# /soteria/dashboard (GET) - Get pre-computed dashboard data
+DASHBOARD_RESOURCE_ID=$(aws apigateway create-resource \
+    --rest-api-id "$API_ID" \
+    --parent-id "$SOTERIA_RESOURCE_ID" \
+    --path-part "dashboard" \
+    --region "$REGION" \
+    --query 'id' \
+    --output text)
+
 # Step 5: Create /soteria/plaid resource (for Plaid integration)
 echo "📁 Creating /soteria/plaid resource..."
 PLAID_RESOURCE_ID=$(aws apigateway create-resource \
@@ -154,6 +163,7 @@ echo "Resources created:"
 echo "  Data Sync:"
 echo "    - /soteria/sync (ID: $SYNC_RESOURCE_ID)"
 echo "    - /soteria/data (ID: $DATA_RESOURCE_ID)"
+echo "    - /soteria/dashboard (ID: $DASHBOARD_RESOURCE_ID)"
 echo "  Plaid:"
 echo "    - /soteria/plaid/create-link-token (ID: $CREATE_TOKEN_RESOURCE_ID)"
 echo "    - /soteria/plaid/exchange-token (ID: $EXCHANGE_TOKEN_RESOURCE_ID)"

@@ -23,6 +23,67 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         print("🔔 [Extension] ════════════════════════════════════════")
     }
     
+    // MARK: - Notification Customization Helper
+    
+    /// Creates a customizable notification content with app-specific messaging
+    /// - Parameters:
+    ///   - title: Main notification title (e.g., "🛑 SOTERIA Moment")
+    ///   - subtitle: Subtitle that appears below title in banner (e.g., "Protection Alert")
+    ///   - body: Main notification message
+    ///   - appName: Name of the app that triggered the notification
+    ///   - type: Notification type identifier
+    ///   - userInfo: Additional user info dictionary
+    /// - Returns: Configured UNMutableNotificationContent
+    private func createCustomNotificationContent(
+        title: String,
+        subtitle: String? = nil,
+        body: String,
+        appName: String? = nil,
+        type: String,
+        userInfo: [String: Any] = [:]
+    ) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        
+        // Set customizable title
+        content.title = title
+        
+        // Set customizable subtitle (appears below title in banner)
+        if let subtitle = subtitle {
+            content.subtitle = subtitle
+        }
+        
+        // Set customizable body text
+        content.body = body
+        
+        // Set category identifier for custom actions (if needed)
+        content.categoryIdentifier = type
+        
+        // Combine userInfo with type and appName
+        var combinedUserInfo = userInfo
+        combinedUserInfo["type"] = type
+        if let appName = appName {
+            combinedUserInfo["appName"] = appName
+        }
+        content.userInfo = combinedUserInfo
+        
+        // Set sound
+        content.sound = .default
+        
+        // Set badge count
+        content.badge = 1
+        
+        // Use time-sensitive interruption level for in-app visibility
+        if #available(iOS 15.0, *) {
+            content.interruptionLevel = .timeSensitive
+            content.relevanceScore = 1.0
+        }
+        
+        // Set thread identifier to group related notifications
+        content.threadIdentifier = type
+        
+        return content
+    }
+    
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         print("🔔 [Extension] ════════════════════════════════════════")
@@ -30,6 +91,11 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         print("🔔 [Extension] Activity: \(activity)")
         print("🔔 [Extension] Current time: \(Date())")
         print("🔔 [Extension] ════════════════════════════════════════")
+        
+        // FIXED: Clear event state when interval starts to allow events to fire again
+        // This ensures notifications can be sent every time the app opens, not just once per interval
+        // DeviceActivity events reset when the monitoring interval starts
+        print("🔄 [Extension] Monitoring interval started - events can now fire again")
         
         // The main app should have already set shield.applications
         // We just verify it's set and log for debugging
@@ -120,48 +186,35 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func eventWillReachThresholdWarning(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventWillReachThresholdWarning(event, activity: activity)
         print("⚠️ [Extension] eventWillReachThresholdWarning - Event: \(event), Activity: \(activity)")
-        // This fires BEFORE the app opens - this is our chance to intercept!
-        print("🔔 [Extension] Blocking screen appeared - intercepting BEFORE app launch")
+        // FIXED: This fires BEFORE the app opens - this is our PRIMARY method to send notifications
+        // This should fire every time the app is about to open, even if eventDidReachThreshold already fired
+        print("🔔 [Extension] App about to open - sending notification BEFORE app launch")
         
-        // Store which app was attempted (we'll use this to open it later)
-        // Note: We can't get the exact app from the event, but we can store a flag
-        // The main app will try to open the first selected app
+        // Extract app index from event name
+        let eventNameString = event.rawValue
+        var appIndex: Int? = nil
+        
+        if let indexString = eventNameString.split(separator: ".").last,
+           let index = Int(indexString) {
+            appIndex = index
+            print("✅ [Extension] Extracted app index: \(index) from event name: \(eventNameString)")
+        }
+        
+        // Get app name using internal naming system
+        let appName = getAppName(forIndex: appIndex ?? 0)
+        print("✅ [Extension] App name: \(appName) (index: \(appIndex ?? -1))")
+        
         UserDefaults.standard.set(true, forKey: "shouldShowPurchaseIntentPrompt")
         UserDefaults.standard.set(true, forKey: "shouldOpenTargetAppAfterPrompt")
-        print("✅ [Extension] Set shouldShowPurchaseIntentPrompt flag")
-        print("✅ [Extension] Set shouldOpenTargetAppAfterPrompt flag")
-        
-        // Send notification that will open SOTERIA immediately
-        // This notification should appear and when tapped, opens SOTERIA with the prompt
-        sendPurchaseIntentPromptNotification()
-        
-        // Also try to open SOTERIA directly via URL scheme (if possible from extension)
-        // Note: Extensions can't directly open apps, but we can try via notification
-        Task {
-            // Send a critical notification that opens SOTERIA
-            let content = UNMutableNotificationContent()
-            content.title = "🛑 SOTERIA Moment"
-            content.body = "Is this a planned purchase or impulse?"
-            content.userInfo = [
-                "type": "purchase_intent_prompt",
-                "url": "soteria://purchase-intent"
-            ]
-            content.sound = .default
-            if #available(iOS 15.0, *) {
-                content.interruptionLevel = .critical // Critical notifications can interrupt
-                content.relevanceScore = 1.0
-            }
-            
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
-            let request = UNNotificationRequest(identifier: "soteria_intercept_\(UUID().uuidString)", content: content, trigger: trigger)
-            
-            do {
-                try await UNUserNotificationCenter.current().add(request)
-                print("✅ [Extension] Critical notification sent to open SOTERIA")
-            } catch {
-                print("❌ [Extension] Failed to send critical notification: \(error)")
-            }
+        if let appIndex = appIndex {
+            UserDefaults.standard.set(appIndex, forKey: "lastOpenedAppIndex")
         }
+        print("✅ [Extension] Set shouldShowPurchaseIntentPrompt flag")
+        
+        // FIXED: Send notification in eventWillReachThresholdWarning (fires BEFORE threshold)
+        // This ensures notification is sent every time app is about to open
+        // eventWillReachThresholdWarning should fire even if eventDidReachThreshold already fired
+        sendPurchaseIntentPromptNotification(appName: appName, appIndex: appIndex)
     }
     
            override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
@@ -170,38 +223,148 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                print("🔔 [Extension] eventDidReachThreshold FIRED!")
                print("🔔 [Extension] Event: \(event)")
                print("🔔 [Extension] Activity: \(activity)")
-               print("🔔 [Extension] User tapped through blocking screen - app opened")
+               print("🔔 [Extension] Monitored app opened during Quiet Hours")
                print("🔔 [Extension] ════════════════════════════════════════")
+               
+               // Extract app index from event name
+               // Event name format: "soteria.moment.0", "soteria.moment.1", etc.
+               let eventNameString = event.rawValue
+               var appIndex: Int? = nil
+               
+               if let indexString = eventNameString.split(separator: ".").last,
+                  let index = Int(indexString) {
+                   appIndex = index
+                   print("✅ [Extension] Extracted app index: \(index) from event name: \(eventNameString)")
+               } else {
+                   print("⚠️ [Extension] Could not extract app index from event name: \(eventNameString)")
+               }
+               
+               // Get app name using internal naming system
+               let appName = getAppName(forIndex: appIndex ?? 0)
+               print("✅ [Extension] App name: \(appName) (index: \(appIndex ?? -1))")
                
                // Track that shopping app was opened
                recordShoppingSessionStart()
                
                // Notify main app that a shopping app came to foreground
-               // This helps track actual usage (foreground vs background)
                UserDefaults.standard.set(true, forKey: "shoppingAppOpened")
                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "shoppingAppOpenedTime")
                
-               // Note: We can't determine which specific app was opened from the extension
-               // The main app will track usage when it detects the app is active
+               // Store app index for main app
+               if let appIndex = appIndex {
+                   UserDefaults.standard.set(appIndex, forKey: "lastOpenedAppIndex")
+               }
         
-        // Set flag so SOTERIA shows prompt when it becomes active
-        UserDefaults.standard.set(true, forKey: "shouldShowPurchaseIntentPrompt")
-        print("✅ [Extension] Set shouldShowPurchaseIntentPrompt flag")
+               // Set flag so SOTERIA shows prompt when it becomes active
+               UserDefaults.standard.set(true, forKey: "shouldShowPurchaseIntentPrompt")
+               print("✅ [Extension] Set shouldShowPurchaseIntentPrompt flag")
+               
+               // Send app-specific purchase intent prompt notification
+               sendPurchaseIntentPromptNotification(appName: appName, appIndex: appIndex)
+               
+               // Also try to open SOTERIA directly via URL scheme
+               if let url = URL(string: "soteria://purchase-intent") {
+                   // Post notification to open SOTERIA
+                   NotificationCenter.default.post(name: NSNotification.Name("OpenSOTERIA"), object: nil, userInfo: ["url": url.absoluteString])
+                   print("✅ [Extension] Posted notification to open SOTERIA")
+               }
+           }
+    
+    // Get app name from internal naming system (shared UserDefaults)
+    private func getAppName(forIndex index: Int) -> String {
+        // Load app names from UserDefaults (shared between app and extension)
+        if let data = UserDefaults.standard.data(forKey: "appNamesMapping"),
+           let appNames = try? JSONDecoder().decode([Int: String].self, from: data),
+           let name = appNames[index] {
+            return name
+        }
+        // Fallback to default name
+        return "App \(index + 1)"
+    }
+    
+    // Get active goal information from shared UserDefaults
+    private func getActiveGoalInfo() -> (name: String, progressPercent: Int)? {
+        // Load goals from UserDefaults (shared between app and extension)
+        // GoalsService stores goals with key "saved_goals"
+        guard let data = UserDefaults.standard.data(forKey: "saved_goals"),
+              let goals = try? JSONDecoder().decode([SavingsGoal].self, from: data) else {
+            print("🔔 [Extension] No goals found in UserDefaults")
+            return nil
+        }
         
-        // Send purchase intent prompt notification
-        sendPurchaseIntentPromptNotification()
+        // Find active goal
+        let activeGoal = goals.first { goal in
+            goal.status == .active
+        }
         
-        // Also try to open SOTERIA directly via URL scheme
-        if let url = URL(string: "soteria://purchase-intent") {
-            // Post notification to open SOTERIA
-            NotificationCenter.default.post(name: NSNotification.Name("OpenSOTERIA"), object: nil, userInfo: ["url": url.absoluteString])
-            print("✅ [Extension] Posted notification to open SOTERIA")
+        guard let goal = activeGoal else {
+            print("🔔 [Extension] No active goal found")
+            return nil
+        }
+        
+        // Calculate progress percentage
+        let progressPercent = Int(goal.progress * 100)
+        
+        print("🔔 [Extension] Found active goal: \(goal.name), Progress: \(progressPercent)%")
+        return (name: goal.name, progressPercent: progressPercent)
+    }
+    
+    // SavingsGoal struct for decoding (must match GoalsService.swift)
+    // This is a simplified version for the extension - only fields we need
+    // All fields are optional to handle decoding gracefully
+    private struct SavingsGoal: Codable {
+        let id: String
+        var name: String
+        var targetAmount: Double
+        var currentAmount: Double
+        var status: GoalStatus
+        var targetDate: Date?
+        var startDate: Date? // Optional - may not be present
+        var category: GoalCategory? // Optional - may not be present
+        var protectionAmount: Double? // Optional - may not be present
+        var photoPath: String? // Optional
+        var description: String? // Optional
+        var createdDate: Date? // Optional
+        var completedDate: Date? // Optional
+        var completedAmount: Double? // Optional
+        
+        enum GoalStatus: String, Codable {
+            case active = "active"
+            case achieved = "achieved"
+            case failed = "failed"
+            case cancelled = "cancelled"
+        }
+        
+        enum GoalCategory: String, Codable {
+            case trip = "Trip"
+            case purchase = "Purchase"
+            case emergency = "Emergency Fund"
+            case other = "Other"
+        }
+        
+        var progress: Double {
+            guard targetAmount > 0 else { return 0 }
+            return min(currentAmount / targetAmount, 1.0)
         }
     }
     
-    // Send notification to show purchase intent prompt
-    private func sendPurchaseIntentPromptNotification() {
-        print("🔔 [Extension] Sending purchase intent prompt notification...")
+    // Send app-specific notification to show purchase intent prompt
+    // Track last notification time per app to prevent spam (optional rate limiting)
+    private var lastNotificationTime: [Int: Date] = [:]
+    private let minNotificationInterval: TimeInterval = 5.0 // Minimum 5 seconds between notifications for same app
+    
+    private func sendPurchaseIntentPromptNotification(appName: String, appIndex: Int?) {
+        print("🔔 [Extension] Sending app-specific purchase intent prompt notification...")
+        print("🔔 [Extension] App: \(appName) (index: \(appIndex ?? -1))")
+        
+        // FIXED: Optional rate limiting - only prevent notifications if sent very recently (within 5 seconds)
+        // This allows notifications to show every time app opens, but prevents spam if app opens/closes rapidly
+        if let appIndex = appIndex,
+           let lastTime = lastNotificationTime[appIndex],
+           Date().timeIntervalSince(lastTime) < minNotificationInterval {
+            print("⏭️ [Extension] Skipping notification - sent recently for app \(appIndex) (rate limiting)")
+            return
+        }
         
         Task {
             let settings = await UNUserNotificationCenter.current().notificationSettings()
@@ -211,28 +374,72 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                 return
             }
             
-            let content = UNMutableNotificationContent()
-            content.title = "Purchase Intent"
-            content.body = "Is this a planned purchase or impulse?"
-            content.userInfo = ["type": "purchase_intent_prompt"]
-            content.sound = .default
+            // Get active goal information
+            let goalInfo = getActiveGoalInfo()
             
-            if #available(iOS 15.0, *) {
-                content.interruptionLevel = .timeSensitive
-                content.relevanceScore = 1.0
+            // Create customizable notification content with goal information
+            var bodyText: String
+            var titleText: String = "🛑 SOTERIA Moment"
+            
+            if let goal = goalInfo {
+                // Include goal information in notification
+                // Format: "You're about to open <app name>. You have a save goal in progress <% to completion> would you like to save instead? click here <takes to soteria app>"
+                titleText = "💰 Save Instead?"
+                bodyText = "You're about to open \(appName). You have a save goal in progress: '\(goal.name)' (\(goal.progressPercent)% complete). Would you like to save instead? Tap to open Soteria."
+            } else {
+                // No active goal - use generic message with call to action to create a goal
+                titleText = "🛑 SOTERIA Moment"
+                let appNameLower = appName.lowercased()
+                if appNameLower.contains("food") || appNameLower.contains("eat") || 
+                   appNameLower.contains("door") || appNameLower.contains("uber") {
+                    bodyText = "You're about to open \(appName). Take a moment to pause and think. Would you like to create a savings goal? Tap to open Soteria."
+                } else {
+                    bodyText = "You're about to open \(appName). Take a moment to pause and think. Would you like to create a savings goal? Tap to open Soteria."
+                }
             }
             
-            // Add URL to open SOTERIA
+            // Determine subtitle based on whether goal exists
+            let subtitleText: String
+            if let goal = goalInfo {
+                subtitleText = "Goal Progress: \(goal.progressPercent)%"
+            } else {
+                subtitleText = "Create a Savings Goal"
+            }
+            
+            // Add flag to userInfo to indicate if goal exists (for app navigation)
+            var userInfo: [String: Any] = ["appIndex": appIndex ?? -1]
+            if goalInfo == nil {
+                userInfo["noActiveGoal"] = true  // Flag to indicate no goal - app can navigate to Goals tab
+            }
+            
+            let content = createCustomNotificationContent(
+                title: titleText,
+                subtitle: subtitleText,
+                body: bodyText,
+                appName: appName,
+                type: "purchase_intent_prompt",
+                userInfo: userInfo
+            )
+            
+            // Add URL to open SOTERIA (tapping notification will open the app)
             if let url = URL(string: "soteria://purchase-intent") {
                 content.userInfo["url"] = url.absoluteString
             }
             
+            // FIXED: Use unique identifier with timestamp to ensure notification is sent every time
+            // Even if DeviceActivity event doesn't fire again, this ensures unique notifications
+            let uniqueId = "purchase_intent_\(appIndex ?? -1)_\(Date().timeIntervalSince1970)_\(UUID().uuidString)"
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
-            let request = UNNotificationRequest(identifier: "purchase_intent_\(UUID().uuidString)", content: content, trigger: trigger)
+            let request = UNNotificationRequest(identifier: uniqueId, content: content, trigger: trigger)
             
             do {
                 try await UNUserNotificationCenter.current().add(request)
-                print("✅ [Extension] Purchase intent prompt notification sent")
+                print("✅ [Extension] App-specific purchase intent prompt notification sent for \(appName)")
+                
+                // Update last notification time for rate limiting
+                if let appIndex = appIndex {
+                    lastNotificationTime[appIndex] = Date()
+                }
             } catch {
                 print("❌ [Extension] Failed to send purchase intent prompt notification: \(error)")
             }
@@ -288,28 +495,13 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                 return
             }
             
-            // Create notification content
-            let content = UNMutableNotificationContent()
-            content.title = "🛑 SOTERIA Moment"
-            content.body = "You're about to open a shopping app. Take a moment to pause and think."
-            content.categoryIdentifier = "SOTERIA_MOMENT"
-            content.userInfo = ["type": "soteria_moment"]
-            content.badge = 1
-            
-            // Make notification as prominent as possible
-            if #available(iOS 15.0, *) {
-                // Use timeSensitive interruption level - this should show even when user is in another app
-                content.interruptionLevel = .timeSensitive
-                // Set maximum relevance score to make it most likely to show
-                content.relevanceScore = 1.0
-            }
-            
-            // Set thread identifier to group related notifications
-            content.threadIdentifier = "soteria_moment"
-            
-            // Use the default sound - for time-sensitive notifications, this should be prominent
-            // Note: Time-sensitive notifications can play sounds even when device is on silent
-            content.sound = UNNotificationSound.default
+            // Create customizable notification content
+            let content = createCustomNotificationContent(
+                title: "🛑 SOTERIA Moment",
+                subtitle: "Protection Alert",
+                body: "You're about to open a shopping app. Take a moment to pause and think.",
+                type: "soteria_moment"
+            )
             
             // Add URL to open app directly when notification is tapped
             // This will help bring the app to foreground

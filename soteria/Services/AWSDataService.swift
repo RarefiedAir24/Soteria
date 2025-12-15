@@ -300,11 +300,14 @@ class AWSDataService: ObservableObject {
         let totalSaved: Double
         let currentStreak: Int
         let longestStreak: Int
-        let activeGoal: GoalData? // Simplified goal data from API
+        let activeGoal: GoalData? // Full goal data from API
         let recentRegretCount: Int
         let currentRisk: String? // Risk level as string
         let isQuietModeActive: Bool
         let soteriaMomentsCount: Int
+        let currentMood: String? // Current mood level (e.g., "happy", "stressed")
+        let recentMoodCount: Int // Mood entries in last 7 days
+        let recentPurchaseIntentsCount: Int // Purchase intents in last 7 days
         let lastUpdated: TimeInterval // Timestamp
         
         struct GoalData: Codable {
@@ -313,6 +316,16 @@ class AWSDataService: ObservableObject {
             let currentAmount: Double
             let targetAmount: Double
             let progress: Double
+            let startDate: TimeInterval? // Date as timestamp
+            let targetDate: TimeInterval? // Date as timestamp
+            let category: String? // Goal category
+            let protectionAmount: Double?
+            let photoPath: String?
+            let description: String?
+            let status: String? // Goal status
+            let createdDate: TimeInterval? // Date as timestamp
+            let completedDate: TimeInterval? // Date as timestamp
+            let completedAmount: Double?
         }
     }
     
@@ -328,7 +341,7 @@ class AWSDataService: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 5.0 // 5 second timeout for fast response
+        request.timeoutInterval = 3.0 // 3 second timeout for fast response (reduced from 5s)
         
         // Get Cognito ID token for authentication
         if let idToken = try? await cognitoService.getIDToken() {

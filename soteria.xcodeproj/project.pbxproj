@@ -9,9 +9,6 @@
 /* Begin PBXBuildFile section */
 		5304F583BB02AFFBADB1754D /* Pods_soteria_SoteriaMonitor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D701E1D8897F2F6CB82AE41 /* Pods_soteria_SoteriaMonitor.framework */; };
 		A967A1C17C785B25FA7EAE94 /* Pods_soteria.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A73DCCB2BE47485E041308F /* Pods_soteria.framework */; };
-		EF2993C22EE903F700547AD7 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = EF2993C12EE903F700547AD7 /* FirebaseAuth */; };
-		EF2993C42EE903F700547AD7 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EF2993C32EE903F700547AD7 /* FirebaseCore */; };
-		EF2993C62EE903F700547AD7 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = EF2993C52EE903F700547AD7 /* FirebaseStorage */; };
 		EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */; };
 		EF83ABD32EE46B020006A32D /* SoteriaMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EF83ABE82EE46EC20006A32D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */; };
@@ -49,6 +46,7 @@
 		7D701E1D8897F2F6CB82AE41 /* Pods_soteria_SoteriaMonitor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_soteria_SoteriaMonitor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A73DCCB2BE47485E041308F /* Pods_soteria.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_soteria.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C12A891BDAE08BCE53CD140 /* Pods-soteria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria.release.xcconfig"; path = "Target Support Files/Pods-soteria/Pods-soteria.release.xcconfig"; sourceTree = "<group>"; };
+		B3BE755EECBF481FBD17A674 /* Products.storekit */ = {isa = PBXFileReference; explicitFileType = text.storekit; includeInIndex = 1; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		EF299D922EEA6D8500547AD7 /* LinkKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = LinkKit.xcframework; path = Pods/Plaid/LinkKit.xcframework; sourceTree = "<group>"; };
 		EF83ABB62EE467910006A32D /* soteria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = soteria.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SoteriaMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -89,9 +87,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				EF83ABF62EE53A520006A32D /* FamilyControls.framework in Frameworks */,
-				EF2993C22EE903F700547AD7 /* FirebaseAuth in Frameworks */,
-				EF2993C42EE903F700547AD7 /* FirebaseCore in Frameworks */,
-				EF2993C62EE903F700547AD7 /* FirebaseStorage in Frameworks */,
 				A967A1C17C785B25FA7EAE94 /* Pods_soteria.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -123,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */,
+				B3BE755EECBF481FBD17A674 /* Products.storekit */,
 				EF83ABB82EE467910006A32D /* soteria */,
 				EF83ABCC2EE46B020006A32D /* SoteriaMonitor */,
 				EF83ABC92EE46B020006A32D /* Frameworks */,
@@ -164,7 +160,6 @@
 				EF83ABB32EE467910006A32D /* Frameworks */,
 				EF83ABB42EE467910006A32D /* Resources */,
 				EF83ABD82EE46B020006A32D /* Embed Foundation Extensions */,
-				A3D3B68DDA8EE878A645E534 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -176,9 +171,6 @@
 			);
 			name = soteria;
 			packageProductDependencies = (
-				EF2993C12EE903F700547AD7 /* FirebaseAuth */,
-				EF2993C32EE903F700547AD7 /* FirebaseCore */,
-				EF2993C52EE903F700547AD7 /* FirebaseStorage */,
 			);
 			productName = soteria;
 			productReference = EF83ABB62EE467910006A32D /* soteria.app */;
@@ -233,7 +225,6 @@
 			mainGroup = EF83ABAD2EE467910006A32D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				EF2993C02EE903F700547AD7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EF83ABB72EE467910006A32D /* Products */;
@@ -307,27 +298,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		A3D3B68DDA8EE878A645E534 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-soteria/Pods-soteria-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-soteria/Pods-soteria-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-soteria/Pods-soteria-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -648,35 +618,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		EF2993C02EE903F700547AD7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.6.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		EF2993C12EE903F700547AD7 /* FirebaseAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EF2993C02EE903F700547AD7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAuth;
-		};
-		EF2993C32EE903F700547AD7 /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EF2993C02EE903F700547AD7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCore;
-		};
-		EF2993C52EE903F700547AD7 /* FirebaseStorage */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EF2993C02EE903F700547AD7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseStorage;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = EF83ABAE2EE467910006A32D /* Project object */;
 }

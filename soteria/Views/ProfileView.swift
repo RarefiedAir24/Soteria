@@ -7,8 +7,9 @@
 
 import SwiftUI
 import PhotosUI
-import FirebaseAuth
-import FirebaseStorage
+// TEMPORARILY DISABLED: Firebase imports - testing if they're causing crash
+// import FirebaseAuth
+// import FirebaseStorage
 import UIKit
 
 struct ProfileView: View {
@@ -37,12 +38,20 @@ struct ProfileView: View {
     @State private var passwordError: String? = nil
     @State private var isChangingPassword = false
     
+    // Get user info from AuthService (Cognito)
     private var userEmail: String {
         authService.currentUser?.email ?? "No email"
     }
     
     private var userName: String {
-        authService.currentUser?.displayName ?? authService.currentUser?.email?.components(separatedBy: "@").first ?? "User"
+        if let cognitoUser = authService.currentUser {
+            if let email = cognitoUser.email {
+                return email.components(separatedBy: "@").first ?? "User"
+            } else {
+                return cognitoUser.username ?? "User"
+            }
+        }
+        return "User"
     }
     
     var body: some View {
@@ -435,30 +444,31 @@ struct ProfileView: View {
             avatarImage = image
         }
         
+        // TEMPORARILY DISABLED: Firebase Storage - testing if it's causing crash
         // Then try to load from Firebase Storage (async, for cross-device sync)
-        if let userId = authService.currentUser?.uid {
-            Task {
-                let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
-                
-                do {
-                    let data = try await storageRef.data(maxSize: 5 * 1024 * 1024) // 5MB max
-                    if let image = UIImage(data: data) {
-                        await MainActor.run {
-                            avatarImage = image
-                            // Update UserDefaults cache
-                            if let imageData = image.jpegData(compressionQuality: 0.8) {
-                                UserDefaults.standard.set(imageData, forKey: "user_avatar")
-                            }
-                        }
-                        print("✅ [ProfileView] Avatar loaded from Firebase Storage")
-                    }
-                } catch {
-                    // Avatar doesn't exist in Firebase Storage yet, or error loading
-                    // This is fine - UserDefaults might have it, or user hasn't uploaded one
-                    print("ℹ️ [ProfileView] Avatar not found in Firebase Storage (this is OK)")
-                }
-            }
-        }
+        // if let userId = authService.currentUser?.uid {
+        //     Task {
+        //         let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
+        //         
+        //         do {
+        //             let data = try await storageRef.data(maxSize: 5 * 1024 * 1024) // 5MB max
+        //             if let image = UIImage(data: data) {
+        //                 await MainActor.run {
+        //                     avatarImage = image
+        //                     // Update UserDefaults cache
+        //                     if let imageData = image.jpegData(compressionQuality: 0.8) {
+        //                         UserDefaults.standard.set(imageData, forKey: "user_avatar")
+        //                     }
+        //                 }
+        //                 print("✅ [ProfileView] Avatar loaded from Firebase Storage")
+        //             }
+        //         } catch {
+        //             // Avatar doesn't exist in Firebase Storage yet, or error loading
+        //             // This is fine - UserDefaults might have it, or user hasn't uploaded one
+        //             print("ℹ️ [ProfileView] Avatar not found in Firebase Storage (this is OK)")
+        //         }
+        //     }
+        // }
     }
     
     private func uploadAvatar(image: UIImage) {
@@ -478,36 +488,40 @@ struct ProfileView: View {
             // Save to UserDefaults for immediate local access
             UserDefaults.standard.set(imageData, forKey: "user_avatar")
             
+            // Notify other views that avatar was updated
+            NotificationCenter.default.post(name: NSNotification.Name("AvatarUpdated"), object: nil)
+            
             // Upload to Firebase Storage for persistence across devices
-            if let userId = authService.currentUser?.uid {
-                do {
-                    let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
-                    let metadata = StorageMetadata()
-                    metadata.contentType = "image/jpeg"
-                    metadata.cacheControl = "public,max-age=3600"
-                    
-                    _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
-                    print("✅ [ProfileView] Avatar uploaded to Firebase Storage")
-                } catch {
-                    // Check if it's a permission/rule error vs file not found
-                    let errorDescription = error.localizedDescription
-                    if errorDescription.contains("does not exist") {
-                        // This might be a permissions issue - try without metadata
-                        do {
-                            let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
-                            _ = try await storageRef.putDataAsync(imageData)
-                            print("✅ [ProfileView] Avatar uploaded to Firebase Storage (without metadata)")
-                        } catch {
-                            print("⚠️ [ProfileView] Failed to upload avatar to Firebase Storage: \(error.localizedDescription)")
-                            print("ℹ️ [ProfileView] Avatar saved to UserDefaults only - check Firebase Storage rules")
-                        }
-                    } else {
-                        print("⚠️ [ProfileView] Failed to upload avatar to Firebase Storage: \(errorDescription)")
-                        print("ℹ️ [ProfileView] Avatar saved to UserDefaults only")
-                    }
-                    // Continue anyway - UserDefaults has the image
-                }
-            }
+            // TEMPORARILY DISABLED: Firebase Storage
+            // if let userId = authService.currentUser?.uid {
+            //     do {
+            //         let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
+            //         let metadata = StorageMetadata()
+            //         metadata.contentType = "image/jpeg"
+            //         metadata.cacheControl = "public,max-age=3600"
+            //         
+            //         _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
+            //         print("✅ [ProfileView] Avatar uploaded to Firebase Storage")
+            //     } catch {
+            //         // Check if it's a permission/rule error vs file not found
+            //         let errorDescription = error.localizedDescription
+            //         if errorDescription.contains("does not exist") {
+            //             // This might be a permissions issue - try without metadata
+            //             do {
+            //                 let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
+            //                 _ = try await storageRef.putDataAsync(imageData)
+            //                 print("✅ [ProfileView] Avatar uploaded to Firebase Storage (without metadata)")
+            //             } catch {
+            //                 print("⚠️ [ProfileView] Failed to upload avatar to Firebase Storage: \(error.localizedDescription)")
+            //                 print("ℹ️ [ProfileView] Avatar saved to UserDefaults only - check Firebase Storage rules")
+            //             }
+            //         } else {
+            //             print("⚠️ [ProfileView] Failed to upload avatar to Firebase Storage: \(errorDescription)")
+            //             print("ℹ️ [ProfileView] Avatar saved to UserDefaults only")
+            //         }
+            //         // Continue anyway - UserDefaults has the image
+            //     }
+            // }
             
             await MainActor.run {
                 isUploadingAvatar = false
@@ -519,14 +533,15 @@ struct ProfileView: View {
         avatarImage = nil
         UserDefaults.standard.removeObject(forKey: "user_avatar")
         
+        // TEMPORARILY DISABLED: Firebase Storage - testing if it's causing crash
         // Also remove from Firebase Storage
-        if let userId = authService.currentUser?.uid {
-            Task {
-                let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
-                try? await storageRef.delete()
-                print("✅ [ProfileView] Avatar removed from Firebase Storage")
-            }
-        }
+        // if let userId = authService.currentUser?.uid {
+        //     Task {
+        //         let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
+        //         try? await storageRef.delete()
+        //         print("✅ [ProfileView] Avatar removed from Firebase Storage")
+        //     }
+        // }
     }
 }
 
@@ -614,28 +629,32 @@ struct ChangePasswordView: View {
         
         Task {
             do {
+                // TEMPORARILY DISABLED: Firebase Auth - testing if it's causing crash
                 // Re-authenticate user first (Firebase requires this)
-                guard let email = authService.currentUser?.email else {
-                    await MainActor.run {
-                        passwordError = "User not authenticated"
-                        isChangingPassword = false
-                    }
-                    return
-                }
+                // guard let email = authService.currentUser?.email else {
+                //     await MainActor.run {
+                //         passwordError = "User not authenticated"
+                //         isChangingPassword = false
+                //     }
+                //     return
+                // }
+                // 
+                // let credential = EmailAuthProvider.credential(withEmail: email, password: currentPassword)
+                // try await authService.currentUser?.reauthenticate(with: credential)
+                // 
+                // // Change password
+                // try await authService.currentUser?.updatePassword(to: newPassword)
                 
-                let credential = EmailAuthProvider.credential(withEmail: email, password: currentPassword)
-                try await authService.currentUser?.reauthenticate(with: credential)
+                // Firebase disabled - show error
+                throw NSError(domain: "ProfileView", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase is temporarily disabled"])
                 
-                // Change password
-                try await authService.currentUser?.updatePassword(to: newPassword)
-                
-                await MainActor.run {
-                    isChangingPassword = false
-                    showSuccess = true
-                    currentPassword = ""
-                    newPassword = ""
-                    confirmPassword = ""
-                }
+                // await MainActor.run {
+                //     isChangingPassword = false
+                //     showSuccess = true
+                //     currentPassword = ""
+                //     newPassword = ""
+                //     confirmPassword = ""
+                // }
             } catch {
                 await MainActor.run {
                     isChangingPassword = false
@@ -650,10 +669,32 @@ struct ChangePasswordView: View {
 
 extension UIImage {
     func resized(to size: CGSize) -> UIImage {
-        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        // Maintain aspect ratio
+        let aspectRatio = self.size.width / self.size.height
+        var newSize = size
+        
+        if aspectRatio > 1 {
+            // Landscape: width is the limiting factor
+            newSize.height = size.width / aspectRatio
+        } else {
+            // Portrait: height is the limiting factor
+            newSize.width = size.height * aspectRatio
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(newSize, false, scale)
         defer { UIGraphicsEndImageContext() }
-        draw(in: CGRect(origin: .zero, size: size))
+        draw(in: CGRect(origin: .zero, size: newSize))
         return UIGraphicsGetImageFromCurrentImageContext() ?? self
+    }
+    
+    // Resize to fit within max dimensions while maintaining aspect ratio
+    func resized(toMaxDimension maxDimension: CGFloat) -> UIImage {
+        let currentMax = max(size.width, size.height)
+        guard currentMax > maxDimension else { return self }
+        
+        let scale = maxDimension / currentMax
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        return resized(to: newSize)
     }
 }
 

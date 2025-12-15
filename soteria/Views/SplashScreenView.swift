@@ -8,23 +8,23 @@
 import SwiftUI
 
 struct SplashScreenView: View {
-    @State private var isAnimating = false
+    // REMOVED: @State private var isAnimating - animations block MainActor
+    // REMOVED: All animations - they cause 49-second delays in view rendering
     
     var body: some View {
         ZStack {
-            // Background - REVER Dream gradient for calm, dreamlike feel
-            Color.reverDreamGradient
+            // Background - Lighter REVER color for better logo contrast
+            Color.dreamMist
                 .ignoresSafeArea()
             
             VStack(spacing: .spacingSection) {
-                // Logo - using soteria_logo_2 asset
-                Image("soteria_logo_2")
+                // Logo - using soteria_logo asset
+                // REMOVED: Animations to prevent blocking
+                Image("soteria_logo")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 120, height: 120)
                     .shadow(color: Color.reverBlue.opacity(0.25), radius: 15, x: 0, y: 5)
-                    .scaleEffect(isAnimating ? 1.0 : 0.8)
-                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isAnimating)
                 
                 // App Name - H1 style
                 Text("SOTERIA")
@@ -37,9 +37,7 @@ struct SplashScreenView: View {
             }
             .padding(.spacingHero)
         }
-        .onAppear {
-            isAnimating = true
-        }
+        // REMOVED: .onAppear with animation - it was blocking MainActor
     }
 }
 

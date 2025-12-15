@@ -29,11 +29,11 @@ class DeviceActivityService: ObservableObject {
             // Move everything to background tasks
             
             // Save app count in background (this is the critical blocking operation)
-            // Use a significant delay to ensure this doesn't block startup
-            Task.detached(priority: .background) { [weak self] in
+            // Reduced delay to 0.5 seconds - fast enough to save before app closes, but still off MainActor
+            Task.detached(priority: .utility) { [weak self] in
                 guard let self = self else { return }
-                // Wait 5 seconds to ensure app is fully responsive before accessing blocking property
-                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                // Small delay to ensure app is responsive, but fast enough to save before app closes
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds (reduced from 5s)
                 // Access count in background task to avoid blocking main thread
                 let count = await MainActor.run {
                     self.selectedApps.applicationTokens.count
@@ -408,6 +408,31 @@ class DeviceActivityService: ObservableObject {
             
             // Load selection (app names, etc.)
             self.loadSelection()
+        }
+    }
+    
+    /// Update the cached app count from the current selection
+    /// Call this when the picker closes to ensure count is saved immediately
+    /// This runs off MainActor to avoid blocking
+    func refreshAppCount() {
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            // Small delay to ensure picker is fully closed
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            
+            // Access count in background task to avoid blocking main thread
+            let count = await MainActor.run {
+                self.selectedApps.applicationTokens.count
+            }
+            
+            // Save to UserDefaults immediately
+            UserDefaults.standard.set(count, forKey: "cachedSelectedAppsCount")
+            
+            // Update cached count on MainActor
+            await MainActor.run {
+                self.cachedAppsCount = count
+            }
+            print("💾 [DeviceActivityService] Refreshed app count: \(count)")
         }
     }
     

@@ -38,12 +38,23 @@ struct AppSelectionSheetContent: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onChange(of: showAppSelection) { oldValue, newValue in
-            // When picker closes, ensure selection is persisted
-            if !newValue {
-                print("🔄 [AppSelectionSheetContent] Picker closed - selection should be persisted by system")
+            if newValue {
+                // When picker opens, system restores selection automatically
+                // Refresh count after a short delay to ensure system has restored it
+                print("🔄 [AppSelectionSheetContent] Picker opened - system will restore selection")
+                Task.detached(priority: .utility) {
+                    // Wait for system to restore selection (usually instant, but give it a moment)
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                    await MainActor.run {
+                        deviceActivityService.refreshAppCount()
+                    }
+                }
+            } else {
+                // When picker closes, ensure selection is persisted
+                print("🔄 [AppSelectionSheetContent] Picker closed - refreshing app count")
                 // The system should persist FamilyActivitySelection automatically,
-                // but we ensure the count is cached
-                deviceActivityService.ensureDataLoaded()
+                // but we need to update the cached count immediately
+                deviceActivityService.refreshAppCount()
             }
         }
     }
@@ -621,41 +632,45 @@ struct SettingsView: View {
             let taskStartTime = Date()
             print("🟢 [SettingsView] .task started at \(taskStartTime)")
             
-            // CRITICAL: Defer data loading to avoid blocking app startup
-            // SettingsView might be created during startup even if not visible
-            // Wait 5 seconds before loading to ensure app is fully launched
-            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+            // OPTIMIZED: Load data immediately when SettingsView appears (user navigated to Settings tab)
+            // No need to wait - the view is only created when user opens Settings
             
-            // CRITICAL FIX: Ensure DeviceActivityService data is loaded (monitoring state, app count, etc.)
-            // This fixes the issue where monitoring toggle doesn't work because data isn't loaded
-            // DeviceActivityService.init() does nothing to prevent startup delays
-            deviceActivityService.ensureDataLoaded()
-            
-            // Wait a moment for data to load, then cache isMonitoring
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-            cachedIsMonitoring = deviceActivityService.isMonitoring
-            print("🟡 [SettingsView] Cached isMonitoring: \(cachedIsMonitoring)")
-            
-            // OPTION 1 FIX: Load schedules on-demand when SettingsView appears
-            // This fixes the issue where schedules weren't loading on app launch
-            // (QuietHoursService.init() does nothing to prevent startup delays)
-            // SettingsView displays "Active/Inactive" status which requires schedules to be loaded
-            quietHoursService.ensureSchedulesLoaded()
-            
-            // Load avatar (only once)
+            // Load avatar first (fast, from UserDefaults)
             loadAvatar()
             
-            // Mark view as ready immediately - no need to wait
+            // Mark view as ready immediately so UI can show
             isViewReady = true
             
-            // Wait for app to be fully loaded before enabling sheet
-            // This prevents SwiftUI from evaluating the binding during startup
-            // Use a longer delay to ensure everything is loaded
-            try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
-            isAppFullyLoaded = true
-            print("🟡 [SettingsView] App fully loaded - sheet is now available")
-            let taskEndTime = Date()
-            print("🟢 [SettingsView] .task completed at \(taskEndTime) (total: \(taskEndTime.timeIntervalSince(taskStartTime))s)")
+            // Load data in background to avoid blocking UI
+            Task.detached(priority: .utility) {
+                // CRITICAL FIX: Ensure DeviceActivityService data is loaded (monitoring state, app count, etc.)
+                await MainActor.run {
+                    deviceActivityService.ensureDataLoaded()
+                }
+                
+                // Small delay to let data load
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                
+                // Cache isMonitoring on MainActor
+                await MainActor.run {
+                    cachedIsMonitoring = deviceActivityService.isMonitoring
+                    print("🟡 [SettingsView] Cached isMonitoring: \(cachedIsMonitoring)")
+                }
+                
+                // Load schedules on-demand when SettingsView appears
+                await MainActor.run {
+                    quietHoursService.ensureSchedulesLoaded()
+                }
+                
+                // Enable sheet after data is loaded (but don't wait too long)
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
+                await MainActor.run {
+                    isAppFullyLoaded = true
+                    let taskEndTime = Date()
+                    print("🟢 [SettingsView] .task completed at \(taskEndTime) (total: \(taskEndTime.timeIntervalSince(taskStartTime))s)")
+                }
+            }
         }
         // REMOVED: onChange observation of .applicationTokens.count
         // This was causing 2-minute lockup because SwiftUI evaluates the property

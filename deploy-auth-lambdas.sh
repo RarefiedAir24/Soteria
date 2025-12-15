@@ -115,6 +115,7 @@ deploy_lambda "soteria-auth-signup" "lambda/soteria-auth-signup" "index.handler"
 deploy_lambda "soteria-auth-signin" "lambda/soteria-auth-signin" "index.handler" 30 256
 deploy_lambda "soteria-auth-refresh" "lambda/soteria-auth-refresh" "index.handler" 30 256
 deploy_lambda "soteria-auth-reset-password" "lambda/soteria-auth-reset-password" "index.handler" 30 256
+deploy_lambda "soteria-auth-confirm" "lambda/soteria-auth-confirm" "index.handler" 30 256
 
 # Step 5: Output summary
 echo ""
@@ -127,6 +128,7 @@ echo "  - soteria-auth-signup"
 echo "  - soteria-auth-signin"
 echo "  - soteria-auth-refresh"
 echo "  - soteria-auth-reset-password"
+echo "  - soteria-auth-confirm"
 echo ""
 echo "Next step: Run connect-auth-lambdas-to-api-gateway.sh"
 echo ""

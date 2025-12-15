@@ -9,101 +9,52 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject var authService: AuthService  // Get from parent environment
     @State private var selectedTab = 0
-    @State private var shouldCreateGoalsView = false  // Lazy load GoalsView
-    @State private var shouldCreateSettingsView = false  // Lazy load SettingsView
+    
+    init() {
+        let timestamp = Date()
+        print("🔍 [MainTabView] init() called at \(timestamp)")
+    }
     
     var body: some View {
         let _ = {
             let timestamp = Date()
-            print("🟢 [MainTabView] body evaluated at \(timestamp), selectedTab: \(selectedTab)")
+            print("🟢 [MainTabView] body evaluation started at \(timestamp), selectedTab: \(selectedTab)")
         }()
         
+        // Restore tab bar with lazy loading
         return VStack(spacing: 0) {
-            // Only create the selected view - this is the key optimization!
+            // Content area - only show selected tab
             Group {
-                switch selectedTab {
-                case 0:
-                    // HomeView is always created (it's the default tab)
-                    NavigationView {
-                        HomeView()
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    
-                case 1:
-                    // GoalsView is only created when user selects Goals tab
-                    NavigationView {
-                        if shouldCreateGoalsView {
-                            GoalsView()
-                        } else {
-                            // Placeholder while we prepare to create the view
-                            Color.mistGray
-                                .ignoresSafeArea()
-                                .overlay(
-                                    ProgressView()
-                                        .scaleEffect(1.2)
-                                )
+                if selectedTab == 0 {
+                    // Home Tab - create HomeViewWrapper immediately (app is loading fast now)
+                    HomeViewWrapper()
+                        .onAppear {
+                            print("🔍 [MainTabView] HomeViewWrapper.onAppear")
                         }
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .onAppear {
-                        // Create GoalsView when tab appears
-                        if !shouldCreateGoalsView {
-                            Task {
-                                // Small delay to ensure smooth transition
-                                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-                                await MainActor.run {
-                                    shouldCreateGoalsView = true
-                                    print("🟢 [MainTabView] GoalsView will now be created")
-                                }
-                            }
-                        }
-                    }
-                    
-                case 2:
-                    // SettingsView is only created when user selects Settings tab
-                    NavigationView {
-                        if shouldCreateSettingsView {
-                            SettingsView()
-                        } else {
-                            // Placeholder while we prepare to create the view
-                            Color.mistGray
-                                .ignoresSafeArea()
-                                .overlay(
-                                    ProgressView()
-                                        .scaleEffect(1.2)
-                                )
-                        }
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .onAppear {
-                        // Create SettingsView when tab appears
-                        if !shouldCreateSettingsView {
-                            Task {
-                                // Small delay to ensure smooth transition
-                                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-                                await MainActor.run {
-                                    shouldCreateSettingsView = true
-                                    print("🟢 [MainTabView] SettingsView will now be created")
-                                }
-                            }
-                        }
-                    }
-                    
-                default:
+                } else if selectedTab == 1 {
+                    // Goals Tab - create immediately when tab is selected (non-blocking)
+                    GoalsView()
+                        .environmentObject(GoalsService.shared)
+                        .environmentObject(authService)
+                } else if selectedTab == 2 {
+                    // Settings Tab - create immediately when tab is selected (non-blocking)
+                    SettingsView()
+                        .environmentObject(DeviceActivityService.shared)
+                        .environmentObject(QuietHoursService.shared)
+                        .environmentObject(SubscriptionService.shared)
+                        .environmentObject(authService)
+                        .id("settingsView")
+                } else {
                     EmptyView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Custom tab bar at bottom
+            // Custom Tab Bar at bottom
             CustomTabBar(selectedTab: $selectedTab)
         }
-        // Set consistent navigation bar appearance for all tabs
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(Color.mistGray, for: .navigationBar)
-        // Set consistent status bar style
-        .preferredColorScheme(.light)
         .onAppear {
             let timestamp = Date()
             print("🟢 [MainTabView] onAppear at \(timestamp), selectedTab: \(selectedTab)")
@@ -111,17 +62,16 @@ struct MainTabView: View {
         .onChange(of: selectedTab) { oldValue, newValue in
             print("🟢 [MainTabView] Tab changed from \(oldValue) to \(newValue)")
         }
-        .task {
-            let startTime = Date()
-            print("🟢 [MainTabView] .task started at \(startTime)")
-            let endTime = Date()
-            print("🟢 [MainTabView] .task completed at \(endTime) (took \(endTime.timeIntervalSince(startTime))s)")
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToGoalsTab"))) { _ in
+            print("✅ [MainTabView] Received NavigateToGoalsTab notification - switching to Goals tab")
+            selectedTab = 1  // Goals tab is index 1
         }
+        .preferredColorScheme(.light)
     }
 }
 
 #Preview {
     MainTabView()
-        .environmentObject(AuthService())
+        // .environmentObject(AuthService())  // TEMPORARILY DISABLED
 }
 

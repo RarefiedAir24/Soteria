@@ -329,8 +329,8 @@ class PlaidService: ObservableObject {
             throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Automatic transfers require a savings account"])
         }
         
-        guard let checkingAccount = checkingAccount,
-              let savingsAccount = savingsAccount else {
+        guard checkingAccount != nil,
+              savingsAccount != nil else {
             throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Both checking and savings accounts required"])
         }
         

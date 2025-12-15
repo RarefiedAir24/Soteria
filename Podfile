@@ -8,11 +8,12 @@ target 'soteria' do
   # Firebase (already added via SPM, but keeping for reference)
   # Firebase is managed via Swift Package Manager
   
+  # TEMPORARILY DISABLED: Plaid SDK - causing dyld crash on new builds
   # Plaid Link SDK for bank account connection
   # Upgraded to v4.1+ (v3.1.1 is not supported on modern iOS/Xcode)
   # Added NSCameraUsageDescription to Info.plist (required by Plaid)
   # Let CocoaPods manage all framework embedding - do NOT manually embed in Xcode
-  pod 'Plaid', '~> 4.1'
+  # pod 'Plaid', '~> 4.1'
 
   target 'SoteriaMonitor' do
     # Extension target - no additional pods needed
@@ -28,6 +29,16 @@ post_install do |installer|
     end
   end
   
-  # Let CocoaPods fully manage LinkKit embedding - no manual modifications needed
-  # Removed all custom hooks that modified LinkKit embedding per Plaid support guidance
+  # Make LinkKit optional/weak-linked to prevent dyld crash at startup
+  installer.pods_project.targets.each do |target|
+    if target.name == 'Plaid'
+      target.build_configurations.each do |config|
+        # Set LinkKit to be optional (weak-linked)
+        # This prevents it from loading at app startup
+        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+        config.build_settings['OTHER_LDFLAGS'] << '-weak_framework'
+        config.build_settings['OTHER_LDFLAGS'] << 'LinkKit'
+      end
+    end
+  end
 end

@@ -14,9 +14,8 @@ struct AppManagementView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var deviceActivityService: DeviceActivityService
     
-    @State private var editingIndex: Int? = nil
-    @State private var editingName: String = ""
-    @State private var showDeleteConfirmation: Int? = nil
+    // Editing removed - app names are read-only (managed by backend)
+    // App removal removed - users should manage apps via Settings → Select Apps
     @State private var appsCount: Int = 0 // Cache to avoid blocking access
     
     var body: some View {
@@ -33,12 +32,12 @@ struct AppManagementView: View {
                                 .font(.system(size: 60))
                                 .foregroundColor(Color.reverBlue)
                             
-                            Text("Manage Apps")
+                            Text("Selected Apps")
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(Color.midnightSlate)
                             
-                            Text("\(appsCount) app\(appsCount == 1 ? "" : "s") selected")
+                            Text("\(appsCount) app\(appsCount == 1 ? "" : "s") selected • Names managed automatically")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
@@ -70,65 +69,31 @@ struct AppManagementView: View {
                                             .font(.system(size: 24))
                                             .foregroundColor(Color.reverBlue)
                                         
-                                        if editingIndex == index {
-                                            // Editing mode
-                                            TextField("App name", text: $editingName)
-                                                .textFieldStyle(.roundedBorder)
-                                                .autocapitalization(.words)
-                                                .onSubmit {
-                                                    saveName(for: index)
-                                                }
+                                        // Display mode only (read-only)
+                                        // App names are managed by backend - no editing allowed
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(deviceActivityService.getAppName(forIndex: index))
+                                                .font(.headline)
+                                                .foregroundColor(Color.midnightSlate)
                                             
-                                            Button(action: {
-                                                saveName(for: index)
-                                            }) {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .foregroundColor(.green)
-                                                    .font(.system(size: 24))
-                                            }
+                                            Text("App \(index + 1)")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
                                             
-                                            Button(action: {
-                                                cancelEditing()
-                                            }) {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .foregroundColor(.red)
-                                                    .font(.system(size: 24))
-                                            }
-                                        } else {
-                                            // Display mode
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(deviceActivityService.getAppName(forIndex: index))
-                                                    .font(.headline)
-                                                    .foregroundColor(Color.midnightSlate)
-                                                
-                                                Text("App \(index + 1)")
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                            }
-                                            
-                                            Spacer()
-                                            
-                                            Button(action: {
-                                                startEditing(index: index)
-                                            }) {
-                                                Image(systemName: "pencil.circle.fill")
-                                                    .foregroundColor(Color.reverBlue)
-                                                    .font(.system(size: 24))
-                                            }
+                                            Text("Auto-named by backend")
+                                                .font(.caption2)
+                                                .foregroundColor(.green)
                                         }
+                                        
+                                        Spacer()
                                     }
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
                                             .fill(Color.white)
                                     )
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button(role: .destructive) {
-                                            showDeleteConfirmation = index
-                                        } label: {
-                                            Label("Remove", systemImage: "trash")
-                                        }
-                                    }
+                                    // Swipe-to-delete removed - app removal should be done via Settings → Select Apps
+                                    // This keeps app management centralized and prevents name mapping conflicts
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -137,7 +102,7 @@ struct AppManagementView: View {
                     .padding(.vertical, 20)
                 }
             }
-            .navigationTitle("Manage Apps")
+            .navigationTitle("Selected Apps")
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 // Load apps count asynchronously to avoid blocking
@@ -154,91 +119,15 @@ struct AppManagementView: View {
                     }
                 }
             }
-            .alert("Remove App", isPresented: Binding(
-                get: { showDeleteConfirmation != nil },
-                set: { if !$0 { showDeleteConfirmation = nil } }
-            )) {
-                Button("Cancel", role: .cancel) {
-                    showDeleteConfirmation = nil
-                }
-                Button("Remove", role: .destructive) {
-                    if let index = showDeleteConfirmation {
-                        removeAppName(at: index)
-                        showDeleteConfirmation = nil
-                    }
-                }
-            } message: {
-                if let index = showDeleteConfirmation {
-                    let appName = deviceActivityService.getAppName(forIndex: index)
-                    Text("Remove '\(appName)' from monitoring? This will stop blocking and tracking for this app. You can add it back in Settings.")
-                }
-            }
+            // App removal removed - users should manage apps via Settings → Select Apps
+            // This prevents conflicts with backend name mapping
         }
     }
     
-    private func startEditing(index: Int) {
-        editingIndex = index
-        editingName = deviceActivityService.getAppName(forIndex: index)
-    }
+    // Editing functions removed - app names are read-only (managed by backend)
     
-    private func saveName(for index: Int) {
-        if !editingName.trimmingCharacters(in: .whitespaces).isEmpty {
-            deviceActivityService.setAppName(editingName.trimmingCharacters(in: .whitespaces), forIndex: index)
-        }
-        cancelEditing()
-    }
-    
-    private func cancelEditing() {
-        editingIndex = nil
-        editingName = ""
-    }
-    
-    private func removeAppName(at index: Int) {
-        let appName = deviceActivityService.getAppName(forIndex: index)
-        
-        // Access selectedApps asynchronously to avoid blocking
-        Task { @MainActor in
-            let selectedApps = self.deviceActivityService.selectedApps
-            
-            // Get the token at this index
-            let tokensArray = Array(selectedApps.applicationTokens)
-            guard index < tokensArray.count else {
-                print("❌ [AppManagementView] Invalid index \(index)")
-                return
-            }
-            
-            // Create new selection without this token
-            var newSelection = FamilyActivitySelection()
-            for (idx, token) in tokensArray.enumerated() {
-                if idx != index {
-                    newSelection.applicationTokens.insert(token)
-                }
-            }
-            
-            // Update the selection (this will trigger didSet and restart monitoring if needed)
-            self.deviceActivityService.selectedApps = newSelection
-        
-            // Remove the app name and shift remaining names
-            var newAppNames: [Int: String] = [:]
-            for (oldIndex, name) in self.deviceActivityService.appNames {
-                if oldIndex < index {
-                    // Keep names before the removed index
-                    newAppNames[oldIndex] = name
-                } else if oldIndex > index {
-                    // Shift names after the removed index down by 1
-                    newAppNames[oldIndex - 1] = name
-                }
-                // Skip the removed index
-            }
-            self.deviceActivityService.appNames = newAppNames
-            self.deviceActivityService.saveAppNamesMapping()
-            
-            // Update cached count
-            self.appsCount = newSelection.applicationTokens.count
-            
-            print("🗑️ [AppManagementView] Removed app '\(appName)' (index \(index)) from monitoring")
-        }
-    }
+    // App removal function removed - users should manage apps via Settings → Select Apps
+    // This prevents conflicts with backend name mapping
 }
 
 #Preview {

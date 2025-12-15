@@ -1,6 +1,9 @@
 import SwiftUI
 import UserNotifications
 
+// Import MainActorMonitor for startup diagnostics
+let mainActorMonitor = MainActorMonitor.shared
+
 @main
 struct SoteriaApp: App {
     @StateObject private var authService = AuthService()
@@ -10,23 +13,46 @@ struct SoteriaApp: App {
     @State private var showPaywall = false
 
     init() {
+        let initStart = Date()
+        MainActorMonitor.shared.logOperation("SoteriaApp.init() started")
         print("🔍 [SoteriaApp] init() started")
         
-        // Configure UI appearance
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(Color.mistGray)
-        appearance.shadowColor = .clear
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        // CRITICAL: UI appearance config was taking 18.856s even when async
+        // Move to a background task with significant delay to avoid blocking startup
+        // The UI will work fine with default appearance until this applies
+        // Don't await - fire and forget
+        _ = Task.detached(priority: .utility) {
+            // Wait 5 seconds to ensure app is fully loaded and interactive
+            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+            
+            await MainActor.run {
+                let beforeAppearance = Date()
+                MainActorMonitor.shared.logOperation("SoteriaApp: UI appearance config (deferred)")
+                
+                let appearance = UINavigationBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = UIColor(Color.mistGray)
+                appearance.shadowColor = .clear
+                UINavigationBar.appearance().standardAppearance = appearance
+                UINavigationBar.appearance().scrollEdgeAppearance = appearance
+                
+                let tabBarAppearance = UITabBarAppearance()
+                tabBarAppearance.configureWithOpaqueBackground()
+                tabBarAppearance.backgroundColor = UIColor(Color.mistGray)
+                UITabBar.appearance().standardAppearance = tabBarAppearance
+                UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+                
+                let appearanceDuration = Date().timeIntervalSince(beforeAppearance)
+                MainActorMonitor.shared.logOperation("SoteriaApp: UI appearance config completed", duration: appearanceDuration)
+                if appearanceDuration > 0.1 {
+                    print("⚠️ [SoteriaApp] UI appearance config took \(String(format: "%.3f", appearanceDuration))s (SLOW)")
+                }
+            }
+        }
         
-        let tabBarAppearance = UITabBarAppearance()
-        tabBarAppearance.configureWithOpaqueBackground()
-        tabBarAppearance.backgroundColor = UIColor(Color.mistGray)
-        UITabBar.appearance().standardAppearance = tabBarAppearance
-        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
-        
-        print("✅ [SoteriaApp] init() completed")
+        let initDuration = Date().timeIntervalSince(initStart)
+        MainActorMonitor.shared.logOperation("SoteriaApp.init() completed", duration: initDuration)
+        print("✅ [SoteriaApp] init() completed (took \(String(format: "%.3f", initDuration))s)")
     }
     
     private func setupNotifications() {
@@ -43,21 +69,27 @@ struct SoteriaApp: App {
         UNUserNotificationCenter.current().delegate = delegate
         
         // Request notification authorization
+        let beforeAuth = Date()
+        MainActorMonitor.shared.logOperation("SoteriaApp: Requesting notification authorization")
         if #available(iOS 15.0, *) {
             let authOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
             UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { granted, error in
+                let authDuration = Date().timeIntervalSince(beforeAuth)
+                MainActorMonitor.shared.logOperation("SoteriaApp: Notification authorization callback (on MainActor)", duration: authDuration)
                 if let error = error {
                     print("❌ [App] Notification authorization error: \(error)")
                 } else {
-                    print("✅ [App] Notification authorization granted: \(granted)")
+                    print("✅ [App] Notification authorization granted: \(granted) (took \(String(format: "%.3f", authDuration))s)")
                 }
             }
         } else {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                let authDuration = Date().timeIntervalSince(beforeAuth)
+                MainActorMonitor.shared.logOperation("SoteriaApp: Notification authorization callback (on MainActor)", duration: authDuration)
                 if let error = error {
                     print("❌ [App] Notification authorization error: \(error)")
                 } else {
-                    print("✅ [App] Notification authorization granted: \(granted)")
+                    print("✅ [App] Notification authorization granted: \(granted) (took \(String(format: "%.3f", authDuration))s)")
                 }
             }
         }
@@ -116,7 +148,33 @@ struct SoteriaApp: App {
                 .environmentObject(authService)
                 .preferredColorScheme(.light)
                 .task {
-                    setupNotifications()
+                    // CRITICAL: Move notification setup completely off MainActor
+                    // Task.sleep in .task runs on MainActor and gets delayed when MainActor is blocked
+                    // Solution: Use Task.detached for the entire operation
+                    MainActorMonitor.shared.logOperation("SoteriaApp: Starting notification setup task")
+                    
+                    await Task.detached(priority: .utility) {
+                        // Wait off MainActor - this won't be delayed
+                        let beforeSleep = Date()
+                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                        let sleepDuration = Date().timeIntervalSince(beforeSleep)
+                        await MainActor.run {
+                            MainActorMonitor.shared.logOperation("SoteriaApp: Notification setup sleep completed", duration: sleepDuration)
+                        }
+                        if sleepDuration > 1.1 {
+                            print("⚠️ [SoteriaApp] Notification sleep delayed by \(String(format: "%.2f", sleepDuration - 1.0))s")
+                        }
+                        
+                        // Setup notifications - this calls MainActor operations but doesn't block the wait
+                        let beforeSetup = Date()
+                        await MainActor.run {
+                            setupNotifications()
+                        }
+                        let setupDuration = Date().timeIntervalSince(beforeSetup)
+                        await MainActor.run {
+                            MainActorMonitor.shared.logOperation("SoteriaApp: setupNotifications() completed", duration: setupDuration)
+                        }
+                    }.value
                 }
                 .sheet(isPresented: $showPauseView) {
                     PauseView()
@@ -346,24 +404,81 @@ struct RootView: View {
     @Binding var showPauseView: Bool
     @State private var showPurchaseLogPrompt = false
     @State private var showPurchaseIntentPrompt = false
+    // Show splash screen until all startup work is complete
+    @State private var isAppReady = false // Start with splash screen
+    
+    init(showPauseView: Binding<Bool>) {
+        let initStart = Date()
+        MainActorMonitor.shared.logOperation("RootView.init() called")
+        self._showPauseView = showPauseView
+        let initDuration = Date().timeIntervalSince(initStart)
+        MainActorMonitor.shared.logOperation("RootView.init() completed", duration: initDuration)
+        print("🔍 [RootView] init() called (took \(String(format: "%.3f", initDuration))s)")
+    }
 
     var body: some View {
-        // SIMPLIFIED: Direct conditional - no flags, no delays
+        let _ = {
+            let bodyStart = Date()
+            MainActorMonitor.shared.logOperation("RootView.body evaluation")
+            print("🟢 [RootView] body evaluated - isAppReady: \(isAppReady), isAuthenticated: \(authService.isAuthenticated), isCheckingAuth: \(authService.isCheckingAuth)")
+            let bodyDuration = Date().timeIntervalSince(bodyStart)
+            if bodyDuration > 0.01 {
+                MainActorMonitor.shared.logOperation("RootView.body evaluation (SLOW)", duration: bodyDuration)
+                print("⚠️ [RootView] Body evaluation took \(String(format: "%.3f", bodyDuration))s")
+            }
+        }()
+        
+        // CRITICAL: Show splash screen while app is initializing OR auth is being verified
+        // This prevents showing sign-in screen while background auth verification is happening
         Group {
-            if authService.isCheckingAuth {
-                // Show splash screen while checking auth
+            if !isAppReady || authService.isCheckingAuth {
                 SplashScreenView()
+                    .id("splash-screen")
             } else if authService.isAuthenticated {
-                // Show MainTabView immediately when authenticated
                 MainTabView()
-                    .id("mainTabView")
+                    .id("main-tab-view")
             } else {
-                // Show login screen
                 AuthView()
+                    .id("auth-view")
             }
         }
+        // Prevent view recreation by using stable identity
+        .animation(nil, value: isAppReady) // No animation to prevent blocking
+        .animation(nil, value: authService.isCheckingAuth) // No animation to prevent blocking
         .onAppear {
-            print("🟢 [RootView] onAppear, isCheckingAuth: \(authService.isCheckingAuth), isAuthenticated: \(authService.isAuthenticated)")
+            let startTime = Date()
+            MainActorMonitor.shared.logOperation("RootView.onAppear called")
+            print("🟢 [RootView] onAppear - setting app ready immediately")
+            
+            // CRITICAL: Set state immediately in onAppear (synchronous on MainActor)
+            // Don't wait - if MainActor is blocked, waiting won't help
+            // The UI will become interactive when MainActor frees up
+            // Small async delay just for splash screen branding
+            let beforeAsync = Date()
+            MainActorMonitor.shared.logOperation("RootView: Scheduling asyncAfter(0.3s)")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                let asyncStart = Date()
+                MainActorMonitor.shared.logOperation("RootView: asyncAfter block executing")
+                print("🟢 [RootView] asyncAfter block started (queued for \(String(format: "%.3f", asyncStart.timeIntervalSince(beforeAsync)))s)")
+                
+                let beforeSet = Date()
+                isAppReady = true
+                let afterSet = Date()
+                let setDuration = afterSet.timeIntervalSince(beforeSet)
+                
+                MainActorMonitor.shared.logOperation("RootView: isAppReady = true", duration: setDuration)
+                
+                let totalTime = Date().timeIntervalSince(startTime)
+                print("✅ [RootView] App is ready (total: \(String(format: "%.2f", totalTime))s)")
+                print("✅ [RootView] Setting isAppReady took \(String(format: "%.3f", setDuration))s")
+                print("✅ [RootView] isAppReady: \(isAppReady), isAuthenticated: \(authService.isAuthenticated), isCheckingAuth: \(authService.isCheckingAuth)")
+                
+                // Print summary after a delay to capture all operations
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    MainActorMonitor.shared.printSummary()
+                }
+            }
         }
         // STREAMLINED: Removed purchase intent checks from foreground/active notifications
         // Purchase intent checks now only happen on-demand when app blocking actually occurs
@@ -604,3 +719,4 @@ struct RootView: View {
         print("🔍 [RootView] ════════════════════════════════════════")
     }
 }
+

@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(LinkKit)
 import LinkKit
+#endif
 
 struct PlaidConnectionView: View {
     @EnvironmentObject var plaidService: PlaidService
@@ -199,7 +201,9 @@ class PlaidLinkViewController: UIViewController {
     let linkToken: String
     let onSuccess: (String) -> Void
     let onExit: () -> Void
+    #if canImport(LinkKit)
     var linkHandler: Handler?
+    #endif
     
     init(linkToken: String, onSuccess: @escaping (String) -> Void, onExit: @escaping () -> Void) {
         self.linkToken = linkToken
@@ -224,6 +228,7 @@ class PlaidLinkViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        #if canImport(LinkKit)
         // Only present LinkKit once when view appears
         // Check if we've already initialized to prevent re-presentation
         guard linkHandler == nil else { return }
@@ -269,10 +274,21 @@ class PlaidLinkViewController: UIViewController {
             print("❌ [PlaidLinkViewController] Failed to create Link handler: \(error)")
             self.onExit()
         }
+        #else
+        // LinkKit not available - show error
+        print("⚠️ [PlaidLinkViewController] LinkKit not available")
+        DispatchQueue.main.async {
+            self.dismiss(animated: true) {
+                self.onExit()
+            }
+        }
+        #endif
     }
     
     deinit {
+        #if canImport(LinkKit)
         linkHandler = nil
+        #endif
     }
 }
 

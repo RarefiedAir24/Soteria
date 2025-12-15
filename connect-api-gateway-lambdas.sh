@@ -64,6 +64,12 @@ TRANSFER_RESOURCE_ID=$(aws apigateway get-resources \
     --query "items[?path=='/soteria/plaid/transfer'].id" \
     --output text)
 
+DASHBOARD_RESOURCE_ID=$(aws apigateway get-resources \
+    --rest-api-id "$API_ID" \
+    --region "$REGION" \
+    --query "items[?path=='/soteria/dashboard'].id" \
+    --output text)
+
 echo "✅ Resource IDs retrieved"
 echo ""
 
@@ -113,6 +119,22 @@ connect_lambda "$CREATE_TOKEN_RESOURCE_ID" "POST" "soteria-plaid-create-link-tok
 connect_lambda "$EXCHANGE_TOKEN_RESOURCE_ID" "POST" "soteria-plaid-exchange-token" "/soteria/plaid/exchange-token"
 connect_lambda "$BALANCE_RESOURCE_ID" "GET" "soteria-plaid-get-balance" "/soteria/plaid/balance"
 connect_lambda "$TRANSFER_RESOURCE_ID" "POST" "soteria-plaid-transfer" "/soteria/plaid/transfer"
+
+# Dashboard endpoint
+if [ -n "$DASHBOARD_RESOURCE_ID" ] && [ "$DASHBOARD_RESOURCE_ID" != "None" ]; then
+    connect_lambda "$DASHBOARD_RESOURCE_ID" "GET" "soteria-get-dashboard" "/soteria/dashboard"
+else
+    echo -e "${YELLOW}⚠️  Dashboard resource not found. Creating it...${NC}"
+    # Create dashboard resource if it doesn't exist
+    DASHBOARD_RESOURCE_ID=$(aws apigateway create-resource \
+        --rest-api-id "$API_ID" \
+        --parent-id "$SOTERIA_RESOURCE_ID" \
+        --path-part "dashboard" \
+        --region "$REGION" \
+        --query 'id' \
+        --output text)
+    connect_lambda "$DASHBOARD_RESOURCE_ID" "GET" "soteria-get-dashboard" "/soteria/dashboard"
+fi
 
 echo ""
 echo -e "${GREEN}════════════════════════════════════════${NC}"

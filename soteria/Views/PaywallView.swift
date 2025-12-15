@@ -86,7 +86,16 @@ struct PaywallView: View {
                         .padding(.horizontal, 24)
                         
                         // Pricing Options
-                        if !subscriptionService.allProducts.isEmpty {
+                        if subscriptionService.isLoading {
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                                Text("Loading subscription options...")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding()
+                        } else if !subscriptionService.allProducts.isEmpty {
                             VStack(spacing: 12) {
                                 ForEach(subscriptionService.allProducts, id: \.id) { product in
                                     PricingCard(
@@ -99,35 +108,72 @@ struct PaywallView: View {
                                 }
                             }
                             .padding(.horizontal, 24)
-                        } else {
-                            ProgressView()
-                                .padding()
-                        }
-                        
-                        // Purchase Button
-                        if let product = selectedProduct ?? subscriptionService.yearlyProduct ?? subscriptionService.monthlyProduct {
-                            Button(action: {
-                                purchaseProduct(product)
-                            }) {
-                                HStack {
-                                    if isPurchasing {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    } else {
-                                        Text("Start Premium")
-                                            .font(.headline)
+                            
+                            // Purchase Button
+                            if let product = selectedProduct ?? subscriptionService.yearlyProduct ?? subscriptionService.monthlyProduct {
+                                Button(action: {
+                                    purchaseProduct(product)
+                                }) {
+                                    HStack {
+                                        if isPurchasing {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        } else {
+                                            Text("Start Premium")
+                                                .font(.headline)
+                                        }
                                     }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.reverBlue)
+                                    )
+                                    .foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.reverBlue)
-                                )
-                                .foregroundColor(.white)
+                                .disabled(isPurchasing)
+                                .padding(.horizontal, 24)
                             }
-                            .disabled(isPurchasing)
-                            .padding(.horizontal, 24)
+                        } else {
+                            // Products failed to load or not available
+                            VStack(spacing: 16) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.orange)
+                                
+                                Text("Subscription Options Unavailable")
+                                    .font(.headline)
+                                    .foregroundColor(.midnightSlate)
+                                
+                                if let errorMessage = subscriptionService.errorMessage {
+                                    Text(errorMessage)
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                } else {
+                                    Text("Unable to load subscription options. Please try again later.")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.center)
+                                }
+                                
+                                Button(action: {
+                                    Task {
+                                        await subscriptionService.loadProducts()
+                                    }
+                                }) {
+                                    Text("Retry")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 24)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(Color.reverBlue)
+                                        )
+                                }
+                            }
+                            .padding()
                         }
                         
                         // Restore Purchases

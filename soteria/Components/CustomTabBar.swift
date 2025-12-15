@@ -73,6 +73,5 @@ struct TabBarButton: View {
 
 #Preview {
     CustomTabBar(selectedTab: .constant(0))
-        .previewLayout(.sizeThatFits)
 }
 

@@ -113,7 +113,10 @@ deploy_lambda "soteria-sync-user-data" "soteria-sync-user-data" "index.handler" 
 # 2. soteria-get-user-data
 deploy_lambda "soteria-get-user-data" "soteria-get-user-data" "index.handler" 30 256
 
-# 3. Plaid functions
+# 3. soteria-get-dashboard (pre-computed dashboard data)
+deploy_lambda "soteria-get-dashboard" "soteria-get-dashboard" "index.handler" 10 512
+
+# 4. Plaid functions
 deploy_lambda "soteria-plaid-create-link-token" "soteria-plaid-create-link-token" "index.handler" 30 256
 deploy_lambda "soteria-plaid-exchange-token" "soteria-plaid-exchange-token" "index.handler" 30 256
 deploy_lambda "soteria-plaid-get-balance" "soteria-plaid-get-balance" "index.handler" 30 256
@@ -128,6 +131,8 @@ echo "Functions deployed:"
 echo "  Data Sync:"
 echo "    - soteria-sync-user-data"
 echo "    - soteria-get-user-data"
+echo "  Dashboard:"
+echo "    - soteria-get-dashboard (pre-computed metrics)"
 echo "  Plaid:"
 echo "    - soteria-plaid-create-link-token"
 echo "    - soteria-plaid-exchange-token"

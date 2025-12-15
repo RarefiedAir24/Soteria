@@ -107,6 +107,7 @@ struct QuietHoursView: View {
                                 QuietHoursScheduleCard(schedule: schedule)
                                     .environmentObject(quietHoursService)
                                     .environmentObject(subscriptionService)
+                                    .environmentObject(DeviceActivityService.shared)
                                     .onTapGesture {
                                         // Free tier: Show paywall if trying to edit
                                         if !subscriptionService.isPremium {
@@ -172,17 +173,25 @@ struct QuietHoursView: View {
             CreateQuietHoursScheduleView()
                 .environmentObject(quietHoursService)
                 .environmentObject(subscriptionService)
+                .environmentObject(DeviceActivityService.shared)
         }
         .sheet(item: $editingSchedule) { schedule in
             CreateQuietHoursScheduleView(editingSchedule: schedule)
                 .environmentObject(quietHoursService)
                 .environmentObject(subscriptionService)
+                .environmentObject(DeviceActivityService.shared)
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
                 .environmentObject(subscriptionService)
         }
         .onAppear {
+            // OPTION 1 FIX: Load schedules on-demand when view appears
+            // This fixes the issue where schedules weren't loading on app launch
+            // (QuietHoursService.init() does nothing to prevent startup delays)
+            // REVERT: If this causes issues, remove this line and schedules will only load when explicitly accessed
+            quietHoursService.ensureSchedulesLoaded()
+            
             // Update premium status for mood-based monitoring
             quietHoursService.updatePremiumStatus(subscriptionService.isPremium)
         }
@@ -195,6 +204,7 @@ struct QuietHoursView: View {
 struct QuietHoursScheduleCard: View {
     @EnvironmentObject var quietHoursService: QuietHoursService
     @EnvironmentObject var subscriptionService: SubscriptionService
+    @EnvironmentObject var deviceActivityService: DeviceActivityService
     let schedule: QuietHoursSchedule
     @State private var showDeleteConfirmation = false
     @State private var showPaywall = false
@@ -273,6 +283,55 @@ struct QuietHoursScheduleCard: View {
                         .foregroundColor(Color.reverBlue)
                 }
             }
+            
+            // Display monitored apps
+            if !schedule.selectedAppIndices.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Monitored Apps")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color.softGraphite)
+                    
+                    // Get app names from DeviceActivityService
+                    let appNames = schedule.selectedAppIndices.compactMap { index -> String? in
+                        deviceActivityService.appNames[index] ?? "App \(index + 1)"
+                    }
+                    
+                    if !appNames.isEmpty {
+                        // Simple wrapping layout using LazyVGrid
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 8) {
+                            ForEach(appNames, id: \.self) { appName in
+                                HStack(spacing: 4) {
+                                    Image(systemName: "app.fill")
+                                        .font(.system(size: 10))
+                                    Text(appName)
+                                        .font(.system(size: 11))
+                                        .lineLimit(1)
+                                }
+                                .foregroundColor(Color.reverBlue)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.reverBlue.opacity(0.1))
+                                )
+                            }
+                        }
+                    } else {
+                        Text("\(schedule.selectedAppIndices.count) app\(schedule.selectedAppIndices.count == 1 ? "" : "s") selected")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    }
+                }
+            } else {
+                HStack {
+                    Image(systemName: "app.badge")
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray)
+                    Text("No apps selected")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray)
+                }
+            }
         }
         .padding(20)
         .background(
@@ -308,8 +367,10 @@ struct CreateQuietHoursScheduleView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var quietHoursService: QuietHoursService
     @EnvironmentObject var subscriptionService: SubscriptionService
+    @EnvironmentObject var deviceActivityService: DeviceActivityService
     @State private var showPaywall = false
     @State private var showLimitAlert = false
+    @State private var showAppSelection = false
     
     let editingSchedule: QuietHoursSchedule?
     
@@ -319,6 +380,7 @@ struct CreateQuietHoursScheduleView: View {
     @State private var endHour: Int = 8
     @State private var endMinute: Int = 0
     @State private var selectedDays: Set<Int> = [1, 2, 3, 4, 5, 6, 7]
+    @State private var selectedAppIndices: Set<Int> = []
     
     init(editingSchedule: QuietHoursSchedule? = nil) {
         self.editingSchedule = editingSchedule
@@ -329,6 +391,7 @@ struct CreateQuietHoursScheduleView: View {
             _endHour = State(initialValue: schedule.endTime.hour ?? 8)
             _endMinute = State(initialValue: schedule.endTime.minute ?? 0)
             _selectedDays = State(initialValue: schedule.daysOfWeek)
+            _selectedAppIndices = State(initialValue: Set(schedule.selectedAppIndices))
         }
     }
     
@@ -377,6 +440,36 @@ struct CreateQuietHoursScheduleView: View {
                                 }
                             }
                         ))
+                    }
+                }
+                
+                Section("Monitored Apps") {
+                    // Get available apps from master selection
+                    let availableAppIndices = Array(0..<deviceActivityService.cachedAppsCount)
+                    
+                    if availableAppIndices.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("No apps selected for monitoring")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Text("Go to Settings → App Monitoring to select apps first")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    } else {
+                        ForEach(availableAppIndices, id: \.self) { index in
+                            let appName = deviceActivityService.appNames[index] ?? "App \(index + 1)"
+                            Toggle(appName, isOn: Binding(
+                                get: { selectedAppIndices.contains(index) },
+                                set: { isOn in
+                                    if isOn {
+                                        selectedAppIndices.insert(index)
+                                    } else {
+                                        selectedAppIndices.remove(index)
+                                    }
+                                }
+                            ))
+                        }
                     }
                 }
                 
@@ -465,13 +558,15 @@ struct CreateQuietHoursScheduleView: View {
             updated.startTime = startTime
             updated.endTime = endTime
             updated.daysOfWeek = selectedDays
+            updated.selectedAppIndices = Array(selectedAppIndices).sorted()
             quietHoursService.updateSchedule(updated)
         } else {
             let newSchedule = QuietHoursSchedule(
                 name: name,
                 startTime: startTime,
                 endTime: endTime,
-                daysOfWeek: selectedDays
+                daysOfWeek: selectedDays,
+                selectedAppIndices: Array(selectedAppIndices).sorted()
             )
             quietHoursService.addSchedule(newSchedule)
         }

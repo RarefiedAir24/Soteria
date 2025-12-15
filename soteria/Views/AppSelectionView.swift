@@ -152,10 +152,20 @@ struct AppSelectionView: View {
         .onAppear {
             // Check authorization status
             checkAuthorization()
+            // IMPORTANT: FamilyActivityPicker should automatically restore previous selection
+            // when opened. The system manages this persistence.
+            print("📂 [AppSelectionView] Picker opened - system should restore previous selection")
         }
         .task {
             // Check authorization status when view appears (async)
             checkAuthorization()
+        }
+        .onChange(of: selection) { oldValue, newValue in
+            // Log when selection changes (picker should restore previous selection on open)
+            print("🔄 [AppSelectionView] Selection changed")
+            // The system should persist this automatically
+            // Note: When picker opens, system restores selection, which triggers this onChange
+            // The count will be refreshed by AppSelectionSheetContent.onChange handler
         }
         .alert("App Limit Reached", isPresented: $showLimitAlert) {
             Button("OK") { }

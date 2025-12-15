@@ -1,0 +1,10 @@
+{
+  "name": "soteria-get-app-name",
+  "version": "1.0.0",
+  "description": "Lambda function to get app names from ApplicationToken hashes",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1000.0"
+  }
+}
+

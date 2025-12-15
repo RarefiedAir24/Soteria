@@ -591,7 +591,7 @@ struct LogRegretView: View {
 
 #Preview {
     PauseView()
-        .environmentObject(SavingsService())
+        .environmentObject(SavingsService.shared)
         .environmentObject(DeviceActivityService.shared)
         .environmentObject(GoalsService.shared)
         .environmentObject(RegretLoggingService.shared)

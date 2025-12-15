@@ -16,10 +16,19 @@
  */
 
 const AWS = require('aws-sdk');
+const crypto = require('crypto');
 const cognito = new AWS.CognitoIdentityServiceProvider();
 
 // These will be set via environment variables
 const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
+// Helper function to compute SECRET_HASH for Cognito
+function computeSecretHash(username) {
+    if (!CLIENT_SECRET) return undefined;
+    const message = username + CLIENT_ID;
+    return crypto.createHmac('sha256', CLIENT_SECRET).update(message).digest('base64');
+}
 
 exports.handler = async (event) => {
     console.log('📥 [Lambda] Password reset request received');
@@ -58,10 +67,16 @@ exports.handler = async (event) => {
         }
         
         // Initiate forgot password flow
+        const username = email.toLowerCase().trim();
         const forgotPasswordParams = {
             ClientId: CLIENT_ID,
-            Username: email.toLowerCase().trim()
+            Username: username
         };
+        
+        // Add SECRET_HASH if client secret is configured
+        if (CLIENT_SECRET) {
+            forgotPasswordParams.SecretHash = computeSecretHash(username);
+        }
         
         await cognito.forgotPassword(forgotPasswordParams).promise();
         

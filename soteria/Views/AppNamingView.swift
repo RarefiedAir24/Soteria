@@ -15,6 +15,23 @@ struct AppNamingView: View {
     @State private var appNames: [Int: String] = [:]
     @State private var appsCount: Int = 0 // Cache to avoid blocking access
     
+    // Computed property to check if all apps are named
+    // Note: Naming is now optional (auto-named from backend), but we still validate for editing
+    private var allAppsNamed: Bool {
+        guard appsCount > 0 else { return true } // Allow saving even if no apps
+        
+        for index in 0..<appsCount {
+            let name = appNames[index] ?? deviceActivityService.getAppName(forIndex: index)
+            let trimmedName = name.trimmingCharacters(in: .whitespaces)
+            
+            // Allow saving if name is not empty (even if it's "App X" - backend will update it)
+            if trimmedName.isEmpty {
+                return false
+            }
+        }
+        return true
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -31,7 +48,7 @@ struct AppNamingView: View {
                             .fontWeight(.bold)
                             .foregroundColor(Color.midnightSlate)
                         
-                        Text("Give each app a name so we can track which one you use most during Quiet Hours")
+                        Text("Apps are automatically named, but you can customize them here. Names are saved automatically and persist until you change or remove the app.")
                             .font(.subheadline)
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -40,9 +57,19 @@ struct AppNamingView: View {
                         // Use cached count to avoid blocking
                         ForEach(0..<appsCount, id: \.self) { index in
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("App \(index + 1)")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                HStack {
+                                    Text("App \(index + 1)")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    
+                                    // Show "Auto-named" if name came from backend
+                                let currentName = appNames[index] ?? deviceActivityService.getAppName(forIndex: index)
+                                if currentName != "App \(index + 1)" && !currentName.isEmpty {
+                                    Text("Auto-named")
+                                        .font(.caption)
+                                        .foregroundColor(.green)
+                                }
+                                }
                                 
                                 TextField("Enter app name (e.g., Amazon, eBay)", text: Binding(
                                     get: { appNames[index] ?? deviceActivityService.getAppName(forIndex: index) },
@@ -55,36 +82,33 @@ struct AppNamingView: View {
                         }
                         
                         Button(action: {
-                            // Save all app names
-                            print("💾 [AppNamingView] Save Names button - saving: \(appNames)")
-                            for (index, name) in appNames {
-                                if !name.isEmpty {
-                                    print("💾 [AppNamingView] Saving '\(name)' for index \(index)")
-                                    deviceActivityService.setAppName(name, forIndex: index)
-                                }
-                            }
-                            // Force save one more time to ensure all names are persisted
-                            deviceActivityService.saveAppNamesMapping()
-                            print("💾 [AppNamingView] Done saving. Final appNames: \(deviceActivityService.appNames)")
+                            // App names are now read-only and managed by backend
+                            // This view is display-only - names are auto-named from backend
+                            print("💾 [AppNamingView] App names are read-only - managed by backend")
                             dismiss()
                         }) {
-                            Text("Save Names")
+                            Text("Save Changes")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .padding(.vertical, 14)
                                 .frame(maxWidth: .infinity)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.reverBlue))
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(allAppsNamed ? Color.reverBlue : Color.gray)
+                                )
                         }
+                        .disabled(!allAppsNamed)
                         .padding(.horizontal, 32)
                         .padding(.top, 20)
                         
                         Button(action: {
                             dismiss()
                         }) {
-                            Text("Skip")
+                            Text("Done")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
+                        .padding(.top, 8)
                     }
                     .padding(.vertical, 40)
                 }
@@ -94,19 +118,12 @@ struct AppNamingView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
-                        // Save all app names
-                        print("💾 [AppNamingView] Saving app names: \(appNames)")
-                        for (index, name) in appNames {
-                            if !name.isEmpty {
-                                print("💾 [AppNamingView] Saving '\(name)' for index \(index)")
-                                deviceActivityService.setAppName(name, forIndex: index)
-                            }
-                        }
-                        // Force save one more time to ensure all names are persisted
-                        deviceActivityService.saveAppNamesMapping()
-                        print("💾 [AppNamingView] Done saving. Final appNames: \(deviceActivityService.appNames)")
+                        // App names are now read-only and managed by backend
+                        // This view is display-only - names are auto-named from backend
+                        print("💾 [AppNamingView] App names are read-only - managed by backend")
                         dismiss()
                     }
+                    .disabled(!allAppsNamed)
                 }
             }
             .task {
