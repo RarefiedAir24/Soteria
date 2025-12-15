@@ -1,0 +1,10 @@
+{
+  "name": "soteria-auth-signup",
+  "version": "1.0.0",
+  "description": "Lambda function for user sign up with AWS Cognito",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1400.0"
+  }
+}
+

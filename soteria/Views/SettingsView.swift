@@ -6,12 +6,13 @@
 //
 
 import SwiftUI
-import FirebaseAuth
+// TEMPORARILY DISABLED: Firebase imports - testing if they're causing crash
+// import FirebaseAuth
 import UIKit
 import FamilyControls
-#if canImport(FirebaseStorage)
-import FirebaseStorage
-#endif
+// #if canImport(FirebaseStorage)
+// import FirebaseStorage
+// #endif
 
 // Separate view to ensure binding is only created when sheet is shown
 struct AppSelectionSheetContent: View {
@@ -23,13 +24,28 @@ struct AppSelectionSheetContent: View {
         LazyAppSelectionView(
             selection: Binding(
                 get: { deviceActivityService.selectedApps },
-                set: { deviceActivityService.selectedApps = $0 }
+                set: { newValue in
+                    // FIXED: Ensure selection is saved when picker closes
+                    // FamilyActivityPicker should restore previous selection automatically,
+                    // but we need to ensure it's properly saved
+                    print("🔄 [AppSelectionSheetContent] Selection changed - saving")
+                    deviceActivityService.selectedApps = newValue
+                }
             ),
             isPresented: $showAppSelection,
             maxApps: subscriptionService.isPremium ? nil : 1
         )
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .onChange(of: showAppSelection) { oldValue, newValue in
+            // When picker closes, ensure selection is persisted
+            if !newValue {
+                print("🔄 [AppSelectionSheetContent] Picker closed - selection should be persisted by system")
+                // The system should persist FamilyActivitySelection automatically,
+                // but we ensure the count is cached
+                deviceActivityService.ensureDataLoaded()
+            }
+        }
     }
 }
 
@@ -84,8 +100,8 @@ struct SettingsView: View {
     @State private var showQuietHours = false
     @State private var showMoodCheckIn = false
     @State private var showRegretLog = false
-    @State private var showAppNaming = false
-    @State private var showAppManagement = false
+    // App naming is now fully automatic via backend - no user editing needed
+    // Removed: showAppNaming, showAppManagement (no longer needed)
     @State private var showMetrics = false
     @State private var showPaywall = false
     // Use cached count from DeviceActivityService instead of accessing selectedApps directly
@@ -95,20 +111,14 @@ struct SettingsView: View {
     @State private var avatarImage: UIImage? = nil
     @State private var showProfileView = false
     
-    var body: some View {
-        let _ = {
-            let timestamp = Date()
-            print("🟢 [SettingsView] body evaluated at \(timestamp)")
-        }()
-        
-        return ZStack(alignment: .top) {
-            // REVER background
-            Color.mistGray
-                .ignoresSafeArea(.all, edges: .top)
-            Color.cloudWhite
-                .ignoresSafeArea()
-            
-            ScrollView {
+    // Computed property to check if any schedule is enabled (toggle ON)
+    private var hasActiveQuietHoursSchedule: Bool {
+        quietHoursService.schedules.contains { $0.isActive }
+    }
+    
+    // Extract ScrollView content to help compiler type-check
+    private var scrollContent: some View {
+        ScrollView {
                 Color.clear
                     .frame(height: 60)
                 
@@ -139,8 +149,8 @@ struct SettingsView: View {
                                                     )
                                                 )
                                             
-                                            if let user = authService.currentUser {
-                                                Text(String((user.email?.components(separatedBy: "@").first ?? "U").prefix(1)).uppercased())
+                                            if let user = authService.currentUser, let email = user.email {
+                                                Text(String((email.components(separatedBy: "@").first ?? "U").prefix(1)).uppercased())
                                                     .font(.system(size: 14, weight: .bold))
                                                     .foregroundColor(.white)
                                             }
@@ -161,7 +171,7 @@ struct SettingsView: View {
                                         .foregroundColor(Color.softGraphite)
                                     
                                     if let user = authService.currentUser {
-                                        Text(user.email ?? "Unknown")
+                                        Text(user.email ?? "Unknown User")
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundColor(Color.midnightSlate)
                                         
@@ -235,8 +245,8 @@ struct SettingsView: View {
                         SettingsRow(
                             icon: "moon.fill",
                             title: "Quiet Hours",
-                            subtitle: quietHoursService.isQuietModeActive ? "Active" : "Inactive",
-                            color: quietHoursService.isQuietModeActive ? Color.reverBlue : .gray
+                            subtitle: hasActiveQuietHoursSchedule ? "Active" : "Inactive",
+                            color: hasActiveQuietHoursSchedule ? Color.reverBlue : .gray
                         ) {
                             showQuietHours = true
                         }
@@ -322,35 +332,7 @@ struct SettingsView: View {
                             )
                         }
                         
-                        // Manage Apps button (only show if apps are selected)
-                        if deviceActivityService.cachedAppsCount > 0 {
-                            Button(action: {
-                                showAppManagement = true
-                            }) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Manage App Names")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(Color.midnightSlate)
-                                        
-                                        Text("Rename or review selected apps")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(Color.softGraphite)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(Color.softGraphite)
-                                }
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.mistGray)
-                                )
-                            }
-                        }
+                        // App names are auto-managed by backend - no user editing needed
                         
                         // Metrics Dashboard button
                         Button(action: {
@@ -484,6 +466,9 @@ struct SettingsView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color.mistGray)
                         )
+                        // FIXED: Only disable if no apps selected OR if monitoring is starting
+                        // Note: User must select apps via "Select Apps to Monitor" button first
+                        // Quiet Hours app selection is separate from monitoring app selection
                         .disabled(deviceActivityService.cachedAppsCount == 0 || isStartingMonitoring)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -512,7 +497,23 @@ struct SettingsView: View {
                     
                     Spacer(minLength: 40)
                 }
-            }
+        }
+    }
+    
+    var body: some View {
+        let _ = {
+            let timestamp = Date()
+            print("🟢 [SettingsView] body evaluated at \(timestamp)")
+        }()
+        
+        return ZStack(alignment: .top) {
+            // REVER background
+            Color.mistGray
+                .ignoresSafeArea(.all, edges: .top)
+            Color.cloudWhite
+                .ignoresSafeArea()
+            
+            scrollContent
             
             // Fixed Header
             VStack(spacing: 2) {
@@ -535,29 +536,7 @@ struct SettingsView: View {
             deviceActivityService: deviceActivityService,
             subscriptionService: subscriptionService
         ))
-        .onDisappear {
-                // After app selection, show naming screen if apps were selected
-                // Defer this check to avoid blocking
-                Task { @MainActor in
-                    if deviceActivityService.cachedAppsCount > 0 {
-                        // Check if any apps need naming (async to avoid blocking)
-                        let needsNaming = (0..<deviceActivityService.cachedAppsCount).contains { index in
-                            deviceActivityService.getAppName(forIndex: index) == "App \(index + 1)"
-                        }
-                        if needsNaming {
-                            showAppNaming = true
-                        }
-                    }
-                }
-            }
-        .sheet(isPresented: $showAppNaming) {
-            AppNamingView()
-                .environmentObject(deviceActivityService)
-        }
-        .sheet(isPresented: $showAppManagement) {
-            AppManagementView()
-                .environmentObject(deviceActivityService)
-        }
+        // App naming is fully automatic via backend - no user editing sheets needed
         .sheet(isPresented: $showMetrics) {
             MetricsDashboardView()
                 .environmentObject(deviceActivityService)
@@ -641,9 +620,27 @@ struct SettingsView: View {
         .task {
             let taskStartTime = Date()
             print("🟢 [SettingsView] .task started at \(taskStartTime)")
-            // Cache isMonitoring immediately to avoid accessing @Published during view evaluation
+            
+            // CRITICAL: Defer data loading to avoid blocking app startup
+            // SettingsView might be created during startup even if not visible
+            // Wait 5 seconds before loading to ensure app is fully launched
+            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+            
+            // CRITICAL FIX: Ensure DeviceActivityService data is loaded (monitoring state, app count, etc.)
+            // This fixes the issue where monitoring toggle doesn't work because data isn't loaded
+            // DeviceActivityService.init() does nothing to prevent startup delays
+            deviceActivityService.ensureDataLoaded()
+            
+            // Wait a moment for data to load, then cache isMonitoring
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
             cachedIsMonitoring = deviceActivityService.isMonitoring
             print("🟡 [SettingsView] Cached isMonitoring: \(cachedIsMonitoring)")
+            
+            // OPTION 1 FIX: Load schedules on-demand when SettingsView appears
+            // This fixes the issue where schedules weren't loading on app launch
+            // (QuietHoursService.init() does nothing to prevent startup delays)
+            // SettingsView displays "Active/Inactive" status which requires schedules to be loaded
+            quietHoursService.ensureSchedulesLoaded()
             
             // Load avatar (only once)
             loadAvatar()
@@ -668,8 +665,12 @@ struct SettingsView: View {
         .onChange(of: deviceActivityService.isMonitoring) { oldValue, newValue in
             // Update cached value when it changes
             // Use the parameter instead of accessing the property again
+            print("🔄 [SettingsView] isMonitoring changed from \(oldValue) to \(newValue)")
             cachedIsMonitoring = newValue
             viewId = UUID()
+        }
+        .onChange(of: cachedIsMonitoring) { oldValue, newValue in
+            print("🔄 [SettingsView] cachedIsMonitoring changed from \(oldValue) to \(newValue)")
         }
         .alert("Start Monitoring", isPresented: $showStartMonitoringConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -720,7 +721,7 @@ struct SettingsView: View {
         
         // Then try to load from Firebase Storage (async, for cross-device sync)
         #if canImport(FirebaseStorage)
-        if let userId = authService.currentUser?.uid {
+        if let userId = authService.currentUser?.userId {
             Task {
                 let storageRef = Storage.storage().reference().child("avatars/\(userId).jpg")
                 

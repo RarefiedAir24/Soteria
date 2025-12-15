@@ -1,92 +1,70 @@
 import SwiftUI
-import FirebaseCore
 import UserNotifications
 
 @main
 struct SoteriaApp: App {
-    // Re-enabling services one by one to find the crash
-    // Start with simple services (no external dependencies)
     @StateObject private var authService = AuthService()
-    @StateObject private var savingsService = SavingsService()
-    @StateObject private var goalsService = GoalsService.shared
-    @StateObject private var moodService = MoodTrackingService.shared
-    @StateObject private var streakService = StreakService.shared
-    // Services with Firebase (re-enabling since Firebase is working)
-    @StateObject private var subscriptionService = SubscriptionService.shared
-    @StateObject private var regretService = RegretLoggingService.shared
-    @StateObject private var regretRiskEngine = RegretRiskEngine.shared
-    // Services with DeviceActivity (re-enabling - should be fine)
-    @StateObject private var quietHoursService = QuietHoursService.shared
-    @StateObject private var deviceActivityService = DeviceActivityService.shared
-    @StateObject private var purchaseIntentService = PurchaseIntentService.shared
-    // Plaid - temporarily disabled due to dyld crash
-    // Will implement lazy loading to prevent framework loading at startup
-    // @StateObject private var plaidService = PlaidService.shared
     @State private var showPauseView = false
     @State private var showPurchaseLogPrompt = false
     @State private var showPurchaseIntentPrompt = false
     @State private var showPaywall = false
 
     init() {
-        let startTime = Date()
-        print("✅ [App] Starting initialization at \(startTime)...")
-        print("🟡 [App] About to initialize services...")
+        print("🔍 [SoteriaApp] init() started")
         
-        // Log each service initialization
-        print("🟡 [App] Services will initialize as @StateObject properties")
-        print("🟡 [App] Note: @StateObject properties initialize BEFORE init() runs")
-        
-        // Configure consistent navigation bar appearance
+        // Configure UI appearance
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(Color.mistGray)
         appearance.shadowColor = .clear
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-        UINavigationBar.appearance().compactScrollEdgeAppearance = appearance
         
-        // Also configure UITabBar appearance for consistency
         let tabBarAppearance = UITabBarAppearance()
         tabBarAppearance.configureWithOpaqueBackground()
         tabBarAppearance.backgroundColor = UIColor(Color.mistGray)
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
         
-        // Re-enable Firebase - app is working now
-        // Debug: List all plist files in bundle
-        let plistFiles = Bundle.main.paths(forResourcesOfType: "plist", inDirectory: nil)
-        print("🔍 [App] Plist files in bundle: \(plistFiles)")
-        
-        // Configure Firebase - check if already configured first
-        // FirebaseApp.configure() can crash if GoogleService-Info.plist is missing/invalid
-        if FirebaseApp.app() == nil {
-            // Check if GoogleService-Info.plist exists in bundle
-            if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
-               FileManager.default.fileExists(atPath: path) {
-                print("✅ [App] Found GoogleService-Info.plist at: \(path)")
-                // FirebaseApp.configure() doesn't throw, but may abort if plist is invalid
-                // We can't catch that, but at least we verified the file exists
-                print("🔍 [App] About to call FirebaseApp.configure()...")
-                let firebaseStart = Date()
-                FirebaseApp.configure()
-                let firebaseTime = Date().timeIntervalSince(firebaseStart)
-                print("✅ [App] Firebase configured (took \(firebaseTime) seconds)")
-            } else {
-                print("⚠️ [App] GoogleService-Info.plist not found in bundle")
-                print("⚠️ [App] Available resources: \(Bundle.main.paths(forResourcesOfType: nil, inDirectory: nil).prefix(10))")
-                print("⚠️ [App] Skipping Firebase configuration - app may not have auth")
-                // Don't call configure() if file doesn't exist - it will crash
-            }
-        } else {
-            print("✅ [App] Firebase already configured")
-        }
-        
-        let totalTime = Date().timeIntervalSince(startTime)
-        print("✅ [App] SoteriaApp init completed (total: \(totalTime) seconds)")
-        print("🟡 [App] Services should have initialized by now - check their logs above")
+        print("✅ [SoteriaApp] init() completed")
     }
     
+    private func setupNotifications() {
+        let delegate = NotificationDelegate()
+        delegate.showPauseView = {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowPauseView"), object: nil)
+        }
+        delegate.showPurchaseLogPrompt = {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowPurchaseLogPrompt"), object: nil)
+        }
+        delegate.showPurchaseIntentPrompt = {
+            NotificationCenter.default.post(name: NSNotification.Name("ShowPurchaseIntentPrompt"), object: nil)
+        }
+        UNUserNotificationCenter.current().delegate = delegate
+        
+        // Request notification authorization
+        if #available(iOS 15.0, *) {
+            let authOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
+            UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { granted, error in
+                if let error = error {
+                    print("❌ [App] Notification authorization error: \(error)")
+                } else {
+                    print("✅ [App] Notification authorization granted: \(granted)")
+                }
+            }
+        } else {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                if let error = error {
+                    print("❌ [App] Notification authorization error: \(error)")
+                } else {
+                    print("✅ [App] Notification authorization granted: \(granted)")
+                }
+            }
+        }
+    }
+    
+    // TEMPORARILY DISABLED: setupNotifications - requires UserNotifications framework
+    /*
     private func setupNotifications() {
         let delegate = NotificationDelegate()
         delegate.showPauseView = {
@@ -103,36 +81,79 @@ struct SoteriaApp: App {
         }
         UNUserNotificationCenter.current().delegate = delegate
         
-        // Request notification authorization
-        // Note: timeSensitive is deprecated - use time-sensitive entitlement instead
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if let error = error {
-                print("❌ [App] Notification authorization error: \(error)")
-            } else {
-                print("✅ [App] Notification authorization granted: \(granted)")
+        // Request notification authorization with time-sensitive support
+        // Time-sensitive notifications can show as banners even when in another app
+        // The entitlement is already configured in entitlements file
+        if #available(iOS 15.0, *) {
+            // Note: Time-sensitive notifications are enabled via entitlement
+            // No need to include .timeSensitive in the authorization request
+            let authOptions: UNAuthorizationOptions = [.alert, .sound, .badge]
+            UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { granted, error in
+                if let error = error {
+                    print("❌ [App] Notification authorization error: \(error)")
+                } else {
+                    print("✅ [App] Notification authorization granted: \(granted)")
+                    if granted {
+                        print("✅ [App] Time-sensitive notifications enabled - banners will show in-app")
+                    }
+                }
+            }
+        } else {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                if let error = error {
+                    print("❌ [App] Notification authorization error: \(error)")
+                } else {
+                    print("✅ [App] Notification authorization granted: \(granted)")
+                }
             }
         }
     }
+    */
 
     var body: some Scene {
         WindowGroup {
-            // Testing with basic services enabled
             RootView(showPauseView: $showPauseView)
                 .environmentObject(authService)
-                .environmentObject(savingsService)
-                .environmentObject(deviceActivityService)
-                .environmentObject(goalsService)
-                .environmentObject(quietHoursService)
-                .environmentObject(moodService)
-                .environmentObject(regretRiskEngine)
-                .environmentObject(regretService)
-                .environmentObject(purchaseIntentService)
-                .environmentObject(subscriptionService)
-                .environmentObject(streakService)
-                // .environmentObject(plaidService)  // Temporarily disabled
-                // Set consistent status bar style
                 .preferredColorScheme(.light)
-                .statusBar(hidden: false)
+                .task {
+                    setupNotifications()
+                }
+                .sheet(isPresented: $showPauseView) {
+                    PauseView()
+                }
+                .sheet(isPresented: $showPurchaseLogPrompt) {
+                    PurchaseLogPromptView()
+                }
+                .sheet(isPresented: $showPurchaseIntentPrompt) {
+                    PurchaseIntentPromptView()
+                }
+                .sheet(isPresented: $showPaywall) {
+                    PaywallView()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPauseView"))) { _ in
+                    showPauseView = true
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPurchaseLogPrompt"))) { _ in
+                    showPurchaseLogPrompt = true
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPurchaseIntentPrompt"))) { _ in
+                    showPurchaseIntentPrompt = true
+                }
+                .onOpenURL { url in
+                    if url.scheme == "soteria" {
+                        if url.host == "pause" {
+                            print("✅ [App] Opened via URL scheme: \(url)")
+                            showPauseView = true
+                        } else if url.host == "purchase-intent" {
+                            print("✅ [App] Opened via URL scheme: \(url)")
+                            showPurchaseIntentPrompt = true
+                        }
+                    }
+                }
+            //     .task {
+            //         // Setup notifications asynchronously - don't block UI
+            //         setupNotifications()
+            //     }
             // .sheet(isPresented: $showPaywall) {
             //     PaywallView()
             //         .environmentObject(subscriptionService)
@@ -237,9 +258,20 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 self.showPurchaseLogPrompt?()
             }
         } else if userInfo["type"] as? String == "purchase_intent_prompt" {
-            print("✅ [App] Purchase intent prompt notification detected - opening PurchaseIntentPromptView")
-            DispatchQueue.main.async {
-                self.showPurchaseIntentPrompt?()
+            // Check if user has no active goal - navigate to Goals tab instead
+            if userInfo["noActiveGoal"] as? Bool == true {
+                print("✅ [App] Purchase intent prompt notification detected - no active goal, navigating to Goals tab")
+                // Post notification to navigate to Goals tab
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToGoalsTab"), object: nil)
+                    // Also post notification to show create goal view
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowCreateGoal"), object: nil)
+                }
+            } else {
+                print("✅ [App] Purchase intent prompt notification detected - opening PurchaseIntentPromptView")
+                DispatchQueue.main.async {
+                    self.showPurchaseIntentPrompt?()
+                }
             }
         } else {
             print("⚠️ [App] Unknown notification type: \(userInfo["type"] ?? "nil")")
@@ -278,9 +310,20 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 completionHandler([.alert, .sound, .badge])
             }
         } else if userInfo["type"] as? String == "purchase_intent_prompt" {
-            print("✅ [App] Purchase intent prompt notification detected in foreground - opening PurchaseIntentPromptView")
-            DispatchQueue.main.async {
-                self.showPurchaseIntentPrompt?()
+            // Check if user has no active goal - navigate to Goals tab instead
+            if userInfo["noActiveGoal"] as? Bool == true {
+                print("✅ [App] Purchase intent prompt notification detected in foreground - no active goal, navigating to Goals tab")
+                // Post notification to navigate to Goals tab
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToGoalsTab"), object: nil)
+                    // Also post notification to show create goal view
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowCreateGoal"), object: nil)
+                }
+            } else {
+                print("✅ [App] Purchase intent prompt notification detected in foreground - opening PurchaseIntentPromptView")
+                DispatchQueue.main.async {
+                    self.showPurchaseIntentPrompt?()
+                }
             }
             if #available(iOS 15.0, *) {
                 completionHandler([.banner, .list, .sound, .badge])
@@ -298,99 +341,33 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     }
 }
 
-// Minimal test view to isolate crash
-struct TestMinimalView: View {
-    var body: some View {
-        ZStack {
-            Color.blue.ignoresSafeArea()
-            VStack {
-                Text("✅ App is Running!")
-                    .font(.largeTitle)
-                    .foregroundColor(.white)
-                Text("If you see this, the crash is in service initialization")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding()
-            }
-        }
-        .onAppear {
-            print("✅ [TestMinimalView] Rendered successfully!")
-        }
-    }
-}
-
 struct RootView: View {
     @EnvironmentObject var authService: AuthService
-    @EnvironmentObject var deviceActivityService: DeviceActivityService
-    @EnvironmentObject var quietHoursService: QuietHoursService
     @Binding var showPauseView: Bool
     @State private var showPurchaseLogPrompt = false
     @State private var showPurchaseIntentPrompt = false
-    @State private var isAppReady = false  // Track if app initialization is complete
 
     var body: some View {
-        let _ = {
-            let timestamp = Date()
-            print("🟢 [RootView] body evaluated at \(timestamp), isAuthenticated: \(authService.isAuthenticated)")
-        }()
-        
-        return Group {
-            if authService.isAuthenticated {
-                // CRITICAL: Only create MainTabView after app is ready
-                // This prevents TabView from evaluating all its children during startup
-                if isAppReady {
-                    // Use ZStack to ensure MainTabView appears immediately
-                    // Don't wrap in Group - that doesn't defer evaluation
-                    MainTabView()
-                } else {
-                    // Show custom splash screen while app initializes
-                    SplashScreenView()
-                }
+        // SIMPLIFIED: Direct conditional - no flags, no delays
+        Group {
+            if authService.isCheckingAuth {
+                // Show splash screen while checking auth
+                SplashScreenView()
+            } else if authService.isAuthenticated {
+                // Show MainTabView immediately when authenticated
+                MainTabView()
+                    .id("mainTabView")
             } else {
+                // Show login screen
                 AuthView()
             }
         }
         .onAppear {
-            let timestamp = Date()
-            print("🟢 [RootView] onAppear at \(timestamp), isAuthenticated: \(authService.isAuthenticated)")
+            print("🟢 [RootView] onAppear, isCheckingAuth: \(authService.isCheckingAuth), isAuthenticated: \(authService.isAuthenticated)")
         }
-        .task {
-            let taskStart = Date()
-            print("🟢 [RootView] .task started at \(taskStart), isAuthenticated: \(authService.isAuthenticated)")
-            
-            // With custom tab bar, we can create MainTabView quickly
-            // Only HomeView will be created (lazy loading for other tabs)
-            if authService.isAuthenticated {
-                print("🟡 [RootView] App is authenticated - showing splash screen briefly")
-                // Show splash screen for minimum 1.5 seconds for branding
-                // This is much shorter than the previous 10-second delay
-                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
-                await MainActor.run {
-                    isAppReady = true
-                    print("🟢 [RootView] App is ready - MainTabView will be created (only HomeView will load)")
-                }
-            }
-            
-            // DISABLE these checks on app launch - they're blocking the main thread
-            // They can run later when user interacts with the app
-            // Task.detached(priority: .background) {
-            //     try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
-            //     await MainActor.run {
-            //         checkForRecentShoppingSession()
-            //         checkForPurchaseIntentPrompt()
-            //     }
-            // }
-            let taskEnd = Date()
-            print("🟢 [RootView] .task completed at \(taskEnd) (took \(taskEnd.timeIntervalSince(taskStart))s)")
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            // DISABLED: These checks block the main thread
-            // They can be re-enabled later if needed, but must be truly async
-        }
-               .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-                   // DISABLED: These checks block the main thread
-                   // They can be re-enabled later if needed, but must be truly async
-               }
+        // STREAMLINED: Removed purchase intent checks from foreground/active notifications
+        // Purchase intent checks now only happen on-demand when app blocking actually occurs
+        // This eliminates 2 unnecessary background tasks on every app launch
                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                    // App is going to background - end any active usage sessions
                    // Note: This is a fallback - we primarily track via DeviceActivity events
@@ -421,12 +398,44 @@ struct RootView: View {
     }
     
            // Check if we should show purchase intent prompt
+           // SAFE: Only reads UserDefaults and cached values (fast, non-blocking)
+           // CRITICAL: This function must NEVER block - all property access is async
            private func checkForPurchaseIntentPrompt() {
-               print("🔍 [RootView] ════════════════════════════════════════")
+               let funcStart = Date()
+               print("🔍 [RootView] checkForPurchaseIntentPrompt() called at \(funcStart)")
+               // Note: Thread.isMainThread is not available in async contexts in Swift 6
+               // This function is called from MainActor context, so it's on the main thread
+               print("🔍 [RootView] checkForPurchaseIntentPrompt - Running on MainActor (main thread)")
+               print("🔍 [RootView] checkForPurchaseIntentPrompt - Task priority: \(Task.currentPriority.rawValue)")
+               
+               // Guard: Don't check during app launch (first 3 seconds) to prevent startup blocking
+               let guardStart = Date()
+               let appLaunchTime = UserDefaults.standard.double(forKey: "appLaunchTime")
+               let guardTime = Date().timeIntervalSince(guardStart)
+               if guardTime > 0.01 {
+                   print("⚠️ [RootView] WARNING: UserDefaults read took \(guardTime)s (should be < 0.01s)")
+               }
+               
+               if appLaunchTime > 0 {
+                   let timeSinceLaunch = Date().timeIntervalSince1970 - appLaunchTime
+                   if timeSinceLaunch < 3.0 {
+                       print("⏭️ [RootView] Skipping purchase intent check - app still launching (\(Int(timeSinceLaunch))s)")
+                       print("🔍 [RootView] checkForPurchaseIntentPrompt - Returned early (took \(Date().timeIntervalSince(funcStart))s)")
+                       return
+                   }
+               }
+               
                print("🔍 [RootView] Checking for purchase intent prompt...")
                
-               // Check if we should show purchase intent prompt (intercepted before app launch)
-               if UserDefaults.standard.bool(forKey: "shouldShowPurchaseIntentPrompt") {
+               // Fast check: UserDefaults read (synchronous but instant)
+               let userDefaultsStart = Date()
+               let shouldShow = UserDefaults.standard.bool(forKey: "shouldShowPurchaseIntentPrompt")
+               let userDefaultsTime = Date().timeIntervalSince(userDefaultsStart)
+               if userDefaultsTime > 0.01 {
+                   print("⚠️ [RootView] WARNING: UserDefaults.bool read took \(userDefaultsTime)s (should be < 0.01s)")
+               }
+               
+               if shouldShow {
                    print("✅ [RootView] shouldShowPurchaseIntentPrompt is true - showing prompt (intercepted before app launch)")
                    UserDefaults.standard.set(false, forKey: "shouldShowPurchaseIntentPrompt")
                    // Show immediately when app becomes active
@@ -434,39 +443,125 @@ struct RootView: View {
                        self.showPurchaseIntentPrompt = true
                        print("✅ [RootView] showPurchaseIntentPrompt set to: \(self.showPurchaseIntentPrompt)")
                    }
-               } else {
-                   // Fallback: If Quiet Hours are active and monitoring is on, 
-                   // show prompt when user opens SOTERIA (they likely saw blocking screen)
+                   print("🔍 [RootView] ════════════════════════════════════════")
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - Returned early (took \(Date().timeIntervalSince(funcStart))s)")
+                   return
+               }
+               
+               // CRITICAL: All property access must be in a detached task to avoid blocking
+               // This ensures the function returns immediately and doesn't block MainActor
+               // CRITICAL: Access services INSIDE the detached task to prevent initialization chain during startup
+               let beforeDetached = Date()
+               print("🔍 [RootView] checkForPurchaseIntentPrompt - Starting detached task at \(beforeDetached)")
+               print("🔍 [RootView] checkForPurchaseIntentPrompt - Time before detached task: \(beforeDetached.timeIntervalSince(funcStart))s")
+               
+               Task.detached(priority: .utility) {
+                   // CRITICAL: Access services INSIDE detached task to prevent blocking MainActor
+                   // Accessing .shared triggers service init(), which can create an initialization chain
+                   // Use MainActor.run to access MainActor-isolated properties
+                   let quietHoursService = await MainActor.run {
+                       QuietHoursService.shared
+                   }
+                   let deviceActivityService = await MainActor.run {
+                       DeviceActivityService.shared
+                   }
+                   let detachedStart = Date()
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - Detached task started at \(detachedStart)")
+                   // Note: Thread.isMainThread is not available in async contexts in Swift 6
+                   // This is a detached task, so it runs on a background thread
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - Detached task running on background thread")
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - Detached task priority: \(Task.currentPriority.rawValue)")
+                   
+                   // Fallback: Check if user likely saw blocking screen
+                   // This handles cases where:
+                   // 1. Extension didn't fire (common issue)
+                   // 2. Schedule was active when blocking happened but isn't active now
+                   // 3. User returns to Soteria after seeing restricted screen
+                   
                    let now = Date().timeIntervalSince1970
                    let lastPromptTime = UserDefaults.standard.double(forKey: "lastPurchaseIntentPromptTime")
                    let timeSinceLastPrompt = now - lastPromptTime
                    
-                   print("🔍 [RootView] Checking fallback prompt conditions:")
-                   print("   - Quiet Hours active: \(quietHoursService.isQuietModeActive)")
-                   print("   - Monitoring on: \(deviceActivityService.isMonitoring)")
-                   print("   - Time since last prompt: \(Int(timeSinceLastPrompt))s")
+                   // CRITICAL: Access @Published properties on MainActor, but don't block
+                   let beforeMainActor = Date()
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - About to access @Published properties on MainActor at \(beforeMainActor)")
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - Time before MainActor.run: \(beforeMainActor.timeIntervalSince(detachedStart))s")
                    
-                   if quietHoursService.isQuietModeActive && deviceActivityService.isMonitoring {
-                       // Only show if we haven't shown a prompt in the last 10 seconds (avoid spam)
-                       // Reduced from 30s for testing
-                       if timeSinceLastPrompt > 10.0 {
-                           print("✅ [RootView] SOTERIA activated during Quiet Hours with monitoring - showing prompt")
+                   await MainActor.run {
+                       let mainActorStart = Date()
+                       print("🔍 [RootView] checkForPurchaseIntentPrompt - Inside MainActor.run at \(mainActorStart)")
+                       print("🔍 [RootView] checkForPurchaseIntentPrompt - Time to enter MainActor.run: \(mainActorStart.timeIntervalSince(beforeMainActor))s")
+                       // Note: Thread.isMainThread is not available in async contexts in Swift 6
+                       // MainActor.run ensures we're on the main thread
+                       print("🔍 [RootView] checkForPurchaseIntentPrompt - Running on MainActor (main thread)")
+                       
+                       // Check if any schedule is enabled (not just currently active)
+                       // CRITICAL: Access schedules - they should be loaded by now (30s delay)
+                       let schedulesStart = Date()
+                       let schedules = quietHoursService.schedules
+                       let schedulesTime = Date().timeIntervalSince(schedulesStart)
+                       if schedulesTime > 0.1 {
+                           print("⚠️ [RootView] WARNING: Accessing quietHoursService.schedules took \(schedulesTime)s (should be < 0.1s)")
+                       }
+                       let hasEnabledSchedule = schedules.contains { $0.isActive }
+                       
+                       // CRITICAL: Cache isQuietModeActive and isMonitoring to avoid blocking access
+                       let isQuietModeActiveStart = Date()
+                       let isQuietModeActive = quietHoursService.isQuietModeActive
+                       let isQuietModeActiveTime = Date().timeIntervalSince(isQuietModeActiveStart)
+                       if isQuietModeActiveTime > 0.1 {
+                           print("⚠️ [RootView] WARNING: Accessing quietHoursService.isQuietModeActive took \(isQuietModeActiveTime)s (should be < 0.1s)")
+                       }
+                       
+                       let isMonitoringStart = Date()
+                       let cachedIsMonitoring = deviceActivityService.isMonitoring
+                       let isMonitoringTime = Date().timeIntervalSince(isMonitoringStart)
+                       if isMonitoringTime > 0.1 {
+                           print("⚠️ [RootView] WARNING: Accessing deviceActivityService.isMonitoring took \(isMonitoringTime)s (should be < 0.1s)")
+                       }
+                       
+                       print("🔍 [RootView] Checking fallback prompt conditions:")
+                       print("   - Quiet Hours currently active: \(isQuietModeActive)")
+                       print("   - Has enabled schedule: \(hasEnabledSchedule)")
+                       print("   - Monitoring on: \(cachedIsMonitoring)")
+                       print("   - Time since last prompt: \(Int(timeSinceLastPrompt))s")
+                       print("🔍 [RootView] Property access times:")
+                       print("   - schedules: \(schedulesTime)s")
+                       print("   - isQuietModeActive: \(isQuietModeActiveTime)s")
+                       print("   - isMonitoring: \(isMonitoringTime)s")
+                       
+                       // Show prompt if:
+                       // 1. Monitoring is on (apps are being blocked)
+                       // 2. At least one schedule is enabled (user has Quiet Hours set up)
+                       // 3. Cooldown has expired
+                       if cachedIsMonitoring && hasEnabledSchedule && timeSinceLastPrompt > 10.0 {
+                           print("✅ [RootView] Showing fallback prompt (monitoring + enabled schedule)")
                            print("✅ [RootView] Setting showPurchaseIntentPrompt = true")
                            UserDefaults.standard.set(now, forKey: "lastPurchaseIntentPromptTime")
-                           DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                               self.showPurchaseIntentPrompt = true
-                               print("✅ [RootView] showPurchaseIntentPrompt set to: \(self.showPurchaseIntentPrompt)")
-                           }
+                           // Use NotificationCenter to update view state from detached task
+                           NotificationCenter.default.post(name: NSNotification.Name("ShowPurchaseIntentPrompt"), object: nil)
+                           print("✅ [RootView] Posted ShowPurchaseIntentPrompt notification")
                        } else {
-                           print("⏭️ [RootView] Skipping prompt - shown \(Int(timeSinceLastPrompt))s ago (cooldown: 10s)")
+                           if !cachedIsMonitoring {
+                               print("⏭️ [RootView] Monitoring is off")
+                           } else if !hasEnabledSchedule {
+                               print("⏭️ [RootView] No enabled schedules")
+                           } else {
+                               print("⏭️ [RootView] Cooldown active (\(Int(timeSinceLastPrompt))s)")
+                           }
                        }
-                   } else {
-                       print("⏭️ [RootView] Fallback conditions not met:")
-                       print("   - Quiet Hours active: \(quietHoursService.isQuietModeActive)")
-                       print("   - Monitoring on: \(deviceActivityService.isMonitoring)")
+                       
+                       let mainActorEnd = Date()
+                       print("🔍 [RootView] checkForPurchaseIntentPrompt - MainActor.run completed (took \(mainActorEnd.timeIntervalSince(mainActorStart))s)")
+                       print("🔍 [RootView] ════════════════════════════════════════")
                    }
+                   
+                   let detachedEnd = Date()
+                   print("🔍 [RootView] checkForPurchaseIntentPrompt - Detached task completed (total: \(detachedEnd.timeIntervalSince(detachedStart))s)")
                }
-               print("🔍 [RootView] ════════════════════════════════════════")
+               
+               let funcEnd = Date()
+               print("🔍 [RootView] checkForPurchaseIntentPrompt - Function returned immediately (took \(funcEnd.timeIntervalSince(funcStart))s)")
            }
            
            // Check if user recently used shopping apps and prompt to log purchase

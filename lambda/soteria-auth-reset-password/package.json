@@ -1,0 +1,10 @@
+{
+  "name": "soteria-auth-reset-password",
+  "version": "1.0.0",
+  "description": "Lambda function for password reset with AWS Cognito",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1400.0"
+  }
+}
+

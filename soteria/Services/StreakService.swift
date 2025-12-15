@@ -20,8 +20,33 @@ class StreakService: ObservableObject {
     private let lastProtectionKey = "last_protection_date"
     
     private init() {
+        let initStart = Date()
+        print("✅ [StreakService] Init started at \(initStart) (truly lazy - no work on startup)")
+        // STREAMLINED: Do absolutely nothing on startup
+        // Data will be loaded on-demand when user accesses streak features
+        // This eliminates blocking UserDefaults reads and Calendar calculations during app launch
+        let initEnd = Date()
+        print("✅ [StreakService] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
+        
+        // Defer all work to background task with delay
+        Task.detached(priority: .background) { [weak self] in
+            guard let self = self else { return }
+            // Wait 30 seconds to ensure app is fully loaded and responsive
+            try? await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds
+            await MainActor.run {
+                self.loadStreakData()
+                self.updateStreak()
+                print("✅ [StreakService] Data loaded and streak updated")
+            }
+        }
+    }
+    
+    // Ensure data is loaded (call on-demand)
+    func ensureDataLoaded() {
+        // Only load if not already loaded
+        guard currentStreak == 0 && longestStreak == 0 && lastProtectionDate == nil else { return }
         loadStreakData()
-        updateStreak() // Check if streak should continue or reset
+        updateStreak()
     }
     
     // Load streak data from UserDefaults

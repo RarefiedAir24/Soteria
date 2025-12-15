@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "AppLogo.png",
+      "filename" : "Asset 1.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "AppLogo@2x.png",
+      "filename" : "Asset 2.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "AppLogo@3x.png",
+      "filename" : "Asset 3.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
@@ -21,4 +21,3 @@
     "version" : 1
   }
 }
-

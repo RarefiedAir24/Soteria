@@ -1,0 +1,110 @@
+{
+  "identifier" : "Products",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "identifier" : "com.soteria.premium.monthly",
+      "localizations" : [
+        {
+          "description" : "Monthly Premium subscription with unlimited apps, advanced analytics, and smart auto-protection",
+          "displayName" : "Premium Monthly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.soteria.premium.monthly",
+      "referenceName" : "Premium Monthly",
+      "type" : "AutoRenewableSubscription"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "identifier" : "com.soteria.premium.yearly",
+      "localizations" : [
+        {
+          "description" : "Yearly Premium subscription with unlimited apps, advanced analytics, and smart auto-protection. Best value!",
+          "displayName" : "Premium Yearly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.soteria.premium.yearly",
+      "referenceName" : "Premium Yearly",
+      "type" : "AutoRenewableSubscription"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6448701997",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21480113",
+      "localizations" : [
+        {
+          "name" : "Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Premium"
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
+

@@ -16,8 +16,9 @@ struct QuietHoursSchedule: Identifiable, Codable {
     var daysOfWeek: Set<Int> // 1 = Sunday, 2 = Monday, etc.
     var isActive: Bool
     var categoryRestrictions: [String]? // App categories to restrict (e.g., "Shopping", "Food Delivery")
+    var selectedAppIndices: [Int] // Indices of apps from DeviceActivityService.selectedApps to monitor for this schedule
     
-    init(id: String = UUID().uuidString, name: String, startTime: DateComponents, endTime: DateComponents, daysOfWeek: Set<Int>, isActive: Bool = true, categoryRestrictions: [String]? = nil) {
+    init(id: String = UUID().uuidString, name: String, startTime: DateComponents, endTime: DateComponents, daysOfWeek: Set<Int>, isActive: Bool = true, categoryRestrictions: [String]? = nil, selectedAppIndices: [Int] = []) {
         self.id = id
         self.name = name
         self.startTime = startTime
@@ -25,6 +26,7 @@ struct QuietHoursSchedule: Identifiable, Codable {
         self.daysOfWeek = daysOfWeek
         self.isActive = isActive
         self.categoryRestrictions = categoryRestrictions
+        self.selectedAppIndices = selectedAppIndices
     }
     
     // Check if quiet hours are currently active
@@ -66,32 +68,30 @@ class QuietHoursService: ObservableObject {
     private let schedulesKey = "quiet_hours_schedules"
     private var timer: Timer?
     private var moodCheckTimer: Timer?
-    private let moodService = MoodTrackingService.shared
+    // CRITICAL: Make all service dependencies lazy to prevent initialization chain during startup
+    // Accessing .shared during init() triggers that service's init(), creating a blocking chain
+    private var moodService: MoodTrackingService {
+        MoodTrackingService.shared
+    }
     // Lazy to avoid circular dependency with RegretRiskEngine
     private lazy var regretRiskEngine = RegretRiskEngine.shared
     
     private init() {
         let initStart = Date()
-        print("✅ [QuietHoursService] Init started at \(initStart) (all work deferred)")
-        // Defer everything - no synchronous work, no MainActor blocking
-        // Use Task.detached to avoid blocking main thread
-        Task.detached(priority: .background) {
-            // Don't wait - load immediately in background
-            let loadStart = Date()
-            print("🟡 [QuietHoursService] Starting schedule load at \(loadStart)")
-            // Call loadSchedules() directly - it's now truly async and won't block
-            // Don't await it - just start it and let it run in background
-            QuietHoursService.shared.loadSchedules()
-            // Log immediately - don't wait for loadSchedules to complete
-            let loadEnd = Date()
-            print("🟡 [QuietHoursService] Schedule loading initiated (took \(loadEnd.timeIntervalSince(loadStart))s)")
-            
-            // Start monitoring in background (low priority) - DISABLED to prevent blocking
-            print("🟡 [QuietHoursService] Deferring startMonitoring() - will start later")
-            
-            let initEnd = Date()
-            print("✅ [QuietHoursService] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
-        }
+        print("✅ [QuietHoursService] Init started at \(initStart) (truly lazy - no work on startup)")
+        // STREAMLINED: Do absolutely nothing on startup
+        // Schedules will be loaded on-demand when user opens Quiet Hours view
+        // This eliminates unnecessary background tasks on app launch
+        let initEnd = Date()
+        print("✅ [QuietHoursService] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
+    }
+    
+    // Load schedules on-demand (lazy loading)
+    // Call this when user actually opens Quiet Hours view
+    func ensureSchedulesLoaded() {
+        // Only load if not already loaded
+        guard schedules.isEmpty else { return }
+        loadSchedules()
     }
     
     deinit {
@@ -104,7 +104,8 @@ class QuietHoursService: ObservableObject {
     // Remove @MainActor - this function should not block the main thread
     private func loadSchedules() {
         // Start a detached task immediately - don't block anything
-        Task.detached(priority: .utility) { [weak self] in
+        // CRITICAL: Use .background priority to ensure it doesn't block critical operations
+        Task.detached(priority: .background) { [weak self] in
             guard let self = self else { return }
             let loadStart = Date()
             print("🟡 [QuietHoursService] loadSchedules() task started at \(loadStart)")
@@ -113,14 +114,14 @@ class QuietHoursService: ObservableObject {
             let data = UserDefaults.standard.data(forKey: "quiet_hours_schedules")
             
             // Decode JSON in background (can be slow with large arrays)
-            let decoded = data.flatMap { try? JSONDecoder().decode([QuietHoursSchedule].self, from: $0) }
+            let decoded = data.flatMap { try? JSONDecoder().decode([QuietHoursSchedule].self, from: $0) } ?? []
             
             let decodeEnd = Date()
             print("🟡 [QuietHoursService] JSON decode completed (took \(decodeEnd.timeIntervalSince(loadStart))s)")
             
             // Update @Published property on MainActor (required for ObservableObject)
             await MainActor.run {
-                self.schedules = decoded ?? []
+                self.schedules = decoded
                 let updateEnd = Date()
                 print("✅ [QuietHoursService] Schedules loaded: \(self.schedules.count) (total: \(updateEnd.timeIntervalSince(loadStart))s)")
             }

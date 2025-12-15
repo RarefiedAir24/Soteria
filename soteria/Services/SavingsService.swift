@@ -9,12 +9,16 @@ import Foundation
 import Combine
 
 class SavingsService: ObservableObject {
+    static let shared = SavingsService()
+    
     // Note: These are user-reported estimates, not actual purchase tracking
     // We cannot track actual purchases - users manually enter amounts when they skip a purchase
     @Published var totalSaved: Double = 0 // User-reported estimated amount avoided
     @Published var soteriaMomentsCount: Int = 0 // Number of times user chose protection
     @Published var lastSavedAmount: Double? = nil // Last user-reported estimated amount
     @Published var totalTransferredToSavings: Double = 0 // Money transferred to bank accounts (if Plaid integration used)
+    
+    private init() {}
     
     // Record when user skips a purchase and reports estimated amount
     // This is NOT actual purchase tracking - it's user-reported data

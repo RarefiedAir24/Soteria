@@ -38,20 +38,37 @@ class SubscriptionService: ObservableObject {
     
     private init() {
         // Load from UserDefaults immediately (fast, synchronous)
-        isPremium = UserDefaults.standard.bool(forKey: "isPremium")
-        subscriptionTier = isPremium ? .premium : .free
+        // Check if test account premium flag is set
+        let isTestAccount = UserDefaults.standard.bool(forKey: "isTestAccountPremium")
+        if isTestAccount {
+            isPremium = true
+            subscriptionTier = .premium
+            print("✅ [SubscriptionService] Test account premium status loaded from UserDefaults")
+        } else {
+            isPremium = UserDefaults.standard.bool(forKey: "isPremium")
+            subscriptionTier = isPremium ? .premium : .free
+        }
         
-        // Defer heavy operations to avoid blocking UI
-        Task { [weak self] in
+        // Defer heavy operations to avoid blocking UI during startup
+        // Use Task.detached to ensure it doesn't block the main thread
+        Task.detached(priority: .background) { [weak self] in
             guard let self = self else { return }
-            // Load subscription status from StoreKit (async)
+            
+            // Small delay to ensure app startup completes first
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            
+            // Load subscription status from StoreKit (async, non-blocking)
             await self.updateSubscriptionStatus()
             
-            // Listen for transaction updates
-            self.updateListenerTask = self.listenForTransactions()
+            // Listen for transaction updates (background task)
+            // Must run on MainActor since updateListenerTask is MainActor-isolated
+            await MainActor.run {
+                self.updateListenerTask = self.listenForTransactions()
+            }
             
-            // Load products
-            await self.loadProducts()
+            // DON'T load products here - they're loaded when PaywallView appears
+            // This prevents unnecessary StoreKit calls during startup
+            // await self.loadProducts()  // ❌ Removed - loaded in PaywallView.task instead
         }
     }
     
@@ -64,15 +81,32 @@ class SubscriptionService: ObservableObject {
     @MainActor
     func loadProducts() async {
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
         
         do {
             let productIDs = [monthlyProductID, yearlyProductID]
+            print("🟡 [SubscriptionService] Loading products: \(productIDs)")
+            print("🟡 [SubscriptionService] Make sure scheme is configured to use Products.storekit!")
+            print("🟡 [SubscriptionService] Edit Scheme → Run → Options → StoreKit Configuration")
             products = try await Product.products(for: productIDs)
             print("✅ [SubscriptionService] Loaded \(products.count) products")
+            
+            if products.isEmpty {
+                errorMessage = "No subscription products found. Please check:\n1. Scheme is configured (Edit Scheme → Run → Options → StoreKit Configuration → Products.storekit)\n2. App is running in DEBUG mode\n3. Clean build folder (⇧⌘K) and rebuild"
+                print("⚠️ [SubscriptionService] No products loaded - check product IDs: \(productIDs)")
+                print("⚠️ [SubscriptionService] StoreKit Configuration file may not be active")
+                print("⚠️ [SubscriptionService] Verify: Edit Scheme → Run → Options → StoreKit Configuration = Products.storekit")
+            } else {
+                // Clear any previous error
+                errorMessage = nil
+                print("✅ [SubscriptionService] Products loaded successfully from StoreKit Configuration!")
+            }
         } catch {
-            print("❌ [SubscriptionService] Failed to load products: \(error)")
-            errorMessage = "Failed to load subscription options"
+            print("❌ [SubscriptionService] Failed to load products: \(error.localizedDescription)")
+            print("❌ [SubscriptionService] Error details: \(error)")
+            errorMessage = "Failed to load subscription options: \(error.localizedDescription)\n\nMake sure:\n1. Scheme uses Products.storekit (Edit Scheme → Run → Options)\n2. App is in DEBUG mode\n3. Clean build (⇧⌘K) and rebuild"
+            products = [] // Clear products on error
         }
     }
     
@@ -119,6 +153,15 @@ class SubscriptionService: ObservableObject {
     
     @MainActor
     private func updateSubscriptionStatus() async {
+        // Check if this is a test account - preserve premium status for test accounts
+        let isTestAccount = UserDefaults.standard.bool(forKey: "isTestAccountPremium")
+        if isTestAccount {
+            print("✅ [SubscriptionService] Test account detected - preserving premium status")
+            isPremium = true
+            subscriptionTier = .premium
+            return
+        }
+        
         var isCurrentlyPremium = false
         
         // Check for active subscriptions
@@ -191,6 +234,26 @@ class SubscriptionService: ObservableObject {
     
     var allProducts: [Product] {
         products
+    }
+    
+    // MARK: - Testing/Development
+    
+    /// Manually set premium status for testing (only for specific test accounts)
+    @MainActor
+    func setPremiumForTesting(email: String) {
+        // Only allow for specific test accounts
+        let testAccounts = ["supergeek@me.com", "supergeek"]
+        guard testAccounts.contains(email.lowercased()) else {
+            print("⚠️ [SubscriptionService] Test account not authorized: \(email)")
+            return
+        }
+        
+        isPremium = true
+        subscriptionTier = .premium
+        UserDefaults.standard.set(true, forKey: "isPremium")
+        UserDefaults.standard.set(true, forKey: "isTestAccountPremium") // Flag to preserve premium status
+        print("✅ [SubscriptionService] Premium status manually set for testing account: \(email)")
+        print("✅ [SubscriptionService] isPremium: \(isPremium), subscriptionTier: \(subscriptionTier.displayName)")
     }
 }
 

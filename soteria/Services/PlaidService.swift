@@ -7,8 +7,6 @@
 
 import Foundation
 import Combine
-import FirebaseAuth
-import FirebaseCore
 
 // MARK: - Models
 
@@ -40,6 +38,8 @@ struct Transfer: Codable, Identifiable {
 
 class PlaidService: ObservableObject {
     static let shared = PlaidService()
+    
+    private let cognitoService = CognitoAuthService.shared
     
     // API Gateway URL - Switches between local dev and production
     #if DEBUG
@@ -78,163 +78,168 @@ class PlaidService: ObservableObject {
     
     /// Create Plaid Link token for account connection
     func createLinkToken() async throws -> String {
-        // Check if Firebase is configured
-        guard FirebaseApp.app() != nil else {
-            throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase not configured"])
-        }
-        guard let userId = Auth.auth().currentUser?.uid else {
-            throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
-        }
-        
-        guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/create-link-token") else {
-            throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        // Get Firebase ID token for authentication
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
-            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
-        }
-        
-        let requestBody: [String: Any] = [
-            "user_id": userId,
-            "client_name": "Soteria",
-            "products": ["auth", "transactions"], // Note: "balance" is not a valid product
-            "country_codes": ["US"],
-            "language": "en"
-        ]
-        
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
-        
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch let urlError as URLError {
-            // Connection error - provide helpful message
-            #if DEBUG
-            var errorMsg = "Cannot connect to local dev server at \(apiGatewayURL).\n\n"
-            #if targetEnvironment(simulator)
-            errorMsg += "Simulator detected. Please check:\n1. Server is running: curl http://localhost:8000/health\n2. Server is accessible"
-            #else
-            errorMsg += "Physical device detected.\n\nYou need to use your Mac's IP address instead of localhost:\n1. Find Mac IP: ifconfig | grep 'inet ' | grep -v 127.0.0.1\n2. Update PlaidService.swift line 47 to: http://YOUR_MAC_IP:8000\n3. Example: http://10.0.0.52:8000"
-            #endif
-            #else
-            let errorMsg = "Cannot connect to server. Please check your internet connection."
-            #endif
-            throw NSError(domain: "PlaidService", code: -5, userInfo: [
-                NSLocalizedDescriptionKey: errorMsg,
-                NSUnderlyingErrorKey: urlError
-            ])
-        } catch {
-            throw NSError(domain: "PlaidService", code: -5, userInfo: [
-                NSLocalizedDescriptionKey: "Connection error: \(error.localizedDescription)",
-                NSUnderlyingErrorKey: error
-            ])
-        }
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-        }
-        
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let linkToken = json["link_token"] as? String else {
-            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse link token"])
-        }
-        
-        print("✅ [PlaidService] Link token created")
-        return linkToken
+        // TEMPORARILY DISABLED: Firebase - testing if it's causing crash
+        throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase is temporarily disabled"])
+        // // Check if Firebase is configured
+        // guard FirebaseApp.app() != nil else {
+        //     throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase not configured"])
+        // }
+        // guard let userId = Auth.auth().currentUser?.uid else {
+        //     throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        // }
+        // 
+        // guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/create-link-token") else {
+        //     throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        // }
+        // 
+        // var request = URLRequest(url: url)
+        // request.httpMethod = "POST"
+        // request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // 
+        // // TEMPORARILY DISABLED: Firebase ID token
+        // // Get Firebase ID token for authentication
+        // // if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        // //     request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // // }
+        // 
+        // let requestBody: [String: Any] = [
+        //     "user_id": userId,
+        //     "client_name": "Soteria",
+        //     "products": ["auth", "transactions"], // Note: "balance" is not a valid product
+        //     "country_codes": ["US"],
+        //     "language": "en"
+        // ]
+        // 
+        // request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        // 
+        // let (data, response): (Data, URLResponse)
+        // do {
+        //     (data, response) = try await URLSession.shared.data(for: request)
+        // } catch let urlError as URLError {
+        //     // Connection error - provide helpful message
+        //     #if DEBUG
+        //     var errorMsg = "Cannot connect to local dev server at \(apiGatewayURL).\n\n"
+        //     #if targetEnvironment(simulator)
+        //     errorMsg += "Simulator detected. Please check:\n1. Server is running: curl http://localhost:8000/health\n2. Server is accessible"
+        //     #else
+        //     errorMsg += "Physical device detected.\n\nYou need to use your Mac's IP address instead of localhost:\n1. Find Mac IP: ifconfig | grep 'inet ' | grep -v 127.0.0.1\n2. Update PlaidService.swift line 47 to: http://YOUR_MAC_IP:8000\n3. Example: http://10.0.0.52:8000"
+        //     #endif
+        //     #else
+        //     let errorMsg = "Cannot connect to server. Please check your internet connection."
+        //     #endif
+        //     throw NSError(domain: "PlaidService", code: -5, userInfo: [
+        //         NSLocalizedDescriptionKey: errorMsg,
+        //         NSUnderlyingErrorKey: urlError
+        //     ])
+        // } catch {
+        //     throw NSError(domain: "PlaidService", code: -5, userInfo: [
+        //         NSLocalizedDescriptionKey: "Connection error: \(error.localizedDescription)",
+        //         NSUnderlyingErrorKey: error
+        //     ])
+        // }
+        // 
+        // guard let httpResponse = response as? HTTPURLResponse else {
+        //     throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        // }
+        // 
+        // guard (200...299).contains(httpResponse.statusCode) else {
+        //     let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+        //     throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        // }
+        // 
+        // guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        //       let linkToken = json["link_token"] as? String else {
+        //     throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse link token"])
+        // }
+        // 
+        // print("✅ [PlaidService] Link token created")
+        // return linkToken
     }
     
     /// Exchange public token for access token and store account info
     func exchangePublicToken(_ publicToken: String) async throws {
-        guard let userId = Auth.auth().currentUser?.uid else {
-            throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
-        }
-        
-        guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/exchange-public-token") else {
-            throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
-            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
-        }
-        
-        let requestBody: [String: Any] = [
-            "public_token": publicToken,
-            "user_id": userId
-        ]
-        
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-        }
-        
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let accounts = json["accounts"] as? [[String: Any]] else {
-            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse accounts"])
-        }
-        
-        // Parse accounts
-        var connectedAccounts: [ConnectedAccount] = []
-        for accountData in accounts {
-            if let accountId = accountData["account_id"] as? String,
-               let name = accountData["name"] as? String,
-               let mask = accountData["mask"] as? String,
-               let type = accountData["type"] as? String,
-               let subtype = accountData["subtype"] as? String {
-                connectedAccounts.append(ConnectedAccount(
-                    id: accountId,
-                    name: name,
-                    mask: mask,
-                    type: type,
-                    subtype: subtype,
-                    balance: nil
-                ))
-            }
-        }
-        
-        // Update state
-        await MainActor.run {
-            self.connectedAccounts = connectedAccounts
-            self.checkingAccount = connectedAccounts.first { $0.subtype == "checking" }
-            self.savingsAccount = connectedAccounts.first { $0.subtype == "savings" }
-            
-            // Determine savings mode
-            if self.savingsAccount != nil {
-                self.savingsMode = .automatic
-            } else if self.checkingAccount != nil {
-                self.savingsMode = .virtual
-            } else {
-                self.savingsMode = .manual
-            }
-            
-            self.saveState()
-        }
-        
-        // Load initial balances
-        await refreshBalances()
-        
-        print("✅ [PlaidService] Accounts connected: \(connectedAccounts.count) accounts, mode: \(savingsMode)")
+        // TEMPORARILY DISABLED: Firebase - testing if it's causing crash
+        throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase is temporarily disabled"])
+        // guard let userId = Auth.auth().currentUser?.uid else {
+        //     throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        // }
+        // 
+        // guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/exchange-public-token") else {
+        //     throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        // }
+        // 
+        // var request = URLRequest(url: url)
+        // request.httpMethod = "POST"
+        // request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // 
+        // if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        //     request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // }
+        // 
+        // let requestBody: [String: Any] = [
+        //     "public_token": publicToken,
+        //     "user_id": userId
+        // ]
+        // 
+        // request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        // 
+        // let (data, response) = try await URLSession.shared.data(for: request)
+        // 
+        // guard let httpResponse = response as? HTTPURLResponse else {
+        //     throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        // }
+        // 
+        // guard (200...299).contains(httpResponse.statusCode) else {
+        //     let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+        //     throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        // }
+        // 
+        // guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        //       let accounts = json["accounts"] as? [[String: Any]] else {
+        //     throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse accounts"])
+        // }
+        // 
+        // // Parse accounts
+        // var connectedAccounts: [ConnectedAccount] = []
+        // for accountData in accounts {
+        //     if let accountId = accountData["account_id"] as? String,
+        //        let name = accountData["name"] as? String,
+        //        let mask = accountData["mask"] as? String,
+        //        let type = accountData["type"] as? String,
+        //        let subtype = accountData["subtype"] as? String {
+        //         connectedAccounts.append(ConnectedAccount(
+        //             id: accountId,
+        //             name: name,
+        //             mask: mask,
+        //             type: type,
+        //             subtype: subtype,
+        //             balance: nil
+        //         ))
+        //     }
+        // }
+        // 
+        // // Update state
+        // await MainActor.run {
+        //     self.connectedAccounts = connectedAccounts
+        //     self.checkingAccount = connectedAccounts.first { $0.subtype == "checking" }
+        //     self.savingsAccount = connectedAccounts.first { $0.subtype == "savings" }
+        //     
+        //     // Determine savings mode
+        //     if self.savingsAccount != nil {
+        //         self.savingsMode = .automatic
+        //     } else if self.checkingAccount != nil {
+        //         self.savingsMode = .virtual
+        //     } else {
+        //         self.savingsMode = .manual
+        //     }
+        //     
+        //     self.saveState()
+        // }
+        // 
+        // // Load initial balances
+        // await refreshBalances()
+        // 
+        // print("✅ [PlaidService] Accounts connected: \(connectedAccounts.count) accounts, mode: \(savingsMode)")
     }
     
     // MARK: - Balance Reading
@@ -273,45 +278,47 @@ class PlaidService: ObservableObject {
     
     /// Get balance for a specific account
     private func getBalance(accountId: String) async throws -> Double {
-        guard let userId = Auth.auth().currentUser?.uid else {
-            throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
-        }
-        
-        var urlComponents = URLComponents(string: "\(apiGatewayURL)/soteria/plaid/balance")!
-        urlComponents.queryItems = [
-            URLQueryItem(name: "user_id", value: userId),
-            URLQueryItem(name: "account_id", value: accountId)
-        ]
-        
-        guard let url = urlComponents.url else {
-            throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
-            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
-        }
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-        }
-        
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let balance = json["balance"] as? Double else {
-            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse balance"])
-        }
-        
-        return balance
+        // TEMPORARILY DISABLED: Firebase - testing if it's causing crash
+        throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase is temporarily disabled"])
+        // guard let userId = Auth.auth().currentUser?.uid else {
+        //     throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        // }
+        // 
+        // var urlComponents = URLComponents(string: "\(apiGatewayURL)/soteria/plaid/balance")!
+        // urlComponents.queryItems = [
+        //     URLQueryItem(name: "user_id", value: userId),
+        //     URLQueryItem(name: "account_id", value: accountId)
+        // ]
+        // 
+        // guard let url = urlComponents.url else {
+        //     throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        // }
+        // 
+        // var request = URLRequest(url: url)
+        // request.httpMethod = "GET"
+        // request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // 
+        // if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        //     request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // }
+        // 
+        // let (data, response) = try await URLSession.shared.data(for: request)
+        // 
+        // guard let httpResponse = response as? HTTPURLResponse else {
+        //     throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        // }
+        // 
+        // guard (200...299).contains(httpResponse.statusCode) else {
+        //     let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+        //     throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        // }
+        // 
+        // guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        //       let balance = json["balance"] as? Double else {
+        //     throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse balance"])
+        // }
+        // 
+        // return balance
     }
     
     // MARK: - Transfers
@@ -327,73 +334,75 @@ class PlaidService: ObservableObject {
             throw NSError(domain: "PlaidService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Both checking and savings accounts required"])
         }
         
-        // Check balance first
-        let balance = try await getBalance(accountId: checkingAccount.id)
-        guard balance >= amount else {
-            throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Insufficient funds"])
-        }
-        
-        guard let userId = Auth.auth().currentUser?.uid else {
-            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
-        }
-        
-        guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/transfer") else {
-            throw NSError(domain: "PlaidService", code: -5, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
-            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
-        }
-        
-        let requestBody: [String: Any] = [
-            "user_id": userId,
-            "from_account_id": checkingAccount.id,
-            "to_account_id": savingsAccount.id,
-            "amount": amount
-        ]
-        
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "PlaidService", code: -6, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-        }
-        
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let transferId = json["transfer_id"] as? String,
-              let status = json["status"] as? String else {
-            throw NSError(domain: "PlaidService", code: -7, userInfo: [NSLocalizedDescriptionKey: "Failed to parse transfer response"])
-        }
-        
-        let transfer = Transfer(
-            id: transferId,
-            amount: amount,
-            timestamp: Date(),
-            status: status,
-            fromAccount: checkingAccount.id,
-            toAccount: savingsAccount.id
-        )
-        
-        await MainActor.run {
-            self.transferHistory.append(transfer)
-            self.saveState()
-        }
-        
-        // Refresh balances after transfer
-        await refreshBalances()
-        
-        print("✅ [PlaidService] Transfer initiated: $\(amount), status: \(status)")
-        return transfer
+        // TEMPORARILY DISABLED: Firebase - testing if it's causing crash
+        throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Firebase is temporarily disabled"])
+        // // Check balance first
+        // let balance = try await getBalance(accountId: checkingAccount.id)
+        // guard balance >= amount else {
+        //     throw NSError(domain: "PlaidService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Insufficient funds"])
+        // }
+        // 
+        // guard let userId = Auth.auth().currentUser?.uid else {
+        //     throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        // }
+        // 
+        // guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/transfer") else {
+        //     throw NSError(domain: "PlaidService", code: -5, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        // }
+        // 
+        // var request = URLRequest(url: url)
+        // request.httpMethod = "POST"
+        // request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // 
+        // if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        //     request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // }
+        // 
+        // let requestBody: [String: Any] = [
+        //     "user_id": userId,
+        //     "from_account_id": checkingAccount.id,
+        //     "to_account_id": savingsAccount.id,
+        //     "amount": amount
+        // ]
+        // 
+        // request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        // 
+        // let (data, response) = try await URLSession.shared.data(for: request)
+        // 
+        // guard let httpResponse = response as? HTTPURLResponse else {
+        //     throw NSError(domain: "PlaidService", code: -6, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        // }
+        // 
+        // guard (200...299).contains(httpResponse.statusCode) else {
+        //     let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+        //     throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        // }
+        // 
+        // guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        //       let transferId = json["transfer_id"] as? String,
+        //       let status = json["status"] as? String else {
+        //     throw NSError(domain: "PlaidService", code: -7, userInfo: [NSLocalizedDescriptionKey: "Failed to parse transfer response"])
+        // }
+        // 
+        // let transfer = Transfer(
+        //     id: transferId,
+        //     amount: amount,
+        //     timestamp: Date(),
+        //     status: status,
+        //     fromAccount: checkingAccount.id,
+        //     toAccount: savingsAccount.id
+        // )
+        // 
+        // await MainActor.run {
+        //     self.transferHistory.append(transfer)
+        //     self.saveState()
+        // }
+        // 
+        // // Refresh balances after transfer
+        // await refreshBalances()
+        // 
+        // print("✅ [PlaidService] Transfer initiated: $\(amount), status: \(status)")
+        // return transfer
     }
     
     /// Record virtual savings (for virtual mode - no actual transfer)

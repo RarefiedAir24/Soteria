@@ -7,13 +7,65 @@
 
 import Foundation
 import Combine
-import FirebaseAuth
 
 class AWSDataService: ObservableObject {
     static let shared = AWSDataService()
     
-    // API Gateway URL - Update this after creating the API Gateway
-    private let apiGatewayURL = "https://YOUR-API-ID.execute-api.us-east-1.amazonaws.com/prod"
+    private let cognitoService = CognitoAuthService.shared
+    
+    // API Gateway URL (same as PlaidService for consistency)
+    private let apiGatewayURL = "https://ue1psw3mt3.execute-api.us-east-1.amazonaws.com/prod"
+    
+    // Get app names from token hashes (backend mapping)
+    func getAppNamesFromTokens(tokenHashes: [String]) async throws -> [String: String] {
+        guard getUserId() != nil else {
+            throw NSError(domain: "AWSDataService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        let urlComponents = URLComponents(string: "\(apiGatewayURL)/soteria/app-name")!
+        
+        guard let url = urlComponents.url else {
+            throw NSError(domain: "AWSDataService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10.0 // 10 second timeout
+        
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        // Request body
+        let requestBody: [String: Any] = [
+            "token_hashes": tokenHashes
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        // Make request
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AWSDataService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw NSError(domain: "AWSDataService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        }
+        
+        // Parse response
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let success = json["success"] as? Bool, success,
+              let appNames = json["app_names"] as? [String: String] else {
+            throw NSError(domain: "AWSDataService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response"])
+        }
+        
+        return appNames
+    }
     
     // Data type constants
     enum DataType: String {
@@ -31,9 +83,9 @@ class AWSDataService: ObservableObject {
         print("✅ [AWSDataService] Initialized")
     }
     
-    // Get current user ID from Firebase Auth
+    // Get current user ID from Cognito
     private func getUserId() -> String? {
-        return Auth.auth().currentUser?.uid
+        return cognitoService.getUserId()
     }
     
     // Sync data to AWS
@@ -57,8 +109,8 @@ class AWSDataService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10.0 // 10 second timeout to prevent long freezes
         
-        // Get Firebase ID token for authentication
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
             request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
         }
         
@@ -118,8 +170,8 @@ class AWSDataService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10.0 // 10 second timeout to prevent long freezes
         
-        // Get Firebase ID token for authentication
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
             request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
         }
         
@@ -195,7 +247,8 @@ class AWSDataService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10.0 // 10 second timeout to prevent long freezes
         
-        if let idToken = try? await Auth.auth().currentUser?.getIDToken() {
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
             request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
         }
         
@@ -239,6 +292,117 @@ class AWSDataService: ObservableObject {
         // This would need to be a mutable property, but for now we'll use a static approach
         // In production, you might want to store this in UserDefaults or a config file
         print("⚠️ [AWSDataService] To update API Gateway URL, modify the apiGatewayURL property in AWSDataService.swift")
+    }
+    
+    // MARK: - Dashboard API (Pre-computed data for fast loading)
+    
+    struct DashboardData: Codable {
+        let totalSaved: Double
+        let currentStreak: Int
+        let longestStreak: Int
+        let activeGoal: GoalData? // Simplified goal data from API
+        let recentRegretCount: Int
+        let currentRisk: String? // Risk level as string
+        let isQuietModeActive: Bool
+        let soteriaMomentsCount: Int
+        let lastUpdated: TimeInterval // Timestamp
+        
+        struct GoalData: Codable {
+            let id: String
+            let name: String
+            let currentAmount: Double
+            let targetAmount: Double
+            let progress: Double
+        }
+    }
+    
+    /// Get pre-computed dashboard data from backend
+    /// This is much faster than loading from multiple services locally
+    /// Backend pre-computes: streaks, totals, aggregates, etc.
+    func getDashboardData() async throws -> DashboardData {
+        guard let userId = getUserId() else {
+            throw NSError(domain: "AWSDataService", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        let url = URL(string: "\(apiGatewayURL)/soteria/dashboard")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 5.0 // 5 second timeout for fast response
+        
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        // Add user_id as query parameter
+        var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        urlComponents.queryItems = [URLQueryItem(name: "user_id", value: userId)]
+        request.url = urlComponents.url
+        
+        // Make request
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AWSDataService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            // If API fails, return empty data (fallback to local)
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("⚠️ [AWSDataService] Dashboard API failed: \(errorMessage) - falling back to local data")
+            throw NSError(domain: "AWSDataService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        }
+        
+        // Parse response
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let success = json["success"] as? Bool, success,
+              let dashboardDict = json["data"] as? [String: Any] else {
+            throw NSError(domain: "AWSDataService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse dashboard response"])
+        }
+        
+        // Decode dashboard data
+        let jsonData = try JSONSerialization.data(withJSONObject: dashboardDict)
+        let dashboardData = try decoder.decode(DashboardData.self, from: jsonData)
+        
+        print("✅ [AWSDataService] Dashboard data loaded: saved=\(dashboardData.totalSaved), streak=\(dashboardData.currentStreak)")
+        return dashboardData
+    }
+    
+    /// Cache dashboard data locally for instant loading on next launch
+    func cacheDashboardData(_ data: DashboardData) {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        if let encoded = try? encoder.encode(data) {
+            UserDefaults.standard.set(encoded, forKey: "cached_dashboard_data")
+            print("✅ [AWSDataService] Dashboard data cached locally")
+        }
+    }
+    
+    /// Get cached dashboard data (for instant loading)
+    func getCachedDashboardData() -> DashboardData? {
+        guard let data = UserDefaults.standard.data(forKey: "cached_dashboard_data") else {
+            return nil
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        
+        if let cached = try? decoder.decode(DashboardData.self, from: data) {
+            // Check if cache is fresh (less than 5 minutes old)
+            let cacheAge = Date().timeIntervalSince1970 - cached.lastUpdated
+            if cacheAge < 300 { // 5 minutes
+                print("✅ [AWSDataService] Using cached dashboard data (age: \(Int(cacheAge))s)")
+                return cached
+            } else {
+                print("⚠️ [AWSDataService] Cached dashboard data is stale (age: \(Int(cacheAge))s)")
+            }
+        }
+        
+        return nil
     }
 }
 

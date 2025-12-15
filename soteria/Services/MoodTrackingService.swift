@@ -101,6 +101,31 @@ class MoodTrackingService: ObservableObject {
     private let reflectionsKey = "daily_reflections"
     
     private init() {
+        let initStart = Date()
+        print("✅ [MoodTrackingService] Init started at \(initStart) (truly lazy - no work on startup)")
+        // STREAMLINED: Do absolutely nothing on startup
+        // Data will be loaded on-demand when user accesses mood features
+        // This eliminates blocking JSON decode during app launch
+        let initEnd = Date()
+        print("✅ [MoodTrackingService] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
+        
+        // Defer all work to background task with delay
+        Task.detached(priority: .background) { [weak self] in
+            guard let self = self else { return }
+            // Wait 30 seconds to ensure app is fully loaded and responsive
+            try? await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds
+            await MainActor.run {
+                self.loadData()
+                self.loadTodayReflection()
+                print("✅ [MoodTrackingService] Data loaded")
+            }
+        }
+    }
+    
+    // Ensure data is loaded (call on-demand)
+    func ensureDataLoaded() {
+        // Only load if not already loaded
+        guard moodEntries.isEmpty && dailyReflections.isEmpty else { return }
         loadData()
         loadTodayReflection()
     }

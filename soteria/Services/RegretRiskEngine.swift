@@ -63,9 +63,14 @@ class RegretRiskEngine: ObservableObject {
     @Published var currentRisk: RegretRiskAssessment? = nil
     @Published var riskHistory: [RegretRiskAssessment] = []
     
-    // Lazy to avoid circular dependency with QuietHoursService
-    private lazy var quietHoursService = QuietHoursService.shared
-    private let deviceActivityService = DeviceActivityService.shared
+    // CRITICAL: Make all service dependencies lazy to prevent initialization chain during startup
+    // Accessing .shared during init() triggers that service's init(), creating a blocking chain
+    private var quietHoursService: QuietHoursService {
+        QuietHoursService.shared
+    }
+    private var deviceActivityService: DeviceActivityService {
+        DeviceActivityService.shared
+    }
     
     @Published var lastAlertSent: Date? = nil
     private let alertCooldownMinutes: Int = 60 // Don't send alerts more than once per hour
@@ -76,31 +81,11 @@ class RegretRiskEngine: ObservableObject {
     
     private init() {
         let initStart = Date()
-        print("✅ [RegretRiskEngine] Init started at \(initStart) (all work deferred)")
-        // Defer everything - no synchronous work, no MainActor blocking
-        // Use Task.detached to avoid blocking main thread
-        Task.detached(priority: .background) {
-            // Don't request notification authorization here - SoteriaApp handles it
-            // requestNotificationAuthorization()
-            let assessmentStart = Date()
-            print("🟡 [RegretRiskEngine] Starting periodic assessment at \(assessmentStart)")
-            // DISABLED: Defer startPeriodicAssessment to prevent blocking
-            // It creates Timers which might block
-            print("🟡 [RegretRiskEngine] Deferring startPeriodicAssessment() - will start later")
-            // self?.startPeriodicAssessment()
-            
-            // Defer risk assessment
-            print("🟡 [RegretRiskEngine] Deferring assessCurrentRisk() - will assess later")
-            // DISABLED: Defer assessCurrentRisk to prevent blocking
-            /*
-            Task.detached(priority: .background) {
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-                await self?.assessCurrentRisk()
-            }
-            */
-            let initEnd = Date()
-            print("✅ [RegretRiskEngine] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
-        }
+        print("✅ [RegretRiskEngine] Init started at \(initStart) (truly lazy - no work on startup)")
+        // STREAMLINED: Do absolutely nothing on startup
+        // All work will be done on-demand when user actually needs risk assessment
+        let initEnd = Date()
+        print("✅ [RegretRiskEngine] Initialized at \(initEnd) (total: \(initEnd.timeIntervalSince(initStart))s)")
     }
     
     // Request notification permission (disabled - handled by SoteriaApp)
