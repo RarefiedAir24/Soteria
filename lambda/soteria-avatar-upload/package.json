@@ -1,0 +1,10 @@
+{
+  "name": "soteria-avatar-upload",
+  "version": "1.0.0",
+  "description": "Lambda function to upload user avatars to S3",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  }
+}
+
