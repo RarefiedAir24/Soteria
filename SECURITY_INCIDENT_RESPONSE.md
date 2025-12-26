@@ -62,9 +62,10 @@ git filter-branch --force --index-filter \
 
 ## Status
 - [x] Secrets removed from code
-- [ ] Plaid credentials rotated
-- [ ] Lambda functions updated with new credentials
-- [ ] Local `.env` files updated
+- [x] Plaid credentials rotated
+- [x] Lambda functions updated with new credentials
+- [x] Old secret deleted from Plaid dashboard
+- [ ] Local `.env` files updated (if using local development)
 - [ ] Plaid dashboard reviewed for unauthorized access
 
 ## Notes
