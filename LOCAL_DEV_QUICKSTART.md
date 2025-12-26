@@ -11,8 +11,8 @@ cp .env.example .env
 
 Edit `.env` and add your Plaid credentials:
 ```env
-PLAID_CLIENT_ID=69352338b821ae002254a4e1
-PLAID_SECRET=8651939dc844f1f6cf9a34e6629bc2
+PLAID_CLIENT_ID=your_client_id_here
+PLAID_SECRET=your_secret_here
 PLAID_ENV=sandbox
 ```
 
