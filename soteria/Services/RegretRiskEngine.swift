@@ -65,9 +65,6 @@ class RegretRiskEngine: ObservableObject {
     
     // CRITICAL: Make all service dependencies lazy to prevent initialization chain during startup
     // Accessing .shared during init() triggers that service's init(), creating a blocking chain
-    private var quietHoursService: QuietHoursService {
-        QuietHoursService.shared
-    }
     private var deviceActivityService: DeviceActivityService {
         DeviceActivityService.shared
     }
@@ -152,11 +149,11 @@ class RegretRiskEngine: ObservableObject {
             }
         }
         
-        // Quiet hours status
-        if !quietHoursService.isQuietModeActive {
-            factors.append(.quietHoursOff)
-            riskScore += RegretRiskAssessment.RiskFactor.quietHoursOff.weight
-        }
+        // NOTE: Quiet Hours functionality removed - no longer checking quiet hours status
+        // if !quietHoursService.isQuietModeActive {
+        //     factors.append(.quietHoursOff)
+        //     riskScore += RegretRiskAssessment.RiskFactor.quietHoursOff.weight
+        // }
         
         // Normalize risk score (0.0 to 1.0)
         riskScore = min(riskScore, 1.0)
@@ -235,10 +232,8 @@ class RegretRiskEngine: ObservableObject {
         let historicalRisk = getRiskPattern(hour: hour, dayOfWeek: calendar.component(.weekday, from: now))
         
         if historicalRisk >= 0.7 {
-            // Check if quiet hours are off
-            if !quietHoursService.isQuietModeActive {
-                sendProactiveAlert(hour: hour, historicalRisk: historicalRisk)
-            }
+            // NOTE: Quiet Hours check removed - always send alert if risk is high
+            sendProactiveAlert(hour: hour, historicalRisk: historicalRisk)
         }
     }
     
@@ -287,9 +282,9 @@ class RegretRiskEngine: ObservableObject {
         } else if riskScore >= 0.6 {
             return "Elevated risk. Be mindful of impulse purchases right now."
         } else if riskScore >= 0.4 {
-            return "Moderate risk. Stay aware of your spending intentions."
+            return "Moderate risk. Stay aware of your impulse decisions."
         } else {
-            return "Low risk. Good time for mindful spending decisions."
+            return "Low risk. Good time for mindful impulse decisions."
         }
     }
     

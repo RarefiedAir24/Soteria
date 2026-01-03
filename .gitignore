@@ -41,3 +41,9 @@ node_modules/
 .idea/
 .vscode/
 
+# API Keys and Tokens (DO NOT COMMIT)
+unit_api_token.txt
+*.token
+.env
+.env.local
+

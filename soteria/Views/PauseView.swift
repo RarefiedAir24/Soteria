@@ -390,8 +390,8 @@ struct PauseView: View {
         // Record protection moment (amount is optional)
         savingsService.soteriaMomentsCount += 1
         
-        // Record streak
-        streakService.recordProtection()
+        // Note: Streaks now track savings deposits, not protection moments
+        // Streak is recorded when deposits are made (in PlaidService)
         
         // Auto-add to active goal (Protection = Goal Progress)
         var goalProgressMessage = ""
@@ -427,9 +427,8 @@ struct PauseView: View {
         }
         confirmation += "\nApps remain blocked"
         
-        if streakService.currentStreak > 1 {
-            confirmation += "\n\(streakService.streakEmoji) \(streakService.currentStreak) day streak!"
-        }
+        // Note: Streaks now track savings deposits, not protection moments
+        // Streak is shown in HomeView when deposits are made
         
         showConfirmation = confirmation
         
@@ -509,8 +508,8 @@ struct PauseView: View {
                 appIndex: nil
             )
             
-            // Record streak
-            streakService.recordProtection()
+            // Note: Streaks now track savings deposits, not protection moments
+            // Streak is recorded when deposits are made (in PlaidService)
             
         } catch {
             await MainActor.run {

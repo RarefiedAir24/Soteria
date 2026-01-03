@@ -23,7 +23,6 @@ class HomeViewDataService: ObservableObject {
     private var regretService: RegretLoggingService { RegretLoggingService.shared }
     private var regretRiskEngine: RegretRiskEngine { RegretRiskEngine.shared }
     private var goalsService: GoalsService { GoalsService.shared }
-    private var quietHoursService: QuietHoursService { QuietHoursService.shared }
     private var deviceActivityService: DeviceActivityService { DeviceActivityService.shared }
     private var subscriptionService: SubscriptionService { SubscriptionService.shared }
     private var purchaseIntentService: PurchaseIntentService { PurchaseIntentService.shared }
@@ -73,12 +72,14 @@ class HomeViewDataService: ObservableObject {
         // Access underlying services and cache their values
         cachedRisk = regretRiskEngine.currentRisk
         cachedTotalSaved = savingsService.totalSaved
-        cachedIsQuietModeActive = quietHoursService.isQuietModeActive
+        // NOTE: Quiet Hours removed - no longer tracking quiet mode status
+        cachedIsQuietModeActive = false
         cachedActiveGoal = goalsService.activeGoal
         cachedCurrentStreak = streakService.currentStreak
         cachedSoteriaMomentsCount = savingsService.soteriaMomentsCount
         cachedLastSavedAmount = savingsService.lastSavedAmount
-        cachedCurrentActiveSchedule = quietHoursService.currentActiveSchedule
+        // NOTE: Quiet Hours removed - no longer tracking active schedule
+        cachedCurrentActiveSchedule = nil
         cachedStreakEmoji = streakService.streakEmoji
         cachedCurrentMood = moodService.currentMood
         cachedRecentRegretCount = regretService.recentRegretCount
@@ -126,7 +127,6 @@ class HomeViewDataService: ObservableObject {
     var risk: RegretRiskEngine { regretRiskEngine }
     var savings: SavingsService { savingsService }
     var goals: GoalsService { goalsService }
-    var quietHours: QuietHoursService { quietHoursService }
     var deviceActivity: DeviceActivityService { deviceActivityService }
     var subscription: SubscriptionService { subscriptionService }
     var purchaseIntent: PurchaseIntentService { purchaseIntentService }

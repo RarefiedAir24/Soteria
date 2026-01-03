@@ -15,9 +15,7 @@ target 'soteria' do
   # Let CocoaPods manage all framework embedding - do NOT manually embed in Xcode
   # pod 'Plaid', '~> 4.1'
 
-  target 'SoteriaMonitor' do
-    # Extension target - no additional pods needed
-  end
+  # REMOVED: SoteriaMonitor target - no longer needed after removing Quiet Hours/app monitoring
 end
 
 post_install do |installer|

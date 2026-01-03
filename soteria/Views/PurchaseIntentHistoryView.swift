@@ -10,10 +10,12 @@ import SwiftUI
 struct PurchaseIntentHistoryView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var purchaseIntentService: PurchaseIntentService
+    @ObservedObject private var subscriptionService = SubscriptionService.shared
     
     @State private var searchText: String = ""
     @State private var selectedFilter: FilterType = .all
     @State private var selectedTimeRange: TimeRange = .allTime
+    @State private var showPaywall = false
     
     enum FilterType: String, CaseIterable {
         case all = "All"
@@ -59,8 +61,23 @@ struct PurchaseIntentHistoryView: View {
         }
     }
     
+    // Available time ranges based on subscription
+    private var availableTimeRanges: [TimeRange] {
+        if subscriptionService.isPremium {
+            return TimeRange.allCases
+        } else {
+            return [.today, .thisWeek] // Free users limited to today and this week
+        }
+    }
+    
     private var filteredIntents: [PurchaseIntent] {
         var intents = purchaseIntentService.purchaseIntents
+        
+        // Free users limited to last 7 days
+        if !subscriptionService.isPremium {
+            let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+            intents = intents.filter { $0.date >= sevenDaysAgo }
+        }
         
         // Filter by time range
         if let dateRange = selectedTimeRange.dateRange {
@@ -93,97 +110,170 @@ struct PurchaseIntentHistoryView: View {
         return intents.sorted { $0.date > $1.date }
     }
     
+    // Search and Filter Bar
+    private var searchAndFilterBar: some View {
+        VStack(spacing: 12) {
+            // Search Bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.softGraphite)
+                TextField("Search interactions...", text: $searchText)
+                    .font(.system(size: 16))
+                    .foregroundColor(.midnightSlate)
+            }
+            .padding(12)
+            .background(Color.cloudWhite)
+            .cornerRadius(12)
+            
+            // Filter Chips
+            filterChipsView
+        }
+        .padding(.vertical, 12)
+        .background(Color.mistGray)
+    }
+    
+    // Filter Chips
+    private var filterChipsView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                // Type Filter
+                ForEach(FilterType.allCases, id: \.self) { filter in
+                    typeFilterButton(filter: filter)
+                }
+                
+                // Time Range Filter
+                ForEach(availableTimeRanges, id: \.self) { range in
+                    timeRangeButton(range: range)
+                }
+                
+                // Show locked ranges for free users
+                if !subscriptionService.isPremium {
+                    lockedTimeRangeButtons
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    // Type Filter Button
+    private func typeFilterButton(filter: FilterType) -> some View {
+        Button(action: {
+            selectedFilter = filter
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: filter.icon)
+                    .font(.system(size: 12))
+                Text(filter.rawValue)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .foregroundColor(selectedFilter == filter ? .white : .midnightSlate)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(selectedFilter == filter ? Color.reverBlue : Color.cloudWhite)
+            )
+        }
+    }
+    
+    // Time Range Button
+    private func timeRangeButton(range: TimeRange) -> some View {
+        Button(action: {
+            selectedTimeRange = range
+        }) {
+            Text(range.rawValue)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(selectedTimeRange == range ? .white : .midnightSlate)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(selectedTimeRange == range ? Color.deepReverBlue : Color.cloudWhite)
+                )
+        }
+    }
+    
+    // Locked Time Range Buttons
+    private var lockedTimeRangeButtons: some View {
+        ForEach([TimeRange.thisMonth, .last3Months, .allTime], id: \.self) { range in
+            Button(action: {
+                showPaywall = true
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10))
+                    Text(range.rawValue)
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .foregroundColor(.softGraphite)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.dreamMist)
+                )
+                .opacity(0.6)
+            }
+        }
+    }
+    
+    // Interactions List
+    private var interactionsList: some View {
+        Group {
+            if filteredIntents.isEmpty {
+                emptyStateView
+            } else {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        // Free user message
+                        if !subscriptionService.isPremium {
+                            HStack {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(.reverBlue)
+                                Text("Free users can view last 7 days. Upgrade to Plus for unlimited history.")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.softGraphite)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
+                        }
+                        
+                        LazyVStack(spacing: 12) {
+                            ForEach(filteredIntents) { intent in
+                                PurchaseIntentCard(intent: intent)
+                            }
+                        }
+                        .padding(20)
+                    }
+                }
+            }
+        }
+    }
+    
+    // Empty State
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 50))
+                .foregroundColor(.softGraphite)
+            Text("No interactions found")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.midnightSlate)
+            Text("Try adjusting your filters or search")
+                .font(.system(size: 14))
+                .foregroundColor(.softGraphite)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
                 Color.mistGray.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Search and Filter Bar
-                    VStack(spacing: 12) {
-                        // Search Bar
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.softGraphite)
-                            TextField("Search interactions...", text: $searchText)
-                                .font(.system(size: 16))
-                                .foregroundColor(.midnightSlate)
-                        }
-                        .padding(12)
-                        .background(Color.cloudWhite)
-                        .cornerRadius(12)
-                        
-                        // Filter Chips
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                // Type Filter
-                                ForEach(FilterType.allCases, id: \.self) { filter in
-                                    Button(action: {
-                                        selectedFilter = filter
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: filter.icon)
-                                                .font(.system(size: 12))
-                                            Text(filter.rawValue)
-                                                .font(.system(size: 14, weight: .medium))
-                                        }
-                                        .foregroundColor(selectedFilter == filter ? .white : .midnightSlate)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 20)
-                                                .fill(selectedFilter == filter ? Color.reverBlue : Color.cloudWhite)
-                                        )
-                                    }
-                                }
-                                
-                                // Time Range Filter
-                                ForEach(TimeRange.allCases, id: \.self) { range in
-                                    Button(action: {
-                                        selectedTimeRange = range
-                                    }) {
-                                        Text(range.rawValue)
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(selectedTimeRange == range ? .white : .midnightSlate)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 20)
-                                                    .fill(selectedTimeRange == range ? Color.deepReverBlue : Color.cloudWhite)
-                                            )
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
-                    .padding(.vertical, 12)
-                    .background(Color.mistGray)
-                    
-                    // Interactions List
-                    if filteredIntents.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 50))
-                                .foregroundColor(.softGraphite)
-                            Text("No interactions found")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.midnightSlate)
-                            Text("Try adjusting your filters or search")
-                                .font(.system(size: 14))
-                                .foregroundColor(.softGraphite)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        ScrollView {
-                            LazyVStack(spacing: 12) {
-                                ForEach(filteredIntents) { intent in
-                                    PurchaseIntentCard(intent: intent)
-                                }
-                            }
-                            .padding(20)
-                        }
-                    }
+                    searchAndFilterBar
+                    interactionsList
                 }
             }
             .navigationTitle("Interaction History")
@@ -194,6 +284,22 @@ struct PurchaseIntentHistoryView: View {
                         dismiss()
                     }
                     .foregroundColor(.deepReverBlue)
+                }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(subscriptionService)
+            }
+            .onAppear {
+                // Validate selected time range for free users
+                if !subscriptionService.isPremium && !availableTimeRanges.contains(selectedTimeRange) {
+                    selectedTimeRange = .thisWeek // Default to this week for free users
+                }
+            }
+            .onChange(of: subscriptionService.isPremium) { oldValue, newValue in
+                // Validate time range when subscription changes
+                if !newValue && !availableTimeRanges.contains(selectedTimeRange) {
+                    selectedTimeRange = .thisWeek
                 }
             }
         }

@@ -8,6 +8,23 @@
 import Foundation
 import Combine
 
+enum QuietHoursError: LocalizedError {
+    case editNotAllowed(String)
+    case deleteNotAllowed(String)
+    case toggleNotAllowed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .editNotAllowed(let message):
+            return message
+        case .deleteNotAllowed(let message):
+            return message
+        case .toggleNotAllowed(let message):
+            return message
+        }
+    }
+}
+
 struct QuietHoursSchedule: Identifiable, Codable {
     let id: String
     var name: String
@@ -124,19 +141,42 @@ class QuietHoursService: ObservableObject {
                 self.schedules = decoded
                 let updateEnd = Date()
                 print("✅ [QuietHoursService] Schedules loaded: \(self.schedules.count) (total: \(updateEnd.timeIntervalSince(loadStart))s)")
+                
+                // DISABLED: Auto-start monitoring when schedules load
+                // This was causing startup delays - monitoring will start manually when needed
+                // self.startMonitoring()
             }
         }
     }
     
     // Save schedules to UserDefaults
+    // PERSISTENCE: Schedules persist across app restarts and signout/signin
+    // They are NOT cleared on signout (only auth tokens are cleared)
     private func saveSchedules() {
         if let encoded = try? JSONEncoder().encode(schedules) {
             UserDefaults.standard.set(encoded, forKey: schedulesKey)
+            // Log to verify persistence
+            for schedule in schedules {
+                print("💾 [QuietHoursService] Saved schedule '\(schedule.name)' with \(schedule.selectedAppIndices.count) selected app indices: \(schedule.selectedAppIndices)")
+            }
+        } else {
+            print("❌ [QuietHoursService] Failed to encode schedules for saving")
         }
     }
     
     // Start monitoring quiet hours
-    private func startMonitoring() {
+    // Made public so views can ensure monitoring is active
+    func startMonitoring() {
+        // Prevent multiple timers
+        guard timer == nil else {
+            // Timer already running, just check status immediately
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                await self.checkQuietHoursStatus()
+            }
+            return
+        }
+        
         // Check immediately (async, non-blocking)
         Task { @MainActor [weak self] in
             guard let self = self else { return }
@@ -153,12 +193,16 @@ class QuietHoursService: ObservableObject {
     }
     
     // Check if quiet hours are currently active
-    private func checkQuietHoursStatus() async {
+    // Made public so views can trigger immediate status check
+    func checkQuietHoursStatus() async {
         let activeSchedule = schedules.first { $0.isCurrentlyActive() }
         let wasActive = isQuietModeActive
         
         isQuietModeActive = activeSchedule != nil
         currentActiveSchedule = activeSchedule
+        
+        // Update UserDefaults flag for extension to check
+        UserDefaults.standard.set(isQuietModeActive, forKey: "quietHoursActive")
         
         // Always notify DeviceActivityService to ensure blocking is applied
         // This handles the case where Quiet Hours are already active on app launch
@@ -168,15 +212,11 @@ class QuietHoursService: ObservableObject {
             print("🔄 [QuietHoursService] Quiet Hours are active - ensuring blocking is applied")
         }
         
-        // Always update blocking status if monitoring is active
-        // This ensures blocking is applied even if status didn't "change" (e.g., on app launch)
-        // Defer this significantly to avoid blocking UI during app launch
-        // Use detached task with low priority to ensure it doesn't interfere with UI
-        Task.detached(priority: .background) {
-            // Wait 5 seconds to ensure app UI is fully responsive and user can interact
-            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
-            await DeviceActivityService.shared.updateBlockingStatus()
-        }
+        // Note: Blocking status updates are disabled - we use notifications only
+        // Task.detached(priority: .background) {
+        //     try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+        //     await DeviceActivityService.shared.updateBlockingStatus()
+        // }
     }
     
     // Add a new schedule
@@ -188,19 +228,32 @@ class QuietHoursService: ObservableObject {
         }
     }
     
-    // Update an existing schedule
-    func updateSchedule(_ schedule: QuietHoursSchedule) {
+    // Update an existing schedule (Premium only for free users)
+    func updateSchedule(_ schedule: QuietHoursSchedule, isPremium: Bool) throws {
+        // Free users cannot edit schedules (prevents loopholes)
+        guard isPremium else {
+            throw QuietHoursError.editNotAllowed("Editing Quiet Hours schedules is a premium feature. Upgrade to Plus to customize your schedules.")
+        }
+        
         if let index = schedules.firstIndex(where: { $0.id == schedule.id }) {
             schedules[index] = schedule
+            print("💾 [QuietHoursService] Updated schedule '\(schedule.name)' with \(schedule.selectedAppIndices.count) selected app indices: \(schedule.selectedAppIndices)")
             saveSchedules()
             Task { @MainActor in
                 await checkQuietHoursStatus()
             }
+        } else {
+            print("⚠️ [QuietHoursService] Schedule '\(schedule.name)' not found for update")
         }
     }
     
-    // Delete a schedule
-    func deleteSchedule(_ schedule: QuietHoursSchedule) {
+    // Delete a schedule (Premium only for free users)
+    func deleteSchedule(_ schedule: QuietHoursSchedule, isPremium: Bool) throws {
+        // Free users cannot delete schedules (prevents loopholes)
+        guard isPremium else {
+            throw QuietHoursError.deleteNotAllowed("Deleting Quiet Hours schedules is a premium feature. Upgrade to Plus to manage your schedules.")
+        }
+        
         schedules.removeAll { $0.id == schedule.id }
         saveSchedules()
         Task { @MainActor in
@@ -208,8 +261,13 @@ class QuietHoursService: ObservableObject {
         }
     }
     
-    // Toggle schedule active state
-    func toggleSchedule(_ schedule: QuietHoursSchedule) {
+    // Toggle schedule active state (Premium only for free users)
+    func toggleSchedule(_ schedule: QuietHoursSchedule, isPremium: Bool) throws {
+        // Free users cannot toggle schedules (prevents loopholes)
+        guard isPremium else {
+            throw QuietHoursError.toggleNotAllowed("Enabling/disabling Quiet Hours schedules is a premium feature. Upgrade to Plus to manage your schedules.")
+        }
+        
         if let index = schedules.firstIndex(where: { $0.id == schedule.id }) {
             schedules[index].isActive.toggle()
             saveSchedules()

@@ -23,34 +23,37 @@ struct AuthView: View {
     @State private var showConfirmationCode = false
     @State private var confirmationCode = ""
     @State private var pendingConfirmationEmail = ""
+    @State private var cachedEmailValidation: (email: String, isValid: Bool)? = nil
+    @State private var cachedPasswordValidation: (password: String, requirements: [Bool])? = nil
     @FocusState private var focusedField: Field?
+    @State private var bodyEvaluationStartTime: Date? = nil
     
     enum Field {
         case email, password, confirmationCode
     }
     
-    init() {
-        let initStart = Date()
-        MainActorMonitor.shared.logOperation("AuthView.init() called")
-        print("🔍 [AuthView] init() called")
-        let initDuration = Date().timeIntervalSince(initStart)
-        MainActorMonitor.shared.logOperation("AuthView.init() completed", duration: initDuration)
-        if initDuration > 0.01 {
-            print("⚠️ [AuthView] Init took \(String(format: "%.3f", initDuration))s (SLOW)")
-        }
-    }
-    
     var body: some View {
-        let _ = {
-            MainActorMonitor.shared.logOperation("AuthView.body evaluation START")
-            print("🟢 [AuthView] body evaluation started")
-        }()
+        // CRITICAL: Use synchronous print to detect if body evaluation is happening
+        // This will work even if MainActor is blocked
+        let bodyStart = Date()
+        let shouldLog = !UserDefaults.standard.bool(forKey: "AuthViewBodyLogged")
         
-        return ZStack {
+        // CRITICAL: Use print() instead of StartupDiagnostics - it's synchronous and won't be blocked
+        print("🔍 [AuthView] body evaluation started at \(Date().timeIntervalSince1970)")
+        
+        // Defer detailed logging to avoid blocking
+        DispatchQueue.main.async {
+            StartupDiagnostics.shared.log("🔍 [AuthView] body evaluation started")
+            if shouldLog {
+                UserDefaults.standard.set(true, forKey: "AuthViewBodyLogged")
+                self.bodyEvaluationStartTime = bodyStart
+            }
+        }
+        
+        let view = ZStack {
             // Background - Match splash screen color (dreamMist)
             Color.dreamMist
                 .ignoresSafeArea()
-                // Removed .allowsHitTesting(false) - it was preventing first tap from working
             
             Group {
                 if showConfirmationCode {
@@ -62,20 +65,17 @@ struct AuthView: View {
                         .frame(height: 80)
                     
                     // Logo/Title Section
+                    // CRITICAL: Temporarily remove logo to test if it's causing the 16s delay
+                    // Logo will be added back after we identify the root cause
                     VStack(spacing: 12) {
-                        Image("soteria_logo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100, height: 100)
-                            .shadow(color: Color.reverBlue.opacity(0.25), radius: 10, x: 0, y: 5)
-                            .drawingGroup()  // Optimize rendering performance
-                        
                         Text("SOTERIA")
-                            .reverH1()
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundColor(.midnightSlate)
                         
                         Text("Your behavioral finance companion")
-                            .reverBody()
-                            .padding(.top, .spacingSmall)
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.softGraphite)
+                            .padding(.top, 8)
                     }
                     .padding(.bottom, 50)
                     
@@ -105,27 +105,32 @@ struct AuthView: View {
                                 }
                             }
                             
+                            // CRITICAL: Cache stroke color computation to avoid expensive Color operations during body evaluation
+                            let strokeColor: Color = {
+                                if focusedField == .email {
+                                    return (isEmailValid || email.isEmpty) ? Color.reverBlue : Color.red
+                                } else {
+                                    return (isSignUp && email.isEmpty) ? Color.reverBlue.opacity(0.3) : Color.clear
+                                }
+                            }()
+                            
                             TextField(isSignUp ? "Enter your desired email" : "Enter your email", text: $email)
                                 .textFieldStyle(.plain)
                                 .foregroundColor(Color.midnightSlate)
                                 .keyboardType(.emailAddress)
                                 .autocapitalization(.none)
                                 .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                                .textContentType(.emailAddress) // Enables iOS autofill from keychain
                                 .focused($focusedField, equals: .email)
                                 .accentColor(.green)
                                 .padding()
-                                .contentShape(Rectangle()) // Ensure entire area is tappable
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.mistGray)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .stroke(
-                                                    focusedField == .email 
-                                                        ? (isEmailValid || email.isEmpty ? Color.reverBlue : Color.red)
-                                                        : (isSignUp && email.isEmpty ? Color.reverBlue.opacity(0.3) : Color.clear),
-                                                    lineWidth: 2
-                                                )
+                                                .stroke(strokeColor, lineWidth: 2)
                                         )
                                 )
                                 .submitLabel(.next)
@@ -175,34 +180,58 @@ struct AuthView: View {
                             }
                             
                             ZStack(alignment: .trailing) {
-                                Group {
-                                    if isPasswordVisible {
-                                        TextField(isSignUp ? "Enter your desired password" : "Enter your password", text: $password)
-                                            .textFieldStyle(.plain)
-                                            .foregroundColor(Color.midnightSlate)
-                                            .accentColor(.green)
-                                    } else {
-                                        SecureField(isSignUp ? "Enter your desired password" : "Enter your password", text: $password)
-                                            .textFieldStyle(.plain)
-                                            .foregroundColor(Color.midnightSlate)
-                                            .accentColor(.green)
-                                    }
-                                }
-                                .focused($focusedField, equals: .password)
-                                .padding()
-                                .padding(.trailing, 40)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    focusedField = .password
+                                if isPasswordVisible {
+                                    TextField(isSignUp ? "Enter your desired password" : "Enter your password", text: $password)
+                                        .textFieldStyle(.plain)
+                                        .foregroundColor(Color.midnightSlate)
+                                        .accentColor(.green)
+                                        .textContentType(isSignUp ? .newPassword : .password) // Enables iOS password autofill
+                                        .focused($focusedField, equals: .password)
+                                        .padding()
+                                        .padding(.trailing, 40)
+                                        .submitLabel(.go)
+                                        .onSubmit {
+                                            if !email.isEmpty && !password.isEmpty {
+                                                Task {
+                                                    await performAuth()
+                                                }
+                                            }
+                                        }
+                                } else {
+                                    SecureField(isSignUp ? "Enter your desired password" : "Enter your password", text: $password)
+                                        .textFieldStyle(.plain)
+                                        .foregroundColor(Color.midnightSlate)
+                                        .accentColor(.green)
+                                        .textContentType(isSignUp ? .newPassword : .password) // Enables iOS password autofill
+                                        .focused($focusedField, equals: .password)
+                                        .padding()
+                                        .padding(.trailing, 40)
+                                        .submitLabel(.go)
+                                        .onSubmit {
+                                            if !email.isEmpty && !password.isEmpty {
+                                                Task {
+                                                    await performAuth()
+                                                }
+                                            }
+                                        }
                                 }
                                 
                                 Button(action: {
+                                    // Preserve focus when toggling password visibility
+                                    let wasFocused = focusedField == .password
                                     isPasswordVisible.toggle()
+                                    if wasFocused {
+                                        // Small delay to ensure field is recreated before refocusing
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                            focusedField = .password
+                                        }
+                                    }
                                 }) {
                                     Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
                                         .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
                                         .padding(.trailing, 16)
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
@@ -214,13 +243,15 @@ struct AuthView: View {
                             )
                             
                             // Password Requirements (only in sign-up mode)
+                            // CRITICAL: Use cached validation results to avoid expensive rangeOfCharacter calls during body evaluation
                             if isSignUp && !password.isEmpty {
+                                let requirements = getPasswordRequirements()
                                 VStack(alignment: .leading, spacing: 6) {
-                                    PasswordRequirement(met: password.count >= 6, text: "At least 6 characters")
-                                    PasswordRequirement(met: password.rangeOfCharacter(from: .uppercaseLetters) != nil, text: "One uppercase letter")
-                                    PasswordRequirement(met: password.rangeOfCharacter(from: .lowercaseLetters) != nil, text: "One lowercase letter")
-                                    PasswordRequirement(met: password.rangeOfCharacter(from: .decimalDigits) != nil, text: "One number")
-                                    PasswordRequirement(met: password.rangeOfCharacter(from: CharacterSet(charactersIn: "!@#$%^&*()_+-=[]{}|;:,.<>?")) != nil, text: "One special character")
+                                    PasswordRequirement(met: requirements[0], text: "At least 6 characters")
+                                    PasswordRequirement(met: requirements[1], text: "One uppercase letter")
+                                    PasswordRequirement(met: requirements[2], text: "One lowercase letter")
+                                    PasswordRequirement(met: requirements[3], text: "One number")
+                                    PasswordRequirement(met: requirements[4], text: "One special character")
                                 }
                                 .padding(.top, 4)
                                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -329,54 +360,122 @@ struct AuthView: View {
                 }
             }
         }
-        .simultaneousGesture(
-            TapGesture()
-                .onEnded { _ in
-                    // Dismiss keyboard when tapping outside text fields
-                    // Use simultaneousGesture to avoid interfering with TextField taps
+        
+        // Log body evaluation duration - defer to async to avoid blocking
+        DispatchQueue.main.async {
+            let bodyDuration = Date().timeIntervalSince(bodyStart)
+            if bodyDuration > 0.1 {
+                StartupDiagnostics.shared.log("⚠️ [AuthView] body evaluation took \(String(format: "%.3f", bodyDuration))s")
+            }
+        }
+        
+        return view
+            .onTapGesture {
+                // Dismiss keyboard when tapping outside text fields
+                // Only dismiss if not tapping on a text field
+                if focusedField != nil {
                     focusedField = nil
                 }
-        )
-        .sheet(isPresented: $showForgotPassword) {
-            ForgotPasswordView(
-                email: $forgotPasswordEmail,
-                onDismiss: { showForgotPassword = false },
-                onSuccess: { message in
-                    successMessage = message
-                    errorMessage = nil
-                    showForgotPassword = false
-                },
-                onError: { message in
-                    errorMessage = message
-                    successMessage = nil
+            }
+            // CRITICAL: Completely remove .sheet modifier during first render to test if it's causing the 84s delay
+            // Sheets will be added back after we identify the root cause
+            // .sheet(isPresented: $showForgotPassword) {
+            //     // Create sheet content lazily - only when sheet is actually shown
+            //     ForgotPasswordView(
+            //         email: $forgotPasswordEmail,
+            //         onDismiss: { showForgotPassword = false },
+            //         onSuccess: { message in
+            //             successMessage = message
+            //             errorMessage = nil
+            //             showForgotPassword = false
+            //         },
+            //         onError: { message in
+            //             errorMessage = message
+            //             successMessage = nil
+            //         }
+            //     )
+            //     .onAppear {
+            //         StartupDiagnostics.shared.log("🔍 [AuthView] ForgotPasswordView sheet appeared")
+            //     }
+            // }
+            .onAppear {
+                let onAppearStart = Date()
+                StartupDiagnostics.shared.log("🔍 [AuthView] onAppear called")
+                
+                if let bodyStart = bodyEvaluationStartTime {
+                    let totalTime = Date().timeIntervalSince(bodyStart)
+                    StartupDiagnostics.shared.log("⏱️ [AuthView] Time from body evaluation to onAppear: \(String(format: "%.3f", totalTime))s")
+                } else {
+                    let totalTime = Date().timeIntervalSince(bodyStart)
+                    StartupDiagnostics.shared.log("⏱️ [AuthView] Time from body evaluation to onAppear: \(String(format: "%.3f", totalTime))s")
                 }
-            )
-        }
+                
+                // Post notification so RootViewSheetModifier knows AuthView has appeared
+                NotificationCenter.default.post(name: NSNotification.Name("AuthViewAppeared"), object: nil)
+                
+                let onAppearDuration = Date().timeIntervalSince(onAppearStart)
+                if onAppearDuration > 0.01 {
+                    StartupDiagnostics.shared.log("⚠️ [AuthView] onAppear handler took \(String(format: "%.3f", onAppearDuration))s")
+                }
+            }
     }
     
-    // Email validation
+    // Email validation - optimized to prevent excessive re-computation
+    // CRITICAL: Cache validation result to avoid recomputing on every keystroke
     private var isEmailValid: Bool {
-        guard !email.isEmpty else { return true } // Allow empty for initial state
-        
-        // Trim email for validation
+        // CRITICAL: Don't do any async work here - it can block rendering
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedEmail.isEmpty else { return false }
+        guard !trimmedEmail.isEmpty else { return true } // Allow empty for initial state
         
-        // Basic email format validation
-        let emailRegex = #"^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
-        let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
-        return emailPredicate.evaluate(with: trimmedEmail)
+        // Use cached result if email hasn't changed
+        if let cached = cachedEmailValidation, cached.email == trimmedEmail {
+            return cached.isValid
+        }
+        
+        // Basic email format validation - simplified for performance
+        let isValid = trimmedEmail.contains("@") && 
+               trimmedEmail.contains(".") && 
+               trimmedEmail.count > 5 &&
+               trimmedEmail.first != "@" &&
+               trimmedEmail.last != "@" &&
+               trimmedEmail.first != "." &&
+               trimmedEmail.last != "."
+        
+        // CRITICAL: Update cache synchronously to avoid async dispatch during view evaluation
+        // This prevents blocking MainActor with async work
+        cachedEmailValidation = (trimmedEmail, isValid)
+        
+        return isValid
     }
     
     // Password validation
+    // CRITICAL: Cache CharacterSet to avoid recreating on every validation
+    private static let specialCharacters = CharacterSet(charactersIn: "!@#$%^&*()_+-=[]{}|;:,.<>?")
+    
+    // CRITICAL: Cache password requirements to avoid expensive rangeOfCharacter calls during body evaluation
+    private func getPasswordRequirements() -> [Bool] {
+        // Use cached result if password hasn't changed
+        if let cached = cachedPasswordValidation, cached.password == password {
+            return cached.requirements
+        }
+        
+        // Compute requirements (expensive operations)
+        let requirements: [Bool] = [
+            password.count >= 6,
+            password.rangeOfCharacter(from: .uppercaseLetters) != nil,
+            password.rangeOfCharacter(from: .lowercaseLetters) != nil,
+            password.rangeOfCharacter(from: .decimalDigits) != nil,
+            password.rangeOfCharacter(from: Self.specialCharacters) != nil
+        ]
+        
+        // Cache the result
+        cachedPasswordValidation = (password, requirements)
+        return requirements
+    }
+    
     private var isPasswordValid: Bool {
-        guard password.count >= 6 else { return false }
-        guard password.rangeOfCharacter(from: .uppercaseLetters) != nil else { return false }
-        guard password.rangeOfCharacter(from: .lowercaseLetters) != nil else { return false }
-        guard password.rangeOfCharacter(from: .decimalDigits) != nil else { return false }
-        let specialCharacters = CharacterSet(charactersIn: "!@#$%^&*()_+-=[]{}|;:,.<>?")
-        guard password.rangeOfCharacter(from: specialCharacters) != nil else { return false }
-        return true
+        let requirements = getPasswordRequirements()
+        return requirements.allSatisfy { $0 }
     }
     
     private func performAuth() async {
@@ -421,6 +520,9 @@ struct AuthView: View {
                 try await authService.signUp(email: trimmedEmail, password: trimmedPassword)
             } else {
                 try await authService.signIn(email: trimmedEmail, password: trimmedPassword)
+                // Record sign-in timestamp for welcome back message
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sign_in_timestamp")
+                UserDefaults.standard.set(false, forKey: "welcome_back_shown_for_session")
             }
         } catch {
             withAnimation {
@@ -620,9 +722,24 @@ struct AuthView: View {
         }
         .onAppear {
             // Log when view actually appears (after SwiftUI finishes rendering)
-            let appearTime = Date()
-            MainActorMonitor.shared.logOperation("AuthView.onAppear called")
-            print("✅ [AuthView] View appeared at \(String(format: "%.3f", appearTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 1000)))s")
+            let appearStart = Date()
+            StartupDiagnostics.shared.log("🔍 [AuthView] onAppear called")
+            
+            // Measure time since body evaluation started
+            if let bodyStart = bodyEvaluationStartTime {
+                let bodyDuration = appearStart.timeIntervalSince(bodyStart)
+                if bodyDuration > 0.1 {
+                    StartupDiagnostics.shared.log("⚠️ [AuthView] Time from body start to onAppear: \(String(format: "%.3f", bodyDuration))s")
+                }
+            }
+            
+            // Post notification so RootViewSheetModifier knows AuthView has appeared
+            NotificationCenter.default.post(name: NSNotification.Name("AuthViewAppeared"), object: nil)
+            
+            let appearDuration = Date().timeIntervalSince(appearStart)
+            if appearDuration > 0.01 {
+                StartupDiagnostics.shared.log("⚠️ [AuthView] onAppear handler took \(String(format: "%.3f", appearDuration))s")
+            }
         }
     }
     

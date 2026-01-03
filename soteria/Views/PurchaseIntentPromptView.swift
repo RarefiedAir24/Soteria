@@ -16,7 +16,6 @@ struct PurchaseIntentPromptView: View {
     @EnvironmentObject var purchaseIntentService: PurchaseIntentService
     @EnvironmentObject var deviceActivityService: DeviceActivityService
     @EnvironmentObject var goalsService: GoalsService
-    @EnvironmentObject var quietHoursService: QuietHoursService
     @EnvironmentObject var regretService: RegretLoggingService
     @EnvironmentObject var authService: AuthService
     
@@ -41,8 +40,9 @@ struct PurchaseIntentPromptView: View {
                 
                 ScrollView {
                     VStack(spacing: 30) {
-                        // Goal Visualization (only when Quiet Hours are active and active goal exists)
-                        if quietHoursService.isQuietModeActive, let activeGoal = goalsService.activeGoal {
+                        // Goal Visualization (when active goal exists)
+                        // NOTE: Quiet Hours check removed - always show if goal exists
+                        if let activeGoal = goalsService.activeGoal {
                             GoalVisualizationCard(goal: activeGoal, goalPhoto: $goalPhoto, isLoadingPhoto: $isLoadingGoalPhoto)
                                 .onAppear {
                                     loadGoalPhoto(for: activeGoal)
@@ -111,7 +111,7 @@ struct PurchaseIntentPromptView: View {
                         }
                         // Then ask activity type (only if app is selected)
                         else if selectedAppIndex != nil && purchaseType == nil {
-                            Text("Is this a planned activity or impulse?")
+                            Text("Is this a planned visit or impulse visit?")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(Color.midnightSlate)
@@ -165,7 +165,7 @@ struct PurchaseIntentPromptView: View {
                             }
                         }
                         
-                        // Planned Purchase - Category Selection
+                        // Planned Visit - Category Selection, then Mood
                         else if purchaseType == .planned {
                             VStack(spacing: 20) {
                                 if selectedCategory == nil {
@@ -198,15 +198,103 @@ struct PurchaseIntentPromptView: View {
                                             }
                                         }
                                     }
-                                } else {
-                                    // Category selected - show Continue button
+                                } else if selectedMood == nil {
+                                    // Category selected - now ask for mood
                                     VStack(spacing: 20) {
                                         Text("Selected: \(selectedCategory?.displayName ?? "")")
                                             .font(.headline)
                                             .foregroundColor(Color.reverBlue)
                                         
+                                        Text("How are you feeling?")
+                                            .font(.headline)
+                                            .foregroundColor(Color.midnightSlate)
+                                            .multilineTextAlignment(.center)
+                                        
+                                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                                            ForEach(ImpulseMood.allCases, id: \.self) { mood in
+                                                Button(action: {
+                                                    print("✅ [PurchaseIntentPromptView] Mood selected: \(mood.displayName)")
+                                                    selectedMood = mood
+                                                    if mood == .other {
+                                                        showMoodNotes = true
+                                                    }
+                                                }) {
+                                                    VStack(spacing: 8) {
+                                                        Image(systemName: mood.icon)
+                                                            .font(.system(size: 32))
+                                                            .foregroundColor(selectedMood == mood ? .white : Color.reverBlue)
+                                                        Text(mood.displayName)
+                                                            .font(.subheadline)
+                                                            .foregroundColor(selectedMood == mood ? .white : Color.midnightSlate)
+                                                            .multilineTextAlignment(.center)
+                                                    }
+                                                    .frame(maxWidth: .infinity)
+                                                    .padding(.vertical, 16)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .fill(selectedMood == mood ? Color.reverBlue : Color.mistGray)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Free text field for mood notes (especially for "other")
+                                        if showMoodNotes || selectedMood == .other {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text("Tell us more (optional)")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                                TextField("How are you feeling?", text: $moodNotes, axis: .vertical)
+                                                    .textFieldStyle(.plain)
+                                                    .padding(12)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .fill(Color.mistGray)
+                                                    )
+                                                    .lineLimit(3...6)
+                                            }
+                                            .padding(.horizontal, 32)
+                                        }
+                                        
                                         Button(action: {
-                                            print("✅ [PurchaseIntentPromptView] Continue button tapped for planned purchase")
+                                            selectedCategory = nil
+                                        }) {
+                                            Text("Change Category")
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
+                                        }
+                                    }
+                                } else {
+                                    // Category and mood selected - show Continue button
+                                    VStack(spacing: 20) {
+                                        Text("Selected: \(selectedCategory?.displayName ?? "")")
+                                            .font(.headline)
+                                            .foregroundColor(Color.reverBlue)
+                                        
+                                        Text("Mood: \(selectedMood?.displayName ?? "")")
+                                            .font(.subheadline)
+                                            .foregroundColor(Color.reverBlue)
+                                        
+                                        // Free text field for mood notes (especially for "other")
+                                        if showMoodNotes || selectedMood == .other {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text("Tell us more (optional)")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                                TextField("How are you feeling?", text: $moodNotes, axis: .vertical)
+                                                    .textFieldStyle(.plain)
+                                                    .padding(12)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .fill(Color.mistGray)
+                                                    )
+                                                    .lineLimit(3...6)
+                                            }
+                                            .padding(.horizontal, 32)
+                                        }
+                                        
+                                        Button(action: {
+                                            print("✅ [PurchaseIntentPromptView] Continue button tapped for planned visit")
                                             handleComplete()
                                         }) {
                                             Text("Continue")
@@ -219,9 +307,10 @@ struct PurchaseIntentPromptView: View {
                                         .padding(.horizontal, 32)
                                         
                                         Button(action: {
-                                            selectedCategory = nil
+                                            selectedMood = nil
+                                            showMoodNotes = false
                                         }) {
-                                            Text("Change Category")
+                                            Text("Change Mood")
                                                 .font(.subheadline)
                                                 .foregroundColor(.gray)
                                         }
@@ -231,7 +320,7 @@ struct PurchaseIntentPromptView: View {
                             .padding(.horizontal, 24)
                         }
                         
-                        // Impulse Purchase - Mood Selection
+                        // Impulse Visit - Mood Selection
                         else if purchaseType == .impulse {
                             VStack(spacing: 20) {
                                 if selectedMood == nil {
@@ -385,7 +474,7 @@ struct PurchaseIntentPromptView: View {
                     .padding(.vertical, 40)
                 }
             }
-            .navigationTitle("Purchase Intent")
+            .navigationTitle("Visit Intent")
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 // Load apps count asynchronously to avoid blocking
@@ -412,6 +501,9 @@ struct PurchaseIntentPromptView: View {
         print("   - Category: \(selectedCategory?.rawValue ?? "nil")")
         print("   - Mood: \(selectedMood?.rawValue ?? "nil")")
         
+        // Check if this was opened from a notification
+        let wasOpenedFromNotification = UserDefaults.standard.bool(forKey: "openedFromNotification")
+        
         // Get app name if available
         let appName = selectedAppIndex != nil ? deviceActivityService.getAppName(forIndex: selectedAppIndex!) : nil
         
@@ -421,8 +513,8 @@ struct PurchaseIntentPromptView: View {
         let intent = PurchaseIntent(
             purchaseType: purchaseType ?? .impulse,
             category: purchaseType == .planned ? selectedCategory : nil,
-            impulseMood: purchaseType == .impulse ? selectedMood : nil,
-            impulseMoodNotes: purchaseType == .impulse && !moodNotes.isEmpty ? moodNotes : nil,
+            impulseMood: selectedMood, // Now track mood for both planned and impulse visits
+            impulseMoodNotes: !moodNotes.isEmpty ? moodNotes : nil, // Track mood notes for both types
             amount: amount,
             appName: appName
         )
@@ -442,8 +534,8 @@ struct PurchaseIntentPromptView: View {
             durationMinutes: 15,
             purchaseType: purchaseType?.rawValue,
             category: purchaseType == .planned ? selectedCategory?.rawValue : nil,
-            mood: purchaseType == .impulse ? selectedMood?.rawValue : nil,
-            moodNotes: purchaseType == .impulse && !moodNotes.isEmpty ? moodNotes : nil,
+            mood: selectedMood?.rawValue, // Track mood for both planned and impulse visits
+            moodNotes: !moodNotes.isEmpty ? moodNotes : nil, // Track mood notes for both types
             appIndex: appIndex
         )
         print("✅ [PurchaseIntentPromptView] Apps unblocked (app index: \(appIndex ?? -1))")
@@ -457,9 +549,21 @@ struct PurchaseIntentPromptView: View {
             showConfirmation = "All \(appsCount) selected apps are unblocked for 15 minutes.\nYou can now open the app you want to use."
         }
         
+        // If opened from notification, navigate to metrics dashboard after completion
+        if wasOpenedFromNotification {
+            print("📊 [PurchaseIntentPromptView] Opened from notification - will navigate to metrics after completion")
+            // Set flag to show metrics dashboard after dismissal
+            UserDefaults.standard.set(true, forKey: "shouldShowMetricsAfterPrompt")
+        }
+        
         // Dismiss after showing confirmation
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             self.dismiss()
+            // Post notification to show metrics if opened from notification
+            if wasOpenedFromNotification {
+                print("📊 [PurchaseIntentPromptView] Posting notification to show metrics dashboard")
+                NotificationCenter.default.post(name: NSNotification.Name("ShowMetricsDashboard"), object: nil)
+            }
         }
     }
     
@@ -656,7 +760,7 @@ struct ImpactCalculatorView: View {
                     .foregroundColor(.midnightSlate)
             }
             
-            Text("This \(formattedAmount) purchase delays \"\(goal.name)\" by \(formattedDays) days")
+            Text("This \(formattedAmount) visit delays \"\(goal.name)\" by \(formattedDays) days")
                 .font(.system(size: 13))
                 .foregroundColor(.softGraphite)
                 .multilineTextAlignment(.center)
@@ -699,12 +803,12 @@ struct PastRegretReminderView: View {
                 }
                 
                 if let formattedAmount = formattedAmount {
-                    Text("You regretted spending \(formattedAmount) on \(regret.merchant ?? "a purchase") recently. This feels similar.")
+                    Text("You regretted spending \(formattedAmount) on \(regret.merchant ?? "a visit") recently. This feels similar.")
                         .font(.system(size: 13))
                         .foregroundColor(.softGraphite)
                         .multilineTextAlignment(.center)
                 } else {
-                    Text("You had a recent regret purchase. This feels similar.")
+                    Text("You had a recent regret visit. This feels similar.")
                         .font(.system(size: 13))
                         .foregroundColor(.softGraphite)
                         .multilineTextAlignment(.center)

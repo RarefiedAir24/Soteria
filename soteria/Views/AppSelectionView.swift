@@ -22,8 +22,28 @@ struct FamilyActivityPickerWrapper: View {
     var body: some View {
         Group {
             if isPickerReady {
+                // CRITICAL: FamilyActivityPicker automatically restores the previous selection
+                // when it opens. The system manages FamilyActivitySelection persistence.
+                // The picker will show checkmarks for previously selected apps automatically.
+                // When the picker opens, it restores the selection and updates our binding.
                 FamilyActivityPicker(selection: $selection)
                     .background(Color.mistGray)
+                    .onAppear {
+                        // When the picker appears, the system should have restored the selection
+                        // The picker will show checkmarks automatically and update our binding
+                        print("📂 [FamilyActivityPickerWrapper] FamilyActivityPicker appeared - system should show checkmarks")
+                        
+                        // Give the system a moment to restore the selection and update the binding
+                        Task {
+                            // Wait for system to restore selection (usually instant)
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            
+                            // The picker should have restored the selection by now
+                            // The binding will be updated automatically by the picker
+                            // We don't need to manually check - the picker handles it
+                            print("📂 [FamilyActivityPickerWrapper] System should have restored selection by now")
+                        }
+                    }
             } else {
                 // Placeholder while picker loads
                 ProgressView()
@@ -32,10 +52,21 @@ struct FamilyActivityPickerWrapper: View {
             }
         }
         .task {
-            // Defer FamilyActivityPicker creation to avoid blocking
-            // Wait a bit to ensure view is fully rendered
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            // CRITICAL: The FamilyActivityPicker should automatically restore the previous selection
+            // when it opens. The system manages FamilyActivitySelection persistence automatically.
+            // We don't need to manually restore it - the picker handles this internally.
+            
+            // Wait for view to be fully rendered
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds - shorter delay
+            
+            print("📂 [FamilyActivityPickerWrapper] Picker ready - system will restore selection automatically")
+            print("📂 [FamilyActivityPickerWrapper] Note: Checkmarks will appear even if binding is empty initially")
             isPickerReady = true
+        }
+        .onAppear {
+            // Log when picker wrapper appears
+            print("📂 [FamilyActivityPickerWrapper] Picker wrapper appeared")
+            print("📂 [FamilyActivityPickerWrapper] System will restore selection when picker opens")
         }
     }
 }
@@ -155,6 +186,14 @@ struct AppSelectionView: View {
             // IMPORTANT: FamilyActivityPicker should automatically restore previous selection
             // when opened. The system manages this persistence.
             print("📂 [AppSelectionView] Picker opened - system should restore previous selection")
+            
+            // CRITICAL: Don't access applicationTokens.count here - it blocks MainActor
+            // Instead, log that we're waiting for system restoration
+            print("📂 [AppSelectionView] Waiting for system to restore selection...")
+            
+            // The FamilyActivityPicker will automatically restore the selection when it opens
+            // We just need to ensure the binding is properly connected
+            // The picker wrapper will handle the timing and verification
         }
         .task {
             // Check authorization status when view appears (async)
@@ -162,10 +201,11 @@ struct AppSelectionView: View {
         }
         .onChange(of: selection) { oldValue, newValue in
             // Log when selection changes (picker should restore previous selection on open)
-            print("🔄 [AppSelectionView] Selection changed")
+            // NOTE: Don't access applicationTokens.count here - it blocks MainActor for 20+ seconds
             // The system should persist this automatically
             // Note: When picker opens, system restores selection, which triggers this onChange
-            // The count will be refreshed by AppSelectionSheetContent.onChange handler
+            print("🔄 [AppSelectionView] Selection changed - system restored or user modified")
+            // The picker will show checkmarks automatically when system restores the selection
         }
         .alert("App Limit Reached", isPresented: $showLimitAlert) {
             Button("OK") { }

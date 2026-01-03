@@ -15,6 +15,11 @@ struct QuietHoursView: View {
     @State private var showPaywall = false
     
     var body: some View {
+        // Free users can have 1 schedule (view-only), premium users get unlimited
+        quietHoursContent
+    }
+    
+    private var quietHoursContent: some View {
         ZStack(alignment: .top) {
             Color.cloudWhite
                 .ignoresSafeArea()
@@ -199,6 +204,47 @@ struct QuietHoursView: View {
             quietHoursService.updatePremiumStatus(newValue)
         }
     }
+    
+    private var paywallPrompt: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            Image(systemName: "moon.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.reverBlue)
+            
+            Text("Quiet Hours")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.midnightSlate)
+            
+            Text("Create schedules to block distracting apps during your quiet hours. This feature is available for premium subscribers.")
+                .font(.system(size: 16))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button(action: {
+                showPaywall = true
+            }) {
+                Text("Upgrade to Premium")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.reverBlue)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 40)
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.cloudWhite)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionService)
+        }
+    }
 }
 
 struct QuietHoursScheduleCard: View {
@@ -265,12 +311,30 @@ struct QuietHoursScheduleCard: View {
                         }
                     }
                     
-                    Toggle("", isOn: Binding(
-                        get: { schedule.isActive },
-                        set: { _ in
-                            quietHoursService.toggleSchedule(schedule)
+                    // Free users cannot toggle - editing is premium only
+                    if subscriptionService.isPremium {
+                        Toggle("", isOn: Binding(
+                            get: { schedule.isActive },
+                            set: { newValue in
+                                do {
+                                    try quietHoursService.toggleSchedule(schedule, isPremium: subscriptionService.isPremium)
+                                } catch {
+                                    print("❌ [QuietHoursScheduleCard] Failed to toggle schedule: \(error)")
+                                }
+                            }
+                        ))
+                    } else {
+                        // Show read-only state for free users
+                        HStack(spacing: 4) {
+                            Image(systemName: schedule.isActive ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 20))
+                                .foregroundColor(schedule.isActive ? .reverBlue : .softGraphite)
+                            Text(schedule.isActive ? "Active" : "Inactive")
+                                .font(.system(size: 12))
+                                .foregroundColor(.softGraphite)
                         }
-                    ))
+                        .opacity(0.6) // Visual indicator that it's read-only
+                    }
                 }
             }
             
@@ -339,10 +403,15 @@ struct QuietHoursScheduleCard: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+        // Only allow delete for premium users (prevents loopholes)
+        .swipeActions(edge: .trailing, allowsFullSwipe: subscriptionService.isPremium) {
             if subscriptionService.isPremium {
                 Button(role: .destructive) {
-                    quietHoursService.deleteSchedule(schedule)
+                    do {
+                        try quietHoursService.deleteSchedule(schedule, isPremium: subscriptionService.isPremium)
+                    } catch {
+                        print("❌ [QuietHoursScheduleCard] Failed to delete schedule: \(error)")
+                    }
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
@@ -355,7 +424,11 @@ struct QuietHoursScheduleCard: View {
         .alert("Delete Schedule", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                quietHoursService.deleteSchedule(schedule)
+                do {
+                    try quietHoursService.deleteSchedule(schedule, isPremium: subscriptionService.isPremium)
+                } catch {
+                    print("❌ [QuietHoursScheduleCard] Failed to delete schedule: \(error)")
+                }
             }
         } message: {
             Text("Are you sure you want to delete '\(schedule.name)'? This cannot be undone.")
@@ -371,13 +444,14 @@ struct CreateQuietHoursScheduleView: View {
     @State private var showPaywall = false
     @State private var showLimitAlert = false
     @State private var showAppSelection = false
+    @State private var showTimeValidationAlert = false
     
     let editingSchedule: QuietHoursSchedule?
     
     @State private var name: String = ""
     @State private var startHour: Int = 22
     @State private var startMinute: Int = 0
-    @State private var endHour: Int = 8
+    @State private var endHour: Int = 23
     @State private var endMinute: Int = 0
     @State private var selectedDays: Set<Int> = [1, 2, 3, 4, 5, 6, 7]
     @State private var selectedAppIndices: Set<Int> = []
@@ -386,12 +460,32 @@ struct CreateQuietHoursScheduleView: View {
         self.editingSchedule = editingSchedule
         if let schedule = editingSchedule {
             _name = State(initialValue: schedule.name)
-            _startHour = State(initialValue: schedule.startTime.hour ?? 22)
-            _startMinute = State(initialValue: schedule.startTime.minute ?? 0)
-            _endHour = State(initialValue: schedule.endTime.hour ?? 8)
-            _endMinute = State(initialValue: schedule.endTime.minute ?? 0)
+            let scheduleStartHour = schedule.startTime.hour ?? 22
+            let scheduleStartMinute = schedule.startTime.minute ?? 0
+            let scheduleEndHour = schedule.endTime.hour ?? 23
+            let scheduleEndMinute = schedule.endTime.minute ?? 0
+            
+            // If editing an overnight schedule, adjust to same-day
+            let startTotalMinutes = scheduleStartHour * 60 + scheduleStartMinute
+            let endTotalMinutes = scheduleEndHour * 60 + scheduleEndMinute
+            
+            if endTotalMinutes <= startTotalMinutes {
+                // Overnight schedule detected - adjust end time to same day
+                _endHour = State(initialValue: min(23, scheduleStartHour + 1))
+                _endMinute = State(initialValue: scheduleStartMinute)
+            } else {
+                _endHour = State(initialValue: scheduleEndHour)
+                _endMinute = State(initialValue: scheduleEndMinute)
+            }
+            
+            _startHour = State(initialValue: scheduleStartHour)
+            _startMinute = State(initialValue: scheduleStartMinute)
             _selectedDays = State(initialValue: schedule.daysOfWeek)
+            // Load selectedAppIndices from schedule - these should persist across app rebuilds
             _selectedAppIndices = State(initialValue: Set(schedule.selectedAppIndices))
+            
+            // Log to help diagnose persistence issues
+            print("📋 [CreateQuietHoursScheduleView] Loading schedule '\(schedule.name)' with \(schedule.selectedAppIndices.count) selected app indices: \(schedule.selectedAppIndices)")
         }
     }
     
@@ -405,16 +499,34 @@ struct CreateQuietHoursScheduleView: View {
                 }
                 
                 Section("Time Range") {
+                    // ENHANCED: Use wheel style for clearer minute selection (e.g., 8:05 AM, 9:10 PM)
                     DatePicker("Start Time", selection: Binding(
                         get: {
                             Calendar.current.date(bySettingHour: startHour, minute: startMinute, second: 0, of: Date()) ?? Date()
                         },
                         set: { date in
                             let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                            startHour = components.hour ?? 22
-                            startMinute = components.minute ?? 0
+                            let newStartHour = components.hour ?? 22
+                            let newStartMinute = components.minute ?? 0
+                            
+                            // Validate: end time must be at least 1 minute after start time on same day
+                                let startTotalMinutes = newStartHour * 60 + newStartMinute
+                                let endTotalMinutes = endHour * 60 + endMinute
+                                
+                            // Prevent overnight schedules - end must be after start on same day
+                            // Adjust end time if it's not at least 1 minute after start
+                                if endTotalMinutes <= startTotalMinutes {
+                                // Adjust end time to be at least 1 minute after start, but same day
+                                let adjustedEndMinutes = min(startTotalMinutes + 1, 23 * 60 + 59)
+                                endHour = adjustedEndMinutes / 60
+                                endMinute = adjustedEndMinutes % 60
+                            }
+                            
+                            startHour = newStartHour
+                            startMinute = newStartMinute
                         }
                     ), displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
                     
                     DatePicker("End Time", selection: Binding(
                         get: {
@@ -422,10 +534,33 @@ struct CreateQuietHoursScheduleView: View {
                         },
                         set: { date in
                             let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                            endHour = components.hour ?? 8
-                            endMinute = components.minute ?? 0
+                            let newEndHour = components.hour ?? 23
+                            let newEndMinute = components.minute ?? 0
+                            
+                            // Validate: end time must be at least 1 minute after start time on same day
+                                let startTotalMinutes = startHour * 60 + startMinute
+                                let endTotalMinutes = newEndHour * 60 + newEndMinute
+                                
+                            // Prevent overnight schedules - end must be after start on same day
+                                if endTotalMinutes <= startTotalMinutes {
+                                // Overnight schedule detected - adjust to same day
+                                let adjustedEndMinutes = min(startTotalMinutes + 1, 23 * 60 + 59)
+                                endHour = adjustedEndMinutes / 60
+                                endMinute = adjustedEndMinutes % 60
+                            } else {
+                                // Same day schedule - use selected time
+                                endHour = newEndHour
+                                endMinute = newEndMinute
+                            }
                         }
                     ), displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    
+                    if !isValidTimeRange(startHour: startHour, startMinute: startMinute, endHour: endHour, endMinute: endMinute) {
+                        Text("End time must be at least 1 minute after start time on the same day")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
                 
                 Section("Days of Week") {
@@ -460,13 +595,30 @@ struct CreateQuietHoursScheduleView: View {
                         ForEach(availableAppIndices, id: \.self) { index in
                             let appName = deviceActivityService.appNames[index] ?? "App \(index + 1)"
                             Toggle(appName, isOn: Binding(
-                                get: { selectedAppIndices.contains(index) },
+                                get: { 
+                                    let isSelected = selectedAppIndices.contains(index)
+                                    // Log on first render to debug
+                                    if index == availableAppIndices.first {
+                                        print("🔍 [CreateQuietHoursScheduleView] Toggle get() for index \(index) (\(appName)): \(isSelected ? "SELECTED" : "UNSELECTED")")
+                                        print("🔍 [CreateQuietHoursScheduleView] Current selectedAppIndices: \(Array(selectedAppIndices).sorted())")
+                                    }
+                                    return isSelected
+                                },
                                 set: { isOn in
+                                    // Free users limited to 1 app
+                                    if !subscriptionService.isPremium && selectedAppIndices.count >= 1 && isOn {
+                                        // Already at limit, don't allow more
+                                        return
+                                    }
+                                    
                                     if isOn {
                                         selectedAppIndices.insert(index)
+                                        print("✅ [CreateQuietHoursScheduleView] Selected app index \(index): \(appName)")
                                     } else {
                                         selectedAppIndices.remove(index)
+                                        print("❌ [CreateQuietHoursScheduleView] Deselected app index \(index): \(appName)")
                                     }
+                                    print("📋 [CreateQuietHoursScheduleView] Current selectedAppIndices: \(Array(selectedAppIndices).sorted())")
                                 }
                             ))
                         }
@@ -538,19 +690,87 @@ struct CreateQuietHoursScheduleView: View {
                     Button("Save") {
                         saveSchedule()
                     }
-                    .disabled(name.isEmpty || selectedDays.isEmpty)
+                    .disabled(name.isEmpty || selectedDays.isEmpty || !isValidTimeRange(startHour: startHour, startMinute: startMinute, endHour: endHour, endMinute: endMinute))
                 }
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
                     .environmentObject(subscriptionService)
             }
+            .alert("Invalid Time Range", isPresented: $showTimeValidationAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("End time must be at least 1 minute after start time on the same day. Overnight schedules are not allowed.")
+            }
+            .onAppear {
+                // Ensure app count is loaded when view appears
+                // This is critical for the toggles to show correctly
+                if deviceActivityService.cachedAppsCount == 0 {
+                    // Try to get count from UserDefaults if available
+                    let cachedCount = UserDefaults.standard.integer(forKey: "cachedSelectedAppsCount")
+                    if cachedCount > 0 {
+                        deviceActivityService.cachedAppsCount = cachedCount
+                    }
+                }
+                
+                // Re-initialize selectedAppIndices from schedule if editing
+                // This ensures the state is correct even if cachedAppsCount wasn't ready during init
+                if let schedule = editingSchedule {
+                    selectedAppIndices = Set(schedule.selectedAppIndices)
+                    print("📋 [CreateQuietHoursScheduleView] onAppear - Restored \(selectedAppIndices.count) selected app indices: \(Array(selectedAppIndices).sorted())")
+                    print("📋 [CreateQuietHoursScheduleView] Cached app count: \(deviceActivityService.cachedAppsCount)")
+                }
+            }
+            .onChange(of: deviceActivityService.cachedAppsCount) { oldCount, newCount in
+                // When app count loads, restore selectedAppIndices from schedule if editing
+                // This ensures toggles are checked even if cachedAppsCount was 0 during init
+                if newCount > 0 && newCount != oldCount, let schedule = editingSchedule {
+                    // Restore from schedule - this ensures saved indices are displayed
+                    let scheduleIndices = Set(schedule.selectedAppIndices)
+                    if selectedAppIndices != scheduleIndices {
+                        selectedAppIndices = scheduleIndices
+                        print("📋 [CreateQuietHoursScheduleView] onChange - Restored \(selectedAppIndices.count) selected app indices after app count loaded: \(Array(selectedAppIndices).sorted())")
+                    }
+                }
+            }
         }
     }
     
+    // Validate that end time is at least 1 minute after start time on the same day
+    // Overnight schedules (spanning midnight) are not allowed
+    private func isValidTimeRange(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) -> Bool {
+        let startTotalMinutes = startHour * 60 + startMinute
+        let endTotalMinutes = endHour * 60 + endMinute
+        
+        // Prevent overnight schedules - end must be after start on same day
+        // End time must be at least 1 minute after start time
+        return endTotalMinutes > startTotalMinutes
+    }
+    
     private func saveSchedule() {
+        // CRITICAL: Quiet hours are premium features - check subscription first
+        guard subscriptionService.isPremium else {
+            showPaywall = true
+            return
+        }
+        
+        // Validate time range before saving
+        guard isValidTimeRange(startHour: startHour, startMinute: startMinute, endHour: endHour, endMinute: endMinute) else {
+            showTimeValidationAlert = true
+            return
+        }
+        
         let startTime = DateComponents(hour: startHour, minute: startMinute)
         let endTime = DateComponents(hour: endHour, minute: endMinute)
+        
+        // Validate app selection limit for free users
+        if !subscriptionService.isPremium && selectedAppIndices.count > 1 {
+            showLimitAlert = true
+            return
+        }
+        
+        let savedIndices = Array(selectedAppIndices).sorted()
+        print("💾 [CreateQuietHoursScheduleView] Saving with \(savedIndices.count) selected app indices: \(savedIndices)")
         
         if let editing = editingSchedule {
             var updated = editing
@@ -558,15 +778,21 @@ struct CreateQuietHoursScheduleView: View {
             updated.startTime = startTime
             updated.endTime = endTime
             updated.daysOfWeek = selectedDays
-            updated.selectedAppIndices = Array(selectedAppIndices).sorted()
-            quietHoursService.updateSchedule(updated)
+            updated.selectedAppIndices = savedIndices
+            do {
+                try quietHoursService.updateSchedule(updated, isPremium: subscriptionService.isPremium)
+            } catch {
+                print("❌ [CreateQuietHoursScheduleView] Failed to update schedule: \(error)")
+                showPaywall = true
+                return
+            }
         } else {
             let newSchedule = QuietHoursSchedule(
                 name: name,
                 startTime: startTime,
                 endTime: endTime,
                 daysOfWeek: selectedDays,
-                selectedAppIndices: Array(selectedAppIndices).sorted()
+                selectedAppIndices: savedIndices
             )
             quietHoursService.addSchedule(newSchedule)
         }

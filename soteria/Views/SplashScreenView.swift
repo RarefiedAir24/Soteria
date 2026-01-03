@@ -13,31 +13,34 @@ struct SplashScreenView: View {
     
     var body: some View {
         ZStack {
-            // Background - Lighter REVER color for better logo contrast
             Color.dreamMist
                 .ignoresSafeArea()
             
-            VStack(spacing: .spacingSection) {
-                // Logo - using soteria_logo asset
-                // REMOVED: Animations to prevent blocking
-                Image("soteria_logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .shadow(color: Color.reverBlue.opacity(0.25), radius: 15, x: 0, y: 5)
+            VStack(spacing: 40) {
+                // Soteria Logo
+                if let logoImage = UIImage(named: "soteria_logo") {
+                    Image(uiImage: logoImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                } else {
+                    // Fallback if image not found
+                    Image(systemName: "leaf.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .foregroundColor(.deepReverBlue)
+                }
                 
-                // App Name - H1 style
                 Text("SOTERIA")
-                    .reverH1()
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundColor(.midnightSlate)
                 
-                // Loading indicator
                 ProgressView()
                     .scaleEffect(1.2)
                     .tint(.deepReverBlue)
             }
-            .padding(.spacingHero)
         }
-        // REMOVED: .onAppear with animation - it was blocking MainActor
     }
 }
 

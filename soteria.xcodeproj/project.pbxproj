@@ -7,76 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5304F583BB02AFFBADB1754D /* Pods_soteria_SoteriaMonitor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D701E1D8897F2F6CB82AE41 /* Pods_soteria_SoteriaMonitor.framework */; };
-		A967A1C17C785B25FA7EAE94 /* Pods_soteria.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8A73DCCB2BE47485E041308F /* Pods_soteria.framework */; };
-		EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */; };
-		EF83ABD32EE46B020006A32D /* SoteriaMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EF83ABE82EE46EC20006A32D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */; };
-		EF83ABF62EE53A520006A32D /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF83ABF52EE53A520006A32D /* FamilyControls.framework */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		EF83ABD12EE46B020006A32D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = EF83ABAE2EE467910006A32D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EF83ABC72EE46B020006A32D;
-			remoteInfo = SoteriaMonitor;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		EF83ABD82EE46B020006A32D /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				EF83ABD32EE46B020006A32D /* SoteriaMonitor.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
-		099BBA51E68CDF16B7B6CB53 /* Pods-soteria-SoteriaMonitor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria-SoteriaMonitor.debug.xcconfig"; path = "Target Support Files/Pods-soteria-SoteriaMonitor/Pods-soteria-SoteriaMonitor.debug.xcconfig"; sourceTree = "<group>"; };
-		22EA941E4542555CCAC4BEBD /* Pods-soteria.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria.debug.xcconfig"; path = "Target Support Files/Pods-soteria/Pods-soteria.debug.xcconfig"; sourceTree = "<group>"; };
-		5A0582CC5A31058E13E0BB95 /* Pods-soteria-SoteriaMonitor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria-SoteriaMonitor.release.xcconfig"; path = "Target Support Files/Pods-soteria-SoteriaMonitor/Pods-soteria-SoteriaMonitor.release.xcconfig"; sourceTree = "<group>"; };
-		7D701E1D8897F2F6CB82AE41 /* Pods_soteria_SoteriaMonitor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_soteria_SoteriaMonitor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		8A73DCCB2BE47485E041308F /* Pods_soteria.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_soteria.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		9C12A891BDAE08BCE53CD140 /* Pods-soteria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-soteria.release.xcconfig"; path = "Target Support Files/Pods-soteria/Pods-soteria.release.xcconfig"; sourceTree = "<group>"; };
 		B3BE755EECBF481FBD17A674 /* Products.storekit */ = {isa = PBXFileReference; explicitFileType = text.storekit; includeInIndex = 1; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		EF299D922EEA6D8500547AD7 /* LinkKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = LinkKit.xcframework; path = Pods/Plaid/LinkKit.xcframework; sourceTree = "<group>"; };
 		EF83ABB62EE467910006A32D /* soteria.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = soteria.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SoteriaMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		EF83ABF52EE53A520006A32D /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EF83ABD92EE46B020006A32D /* Exceptions for "SoteriaMonitor" folder in "SoteriaMonitor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = EF83ABC72EE46B020006A32D /* SoteriaMonitor */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EF83ABB82EE467910006A32D /* soteria */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = soteria;
-			sourceTree = "<group>";
-		};
-		EF83ABCC2EE46B020006A32D /* SoteriaMonitor */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				EF83ABD92EE46B020006A32D /* Exceptions for "SoteriaMonitor" folder in "SoteriaMonitor" target */,
-			);
-			path = SoteriaMonitor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -86,17 +30,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EF83ABF62EE53A520006A32D /* FamilyControls.framework in Frameworks */,
-				A967A1C17C785B25FA7EAE94 /* Pods_soteria.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		EF83ABC52EE46B020006A32D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				EF83ABCB2EE46B020006A32D /* DeviceActivity.framework in Frameworks */,
-				5304F583BB02AFFBADB1754D /* Pods_soteria_SoteriaMonitor.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -106,10 +39,6 @@
 		73591A144853D95FF75A3391 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				22EA941E4542555CCAC4BEBD /* Pods-soteria.debug.xcconfig */,
-				9C12A891BDAE08BCE53CD140 /* Pods-soteria.release.xcconfig */,
-				099BBA51E68CDF16B7B6CB53 /* Pods-soteria-SoteriaMonitor.debug.xcconfig */,
-				5A0582CC5A31058E13E0BB95 /* Pods-soteria-SoteriaMonitor.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -120,7 +49,6 @@
 				EF83ABE72EE46EC20006A32D /* GoogleService-Info.plist */,
 				B3BE755EECBF481FBD17A674 /* Products.storekit */,
 				EF83ABB82EE467910006A32D /* soteria */,
-				EF83ABCC2EE46B020006A32D /* SoteriaMonitor */,
 				EF83ABC92EE46B020006A32D /* Frameworks */,
 				EF83ABB72EE467910006A32D /* Products */,
 				73591A144853D95FF75A3391 /* Pods */,
@@ -131,7 +59,6 @@
 			isa = PBXGroup;
 			children = (
 				EF83ABB62EE467910006A32D /* soteria.app */,
-				EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -140,10 +67,6 @@
 			isa = PBXGroup;
 			children = (
 				EF299D922EEA6D8500547AD7 /* LinkKit.xcframework */,
-				EF83ABF52EE53A520006A32D /* FamilyControls.framework */,
-				EF83ABCA2EE46B020006A32D /* DeviceActivity.framework */,
-				8A73DCCB2BE47485E041308F /* Pods_soteria.framework */,
-				7D701E1D8897F2F6CB82AE41 /* Pods_soteria_SoteriaMonitor.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -155,16 +78,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = EF83ABC12EE467920006A32D /* Build configuration list for PBXNativeTarget "soteria" */;
 			buildPhases = (
-				4D68F7EA207F59706AE82941 /* [CP] Check Pods Manifest.lock */,
 				EF83ABB22EE467910006A32D /* Sources */,
 				EF83ABB32EE467910006A32D /* Frameworks */,
 				EF83ABB42EE467910006A32D /* Resources */,
-				EF83ABD82EE46B020006A32D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				EF83ABD22EE46B020006A32D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				EF83ABB82EE467910006A32D /* soteria */,
@@ -175,27 +95,6 @@
 			productName = soteria;
 			productReference = EF83ABB62EE467910006A32D /* soteria.app */;
 			productType = "com.apple.product-type.application";
-		};
-		EF83ABC72EE46B020006A32D /* SoteriaMonitor */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "SoteriaMonitor" */;
-			buildPhases = (
-				06AF8B90604C915557CAAC60 /* [CP] Check Pods Manifest.lock */,
-				EF83ABC42EE46B020006A32D /* Sources */,
-				EF83ABC52EE46B020006A32D /* Frameworks */,
-				EF83ABC62EE46B020006A32D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				EF83ABCC2EE46B020006A32D /* SoteriaMonitor */,
-			);
-			name = SoteriaMonitor;
-			productName = SoteriaMonitor;
-			productReference = EF83ABC82EE46B020006A32D /* SoteriaMonitor.appex */;
-			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -208,9 +107,6 @@
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					EF83ABB52EE467910006A32D = {
-						CreatedOnToolsVersion = 26.1.1;
-					};
-					EF83ABC72EE46B020006A32D = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -232,7 +128,6 @@
 			projectRoot = "";
 			targets = (
 				EF83ABB52EE467910006A32D /* soteria */,
-				EF83ABC72EE46B020006A32D /* SoteriaMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -246,61 +141,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EF83ABC62EE46B020006A32D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		06AF8B90604C915557CAAC60 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-soteria-SoteriaMonitor-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		4D68F7EA207F59706AE82941 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-soteria-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		EF83ABB22EE467910006A32D /* Sources */ = {
@@ -310,22 +151,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EF83ABC42EE46B020006A32D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		EF83ABD22EE46B020006A32D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EF83ABC72EE46B020006A32D /* SoteriaMonitor */;
-			targetProxy = EF83ABD12EE46B020006A32D /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		EF83ABBF2EE467920006A32D /* Debug */ = {
@@ -453,7 +279,6 @@
 		};
 		EF83ABC22EE467920006A32D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 22EA941E4542555CCAC4BEBD /* Pods-soteria.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -467,6 +292,7 @@
 				INFOPLIST_KEY_NSBonjourServices = _http._tcp;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used for identity verification when connecting bank accounts";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Soteria needs access to your local network to connect to the development server for testing Plaid integration.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Soteria uses your location to display weather-based backgrounds on your money tree.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -491,7 +317,6 @@
 		};
 		EF83ABC32EE467920006A32D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9C12A891BDAE08BCE53CD140 /* Pods-soteria.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -505,6 +330,7 @@
 				INFOPLIST_KEY_NSBonjourServices = _http._tcp;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used for identity verification when connecting bank accounts";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Soteria needs access to your local network to connect to the development server for testing Plaid integration.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Soteria uses your location to display weather-based backgrounds on your money tree.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -520,66 +346,6 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		EF83ABD62EE46B020006A32D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 099BBA51E68CDF16B7B6CB53 /* Pods-soteria-SoteriaMonitor.debug.xcconfig */;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = SoteriaMonitor/SoteriaMonitor.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = SoteriaMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SoteriaMonitor;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.soteria.SoteriaMonitor;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		EF83ABD72EE46B020006A32D /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5A0582CC5A31058E13E0BB95 /* Pods-soteria-SoteriaMonitor.release.xcconfig */;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = SoteriaMonitor/SoteriaMonitor.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4P5YXTJ7U7;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = SoteriaMonitor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SoteriaMonitor;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.montebay.soteria.SoteriaMonitor;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -604,15 +370,6 @@
 			buildConfigurations = (
 				EF83ABC22EE467920006A32D /* Debug */,
 				EF83ABC32EE467920006A32D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		EF83ABD52EE46B020006A32D /* Build configuration list for PBXNativeTarget "SoteriaMonitor" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EF83ABD62EE46B020006A32D /* Debug */,
-				EF83ABD72EE46B020006A32D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

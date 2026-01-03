@@ -25,11 +25,18 @@ class SubscriptionService: ObservableObject {
     static let shared = SubscriptionService()
     
     @Published var subscriptionTier: SubscriptionTier = .free
-    @Published var isPremium: Bool = false
+    @Published var isPremium: Bool = false {
+        didSet {
+            // CRITICAL: Keep UserDefaults in sync for extension access
+            // The extension needs to check subscription status via UserDefaults
+            UserDefaults.standard.set(isPremium, forKey: "isPremium")
+        }
+    }
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     
-    // Product IDs - Update these with your actual App Store Connect product IDs
+    // Product IDs - Must match Products.storekit configuration
+    // Format: com.soteria.premium.monthly and com.soteria.premium.yearly
     private let monthlyProductID = "com.soteria.premium.monthly"
     private let yearlyProductID = "com.soteria.premium.yearly"
     
@@ -37,8 +44,27 @@ class SubscriptionService: ObservableObject {
     private var updateListenerTask: Task<Void, Error>?
     
     private init() {
-        // Load from UserDefaults immediately (fast, synchronous)
-        // Check if test account premium flag is set
+        // CRITICAL: Do ABSOLUTELY NOTHING in init() - not even UserDefaults reads
+        // UserDefaults reads on MainActor during init() can block SwiftUI initialization
+        // All initialization happens in startInitialization() which is called after UI is rendered
+        
+        // CRITICAL: Defer ALL work to 60+ seconds after startup to prevent blocking
+        // This ensures the app is fully interactive before doing any work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) { [weak self] in
+            guard let self = self else { return }
+            self.startInitialization()
+        }
+    }
+    
+    private var hasInitialized = false
+    
+    func startInitialization() {
+        guard !hasInitialized else { return }
+        hasInitialized = true
+        
+        print("🔄 [SubscriptionService] Starting initialization (deferred)")
+        
+        // Load from UserDefaults (now safe, UI is rendered)
         let isTestAccount = UserDefaults.standard.bool(forKey: "isTestAccountPremium")
         if isTestAccount {
             isPremium = true
@@ -61,8 +87,10 @@ class SubscriptionService: ObservableObject {
             await self.updateSubscriptionStatus()
             
             // Listen for transaction updates (background task)
-            // Must run on MainActor since updateListenerTask is MainActor-isolated
-            await MainActor.run {
+            // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+            // This prevents MainActor blocking during startup
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
                 self.updateListenerTask = self.listenForTransactions()
             }
             
@@ -119,6 +147,11 @@ class SubscriptionService: ObservableObject {
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
+            // Record subscription for streak tracking BEFORE finishing transaction
+            SubscriptionStreakService.shared.recordSubscription(
+                productID: transaction.productID,
+                transactionDate: transaction.purchaseDate
+            )
             await transaction.finish()
             await updateSubscriptionStatus()
             return true
@@ -152,7 +185,7 @@ class SubscriptionService: ObservableObject {
     // MARK: - Subscription Status
     
     @MainActor
-    private func updateSubscriptionStatus() async {
+    func updateSubscriptionStatus() async {
         // Check if this is a test account - preserve premium status for test accounts
         let isTestAccount = UserDefaults.standard.bool(forKey: "isTestAccountPremium")
         if isTestAccount {
@@ -163,6 +196,7 @@ class SubscriptionService: ObservableObject {
         }
         
         var isCurrentlyPremium = false
+        var latestTransaction: (productID: String, purchaseDate: Date)? = nil
         
         // Check for active subscriptions
         for await result in Transaction.currentEntitlements {
@@ -174,11 +208,18 @@ class SubscriptionService: ObservableObject {
                     if let expirationDate = transaction.expirationDate {
                         if expirationDate > Date() {
                             isCurrentlyPremium = true
-                            print("✅ [SubscriptionService] Active premium subscription found")
+                            // Track the latest transaction for streak calculation
+                            if latestTransaction == nil || transaction.purchaseDate > latestTransaction!.purchaseDate {
+                                latestTransaction = (transaction.productID, transaction.purchaseDate)
+                            }
+                            print("✅ [SubscriptionService] Active premium subscription found: \(transaction.productID)")
                         }
                     } else {
                         // Non-consumable or lifetime subscription
                         isCurrentlyPremium = true
+                        if latestTransaction == nil || transaction.purchaseDate > latestTransaction!.purchaseDate {
+                            latestTransaction = (transaction.productID, transaction.purchaseDate)
+                        }
                     }
                 }
             } catch {
@@ -191,6 +232,19 @@ class SubscriptionService: ObservableObject {
         
         // Save status
         UserDefaults.standard.set(isPremium, forKey: "isPremium")
+        
+        // Update subscription streak with product ID and transaction date
+        SubscriptionStreakService.shared.ensureDataLoaded()
+        if isCurrentlyPremium, let transaction = latestTransaction {
+            print("📊 [SubscriptionService] Recording subscription for streak: \(transaction.productID), date: \(transaction.purchaseDate)")
+            SubscriptionStreakService.shared.recordSubscription(
+                productID: transaction.productID,
+                transactionDate: transaction.purchaseDate
+            )
+        } else if !isCurrentlyPremium {
+            // No longer premium - streak stays but doesn't increment
+            print("📊 [SubscriptionService] User is not premium - streak remains at \(SubscriptionStreakService.shared.currentStreak)")
+        }
         
         print("📊 [SubscriptionService] Subscription status: \(subscriptionTier.displayName)")
     }
@@ -213,6 +267,15 @@ class SubscriptionService: ObservableObject {
             for await result in Transaction.updates {
                 do {
                     let transaction = try self.checkVerified(result)
+                    // Record subscription for streak tracking (handles renewals)
+                    if transaction.productID == self.monthlyProductID || transaction.productID == self.yearlyProductID {
+                        await MainActor.run {
+                            SubscriptionStreakService.shared.recordSubscription(
+                                productID: transaction.productID,
+                                transactionDate: transaction.purchaseDate
+                            )
+                        }
+                    }
                     await transaction.finish()
                     await self.updateSubscriptionStatus()
                 } catch {

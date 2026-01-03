@@ -2,7 +2,7 @@
 //  StreakService.swift
 //  soteria
 //
-//  Tracks protection streaks (days without unblocking)
+//  Tracks savings streaks (days in a row with savings deposits)
 //
 
 import Foundation
@@ -11,13 +11,13 @@ import Combine
 class StreakService: ObservableObject {
     static let shared = StreakService()
     
-    @Published var currentStreak: Int = 0 // Days in a row without unblocking
+    @Published var currentStreak: Int = 0 // Days in a row with savings deposits
     @Published var longestStreak: Int = 0 // Best streak ever
-    @Published var lastProtectionDate: Date? = nil // Last time user chose protection
+    @Published var lastSavingsDate: Date? = nil // Last time user made a savings deposit
     
-    private let streakKey = "protection_streak"
-    private let longestStreakKey = "longest_streak"
-    private let lastProtectionKey = "last_protection_date"
+    private let streakKey = "savings_streak"
+    private let longestStreakKey = "longest_savings_streak"
+    private let lastSavingsKey = "last_savings_date"
     
     private init() {
         let initStart = Date()
@@ -44,7 +44,7 @@ class StreakService: ObservableObject {
     // Ensure data is loaded (call on-demand)
     func ensureDataLoaded() {
         // Only load if not already loaded
-        guard currentStreak == 0 && longestStreak == 0 && lastProtectionDate == nil else { return }
+        guard currentStreak == 0 && longestStreak == 0 && lastSavingsDate == nil else { return }
         loadStreakData()
         updateStreak()
     }
@@ -54,8 +54,8 @@ class StreakService: ObservableObject {
         currentStreak = UserDefaults.standard.integer(forKey: streakKey)
         longestStreak = UserDefaults.standard.integer(forKey: longestStreakKey)
         
-        if let dateData = UserDefaults.standard.object(forKey: lastProtectionKey) as? Date {
-            lastProtectionDate = dateData
+        if let dateData = UserDefaults.standard.object(forKey: lastSavingsKey) as? Date {
+            lastSavingsDate = dateData
         }
     }
     
@@ -63,35 +63,40 @@ class StreakService: ObservableObject {
     private func saveStreakData() {
         UserDefaults.standard.set(currentStreak, forKey: streakKey)
         UserDefaults.standard.set(longestStreak, forKey: longestStreakKey)
-        if let date = lastProtectionDate {
-            UserDefaults.standard.set(date, forKey: lastProtectionKey)
+        if let date = lastSavingsDate {
+            UserDefaults.standard.set(date, forKey: lastSavingsKey)
         }
     }
     
-    // Record a protection moment (user chose protection)
-    func recordProtection() {
+    // Record a savings deposit (user made a deposit - manual, plaid, or virtual)
+    func recordSavings() {
         let today = Calendar.current.startOfDay(for: Date())
         
-        if let lastDate = lastProtectionDate {
+        if let lastDate = lastSavingsDate {
             let lastDay = Calendar.current.startOfDay(for: lastDate)
             let daysSince = Calendar.current.dateComponents([.day], from: lastDay, to: today).day ?? 0
             
             if daysSince == 0 {
-                // Same day - don't increment streak
+                // Same day - don't increment streak (already saved today)
+                // But ensure streak is at least 1 if it's 0
+                if currentStreak == 0 {
+                    currentStreak = 1
+                }
                 return
             } else if daysSince == 1 {
                 // Consecutive day - increment streak
+                // The first day already counts as day 1, so we increment for the new day
                 currentStreak += 1
             } else {
-                // Streak broken - reset to 1
+                // Streak broken - reset to 1 (the day you make the initial save counts as day 1)
                 currentStreak = 1
             }
         } else {
-            // First protection ever
+            // First savings deposit ever - the day you make the initial save counts as day 1
             currentStreak = 1
         }
         
-        lastProtectionDate = today
+        lastSavingsDate = today
         
         // Update longest streak if needed
         if currentStreak > longestStreak {
@@ -99,52 +104,34 @@ class StreakService: ObservableObject {
         }
         
         saveStreakData()
-    }
-    
-    // Record an unblock (user unblocked and shopped)
-    func recordUnblock() {
-        // Check if streak should be broken
-        updateStreak()
-        
-        // If unblock happened today and we had a streak, break it
-        if let lastDate = lastProtectionDate {
-            let today = Calendar.current.startOfDay(for: Date())
-            let lastDay = Calendar.current.startOfDay(for: lastDate)
-            
-            if Calendar.current.isDate(today, inSameDayAs: lastDay) {
-                // Unblock happened on same day as last protection
-                // Don't break streak yet (might have protected earlier today)
-                return
-            }
-        }
-        
-        // If last protection was yesterday or earlier, and we unblock today, streak is broken
-        // This will be handled by updateStreak() on next app launch
+        print("✅ [StreakService] Recorded savings deposit - streak: \(currentStreak) days, lastDate: \(lastSavingsDate?.description ?? "nil")")
     }
     
     // Update streak based on time elapsed (call on app launch)
+    // If more than 1 day has passed since last savings, streak is broken
     func updateStreak() {
-        guard let lastDate = lastProtectionDate else { return }
+        guard let lastDate = lastSavingsDate else { return }
         
         let today = Calendar.current.startOfDay(for: Date())
         let lastDay = Calendar.current.startOfDay(for: lastDate)
         let daysSince = Calendar.current.dateComponents([.day], from: lastDay, to: today).day ?? 0
         
         if daysSince > 1 {
-            // More than 1 day since last protection - streak is broken
+            // More than 1 day since last savings - streak is broken
             currentStreak = 0
             saveStreakData()
+            print("⚠️ [StreakService] Streak broken - \(daysSince) days since last savings")
         }
     }
     
     // Get streak message for display
     var streakMessage: String {
         if currentStreak == 0 {
-            return "Start your protection streak today!"
+            return "Start your savings streak today!"
         } else if currentStreak == 1 {
-            return "1 day protecting your goals"
+            return "1 day saving"
         } else {
-            return "\(currentStreak) days protecting your goals"
+            return "\(currentStreak) days saving"
         }
     }
     

@@ -34,12 +34,54 @@ struct Transfer: Codable, Identifiable {
     let toAccount: String // account_id
 }
 
+struct SavingsDeposit: Codable, Identifiable {
+    let id: String
+    let amount: Double
+    let timestamp: Date
+    let type: DepositType
+    let goalId: String? // Optional: which goal this deposit was added to
+    let source: String? // Optional: "manual", "plaid", "virtual", "decision_window", etc.
+    let screenshotPath: String? // Optional: path to screenshot for manual deposits
+    let referenceId: String? // Optional: reference ID from banking institution
+    
+    enum DepositType: String, Codable {
+        case manual = "manual"
+        case plaid = "plaid"
+        case virtual = "virtual"
+        case decisionWindow = "decision_window"
+        case goalDeposit = "goal_deposit" // Direct deposit to a goal
+    }
+    
+    init(amount: Double, type: DepositType, goalId: String? = nil, source: String? = nil, screenshotPath: String? = nil, referenceId: String? = nil, id: String? = nil) {
+        self.id = id ?? UUID().uuidString
+        self.amount = amount
+        self.timestamp = Date()
+        self.type = type
+        self.goalId = goalId
+        self.source = source
+        self.screenshotPath = screenshotPath
+        self.referenceId = referenceId
+    }
+}
+
 // MARK: - PlaidService
 
 class PlaidService: ObservableObject {
-    static let shared = PlaidService()
+    static let shared: PlaidService = {
+        let startTime = Date()
+        let service = PlaidService()
+        // CRITICAL: Don't access StartupDiagnostics.shared during initialization
+        // StartupDiagnostics.shared.logServiceAccess("PlaidService", startTime: startTime)
+        return service
+    }()
     
-    private let cognitoService = CognitoAuthService.shared
+    private let cognitoService: CognitoAuthService = {
+        let startTime = Date()
+        let service = CognitoAuthService.shared
+        // CRITICAL: Don't access StartupDiagnostics.shared during initialization
+        // StartupDiagnostics.shared.logServiceAccess("CognitoAuthService (from PlaidService)", startTime: startTime)
+        return service
+    }()
     
     // API Gateway URL - Switches between local dev and production
     #if DEBUG
@@ -66,8 +108,12 @@ class PlaidService: ObservableObject {
     @Published var totalSaved: Double = 0 // Sum of all transfers
     @Published var virtualSavings: Double = 0 // Tracked but not transferred (for virtual mode)
     @Published var transferHistory: [Transfer] = []
+    @Published var depositHistory: [SavingsDeposit] = [] // All deposits with timestamps for savings tracker
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    
+    // Track save transfer count for monthly goal prompt
+    private let monthlyGoalPromptShownKey = "monthly_goal_prompt_shown"
     
     private init() {
         // Load saved state synchronously - UserDefaults reads are fast and won't block
@@ -406,12 +452,181 @@ class PlaidService: ObservableObject {
     }
     
     /// Record virtual savings (for virtual mode - no actual transfer)
-    func recordVirtualSavings(amount: Double) {
+    func recordVirtualSavings(amount: Double, goalId: String? = nil) {
         guard savingsMode == .virtual else { return }
         
+        // Get active goal ID if not provided
+        let depositGoalId = goalId ?? GoalsService.shared.activeGoal?.id
+        
         virtualSavings += amount
+        totalSaved += amount // Track total saved for users without goals
+        
+        // Create unique deposit record with timestamp
+        let deposit = SavingsDeposit(
+            amount: amount,
+            type: .virtual,
+            goalId: depositGoalId,
+            source: "virtual_savings"
+        )
+        depositHistory.append(deposit)
+        
         saveState()
-        print("✅ [PlaidService] Virtual savings recorded: $\(amount), total: $\(virtualSavings)")
+        updateGoalProgress(amount: amount, goalId: depositGoalId)
+        
+        // Record savings streak
+        StreakService.shared.recordSavings()
+        
+        print("✅ [PlaidService] Virtual savings recorded: $\(amount), total: $\(virtualSavings), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none")")
+        
+        // Check if we should show monthly goal prompt
+        checkAndShowMonthlyGoalPrompt()
+    }
+    
+    /// Record a confirmed deposit (when transfer status becomes "posted")
+    /// This is called when a Plaid transfer is confirmed by the bank
+    /// - Parameters:
+    ///   - amount: The deposit amount
+    ///   - goalId: Optional goal ID
+    ///   - transferId: Optional Plaid transfer ID (used as reference ID for tracking)
+    func recordConfirmedDeposit(amount: Double, goalId: String? = nil, transferId: String? = nil) {
+        let wasFirstDeposit = totalSaved == 0
+        
+        // Get active goal ID if not provided
+        let depositGoalId = goalId ?? GoalsService.shared.activeGoal?.id
+        
+        totalSaved += amount
+        
+        // Create unique deposit record with timestamp
+        // Use transferId as referenceId for accurate tracking with banking institution
+        let deposit = SavingsDeposit(
+            amount: amount,
+            type: .plaid,
+            goalId: depositGoalId,
+            source: "plaid_transfer",
+            screenshotPath: nil,
+            referenceId: transferId // Store Plaid transfer_id as reference ID
+        )
+        depositHistory.append(deposit)
+        
+        saveState()
+        updateGoalProgress(amount: amount, goalId: depositGoalId)
+        
+        // Record savings streak
+        StreakService.shared.recordSavings()
+        
+        print("✅ [PlaidService] Confirmed deposit recorded: $\(amount), total saved: $\(totalSaved), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none"), transferId: \(transferId ?? "none")")
+        
+        // Post notification for deposit made (for UI refresh)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("DepositMade"),
+            object: ["amount": amount, "goalId": depositGoalId as Any]
+        )
+        
+        // Check if this is the first deposit
+        if wasFirstDeposit {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("FirstDepositMade"),
+                object: amount
+            )
+        }
+        
+        // Check if we should show monthly goal prompt
+        checkAndShowMonthlyGoalPrompt()
+    }
+    
+    /// Record a manual deposit (for users without Plaid)
+    /// This allows users to manually track their savings deposits.
+    /// 
+    /// Use cases:
+    /// - Physical cash savings (e.g., piggy bank, cash envelope)
+    /// - Deposits made outside the app to unintegrated bank accounts
+    /// - Any savings that occur outside of Plaid-connected accounts
+    /// 
+    /// NOTE: This does NOT use Plaid API. It only updates local tracking.
+    /// No bank transfers or API calls are made.
+    func recordManualDeposit(amount: Double, goalId: String? = nil, screenshotPath: String? = nil, referenceId: String? = nil, depositId: String? = nil) {
+        let wasFirstDeposit = totalSaved == 0
+        
+        // Get active goal ID if not provided
+        let depositGoalId = goalId ?? GoalsService.shared.activeGoal?.id
+        
+        totalSaved += amount
+        
+        // Create unique deposit record with timestamp
+        // Use provided depositId if available (for screenshot matching), otherwise generate new one
+        let deposit = SavingsDeposit(
+            amount: amount,
+            type: .manual,
+            goalId: depositGoalId,
+            source: "manual_entry",
+            screenshotPath: screenshotPath,
+            referenceId: referenceId,
+            id: depositId
+        )
+        depositHistory.append(deposit)
+        
+        saveState() // Saves to UserDefaults only - no API calls
+        updateGoalProgress(amount: amount, goalId: depositGoalId)
+        
+        // Record savings streak
+        StreakService.shared.recordSavings()
+        
+        print("✅ [PlaidService] Manual deposit recorded: $\(amount), total saved: \(totalSaved), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none"), referenceId: \(referenceId ?? "none"), screenshot: \(screenshotPath != nil ? "yes" : "no")")
+        
+        // Post notification for deposit made (for UI refresh)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("DepositMade"),
+            object: ["amount": amount, "goalId": depositGoalId as Any]
+        )
+        
+        // Sync screenshot to cloud in background (if provided)
+        if screenshotPath != nil, let screenshot = DepositScreenshotService.shared.loadScreenshot(for: deposit.id) {
+            Task {
+                do {
+                    _ = try await DepositScreenshotAPIService.shared.uploadScreenshot(image: screenshot, depositId: deposit.id)
+                    print("✅ [PlaidService] Screenshot synced to cloud for deposit: \(deposit.id)")
+                } catch {
+                    print("⚠️ [PlaidService] Failed to sync screenshot to cloud: \(error.localizedDescription)")
+                    // Screenshot is still saved locally, so this is not critical
+                }
+            }
+        }
+        
+        // Check if this is the first deposit
+        if wasFirstDeposit {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("FirstDepositMade"),
+                object: amount
+            )
+        }
+        
+        // Check if we should show monthly goal prompt
+        checkAndShowMonthlyGoalPrompt()
+    }
+    
+    /// Update goal progress when a deposit is made
+    /// Note: This is called AFTER a deposit record is created, so the deposit already has the goalId
+    private func updateGoalProgress(amount: Double, goalId: String?) {
+        let goalsService = GoalsService.shared
+        
+        // If a specific goalId was provided, add to that goal
+        if let goalId = goalId {
+            if let goal = goalsService.getGoal(byId: goalId) {
+                goalsService.addToGoal(goalId: goalId, amount: amount)
+                print("✅ [PlaidService] Added $\(amount) to goal: \(goal.name)")
+            } else {
+                print("⚠️ [PlaidService] Goal not found for ID: \(goalId), deposit not added to goal")
+            }
+        } else if let activeGoal = goalsService.activeGoal {
+            // Fallback: add to active goal if no specific goalId provided
+            goalsService.addToGoal(goalId: activeGoal.id, amount: amount)
+            print("✅ [PlaidService] Added $\(amount) to active goal: \(activeGoal.name)")
+        } else {
+            print("⚠️ [PlaidService] No goal specified and no active goal, deposit not added to any goal")
+        }
+        
+        // NOTE: SavingsReminderService.updateProgressNotification removed - Savings Reminders feature removed
+        // Goal progress notifications are handled by GoalNotificationService
     }
     
     // MARK: - State Management
@@ -426,6 +641,11 @@ class PlaidService: ObservableObject {
         
         if let transfersData = try? encoder.encode(transferHistory) {
             UserDefaults.standard.set(transfersData, forKey: "plaid_transfer_history")
+        }
+        
+        // Save deposit history with timestamps for savings tracker
+        if let depositsData = try? encoder.encode(depositHistory) {
+            UserDefaults.standard.set(depositsData, forKey: "plaid_deposit_history")
         }
         
         UserDefaults.standard.set(protectionAmount, forKey: "plaid_protection_amount")
@@ -448,6 +668,12 @@ class PlaidService: ObservableObject {
         if let transfersData = UserDefaults.standard.data(forKey: "plaid_transfer_history"),
            let transfers = try? decoder.decode([Transfer].self, from: transfersData) {
             transferHistory = transfers
+        }
+        
+        // Load deposit history with timestamps for savings tracker
+        if let depositsData = UserDefaults.standard.data(forKey: "plaid_deposit_history"),
+           let deposits = try? decoder.decode([SavingsDeposit].self, from: depositsData) {
+            depositHistory = deposits.sorted { $0.timestamp > $1.timestamp } // Most recent first
         }
         
         protectionAmount = UserDefaults.standard.double(forKey: "plaid_protection_amount")
@@ -484,6 +710,36 @@ class PlaidService: ObservableObject {
         virtualSavings = 0
         saveState()
         print("✅ [PlaidService] Accounts disconnected")
+    }
+    
+    // MARK: - Monthly Goal Prompt
+    
+    /// Check if we should show the monthly goal prompt after 3 save transfers
+    private func checkAndShowMonthlyGoalPrompt() {
+        // Check if we've already shown the prompt
+        let hasShownPrompt = UserDefaults.standard.bool(forKey: monthlyGoalPromptShownKey)
+        if hasShownPrompt {
+            return
+        }
+        
+        // Count save transfers (plaid, virtual, or manual)
+        let saveTransferCount = depositHistory.filter { deposit in
+            deposit.type == .plaid || deposit.type == .virtual || deposit.type == .manual
+        }.count
+        
+        // Show prompt after 3 saves
+        if saveTransferCount >= 3 {
+            // Mark as shown so we don't show it again
+            UserDefaults.standard.set(true, forKey: monthlyGoalPromptShownKey)
+            
+            // Post notification to show the prompt
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ShowMonthlyGoalPrompt"),
+                object: nil
+            )
+            
+            print("✅ [PlaidService] Monthly goal prompt triggered after \(saveTransferCount) save transfers")
+        }
     }
 }
 

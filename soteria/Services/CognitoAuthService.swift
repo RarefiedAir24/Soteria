@@ -29,13 +29,7 @@ class CognitoAuthService: ObservableObject {
     @Published var refreshToken: String?
     
     private init() {
-        print("✅ [CognitoAuthService] Initialized")
-        print("📝 [CognitoAuthService] Base URL: \(baseURL)")
-        print("📝 [CognitoAuthService] Make sure API Gateway endpoints are configured:")
-        print("   - POST /soteria/auth/signup")
-        print("   - POST /soteria/auth/signin")
-        print("   - POST /soteria/auth/refresh")
-        print("   - POST /soteria/auth/reset-password")
+        // CRITICAL: Minimize work in init() - any work here delays SwiftUI initialization
     }
     
     // MARK: - Authentication Methods
@@ -283,10 +277,28 @@ class CognitoAuthService: ObservableObject {
                         try await refreshAccessToken(refreshToken: refreshToken)
                         print("✅ [CognitoAuthService] Refreshed expired token")
                     } catch {
-                        print("⚠️ [CognitoAuthService] Failed to refresh token: \(error.localizedDescription)")
+                        // Check if this is a cancellation error
+                        let isCancelled = (error as? CancellationError) != nil || error.localizedDescription.contains("cancelled")
+                        
+                        if isCancelled {
+                            // Task was cancelled - don't treat as failure
+                            print("ℹ️ [CognitoAuthService] Token refresh was cancelled")
+                            // Keep current state - don't clear auth
+                            return
+                        }
+                        
+                        // Real error - handle it
+                        let errorMsg = error.localizedDescription
+                        // Only log non-cancellation errors
+                        if !errorMsg.contains("cancelled") {
+                            print("⚠️ [CognitoAuthService] Failed to refresh token: \(errorMsg)")
+                        }
                         await MainActor.run {
-                            self.isAuthenticated = false
-                            self.currentUser = nil
+                            // Only clear auth if it's a real error, not cancellation
+                            if !errorMsg.contains("cancelled") {
+                                self.isAuthenticated = false
+                                self.currentUser = nil
+                            }
                         }
                     }
                 } else {
@@ -394,6 +406,9 @@ class CognitoAuthService: ObservableObject {
     }
     
     private func clearTokens() {
+        // IMPORTANT: Only clear authentication tokens on signout
+        // DO NOT clear user preferences (Quiet Hours schedules, monitoring status, selected apps)
+        // These are device-level preferences that persist across signout/signin for user convenience
         UserDefaults.standard.removeObject(forKey: "cognito_user_id")
         UserDefaults.standard.removeObject(forKey: "cognito_user_email")
         UserDefaults.standard.removeObject(forKey: "cognito_id_token")

@@ -276,7 +276,6 @@ class RegretLoggingService: ObservableObject {
     @Published var recentRegretCount: Int = 0
     
     private let regretsKey = "regret_entries"
-    private let quietHoursService = QuietHoursService.shared
     
     private init() {
         let initStart = Date()
@@ -341,10 +340,10 @@ class RegretLoggingService: ObservableObject {
         // Auto-suggest recovery actions
         suggestRecoveryActions(for: entry)
         
-        // Optionally activate quiet hours for next 24-48 hours
-        if entry.mood.regretRisk > 0.7 {
-            suggestQuietHoursActivation()
-        }
+        // NOTE: Quiet Hours functionality removed - no longer suggesting activation
+        // if entry.mood.regretRisk > 0.7 {
+        //     suggestQuietHoursActivation()
+        // }
     }
     
     // Update a regret entry
@@ -398,10 +397,10 @@ class RegretLoggingService: ObservableObject {
         updateRegret(updatedEntry)
     }
     
-    // Suggest quiet hours activation after high-risk regret
-    private func suggestQuietHoursActivation() {
-        quietHoursService.suggestActivation(reason: "Recent high-risk regret detected")
-    }
+    // NOTE: Quiet Hours functionality removed - this method is no longer used
+    // private func suggestQuietHoursActivation() {
+    //     // Removed - Quiet Hours feature has been removed
+    // }
     
     // Get return guidance for a merchant
     func getReturnGuidance(for merchant: String) -> ReturnGuidance? {

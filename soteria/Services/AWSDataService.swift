@@ -9,9 +9,19 @@ import Foundation
 import Combine
 
 class AWSDataService: ObservableObject {
-    static let shared = AWSDataService()
+    static let shared: AWSDataService = {
+        let accessStart = Date()
+        StartupDiagnostics.shared.log("🔍 [AWSDataService] .shared accessed")
+        let instance = AWSDataService()
+        let accessDuration = Date().timeIntervalSince(accessStart)
+        if accessDuration > 0.01 {
+            StartupDiagnostics.shared.log("⚠️ [AWSDataService] .shared initialization took \(String(format: "%.3f", accessDuration))s")
+        }
+        return instance
+    }()
     
-    private let cognitoService = CognitoAuthService.shared
+    // CRITICAL: Make cognitoService lazy to prevent blocking during AWSDataService initialization
+    private lazy var cognitoService = CognitoAuthService.shared
     
     // API Gateway URL (same as PlaidService for consistency)
     private let apiGatewayURL = "https://ue1psw3mt3.execute-api.us-east-1.amazonaws.com/prod"
@@ -138,6 +148,8 @@ class AWSDataService: ObservableObject {
         // Parse response
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let success = json["success"] as? Bool, success {
+            // Update last sync timestamp (for reinstall detection)
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sync_timestamp")
             print("✅ [AWSDataService] Data synced successfully: \(dataType.rawValue)")
         } else {
             throw NSError(domain: "AWSDataService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Sync failed"])
@@ -416,6 +428,50 @@ class AWSDataService: ObservableObject {
         }
         
         return nil
+    }
+    
+    // MARK: - Account Deletion
+    
+    /// Delete all user data from AWS (DynamoDB and Cognito)
+    /// This is called when user explicitly deletes their account
+    func deleteUserData(userId: String) async throws {
+        let url = URL(string: "\(apiGatewayURL)/soteria/user/delete")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30.0 // Longer timeout for deletion
+        
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        // Request body
+        let requestBody: [String: Any] = [
+            "user_id": userId
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        // Make request
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AWSDataService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw NSError(domain: "AWSDataService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        }
+        
+        // Parse response
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let success = json["success"] as? Bool, success else {
+            throw NSError(domain: "AWSDataService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to delete user data"])
+        }
+        
+        print("✅ [AWSDataService] User data deleted successfully")
     }
 }
 

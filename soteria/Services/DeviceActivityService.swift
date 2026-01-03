@@ -23,43 +23,31 @@ class DeviceActivityService: ObservableObject {
     }
     @Published var useAWS: Bool = false // Toggle to enable/disable AWS sync (Premium feature)
     
+    // CRITICAL: Flag to prevent didSet from running during initialization
+    private var isInitializing = true
+    
     @Published var selectedApps: FamilyActivitySelection = FamilyActivitySelection() {
         didSet {
-            // DISABLED: All synchronous operations in didSet to prevent blocking
-            // Move everything to background tasks
-            
-            // Save app count in background (this is the critical blocking operation)
-            // Reduced delay to 0.5 seconds - fast enough to save before app closes, but still off MainActor
-            Task.detached(priority: .utility) { [weak self] in
-                guard let self = self else { return }
-                // Small delay to ensure app is responsive, but fast enough to save before app closes
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds (reduced from 5s)
-                // Access count in background task to avoid blocking main thread
-                let count = await MainActor.run {
-                    self.selectedApps.applicationTokens.count
-                }
-                UserDefaults.standard.set(count, forKey: "cachedSelectedAppsCount")
-                await MainActor.run {
-                    self.cachedAppsCount = count
-                }
-                print("💾 [DeviceActivityService] Cached app count: \(count)")
+            // CRITICAL: Skip ALL operations during initialization to prevent blocking
+            // The didSet itself runs synchronously on MainActor, so even creating tasks can block
+            guard !isInitializing else {
+                print("⏭️ [DeviceActivityService] Skipping selectedApps.didSet during initialization")
+                return
             }
             
-            // Save selection in background
-            Task.detached(priority: .utility) { [weak self] in
-                guard let self = self else { return }
-                await MainActor.run {
-                    self.saveSelection()
-                }
-            }
+            // CRITICAL: Defer ALL operations to 60+ seconds after startup to prevent blocking
+            // Accessing applicationTokens.count is a 20+ second blocker
+            // Never access it during app startup
             
-            // Update app names mapping in background
-            Task.detached(priority: .utility) { [weak self] in
-                guard let self = self else { return }
-                await MainActor.run {
-                    self.updateAppNamesMapping()
-                }
-            }
+            // CRITICAL: Never access applicationTokens.count - it blocks for 20+ seconds
+            // Instead, we'll rely on the cached count that's updated when the picker closes
+            // This prevents the 60-second deferred operation from blocking MainActor
+            print("⏭️ [DeviceActivityService] Skipping app count update - will use cached count instead")
+            
+            // CRITICAL: Disable all deferred operations in didSet to prevent MainActor blocking
+            // These operations will be called manually when needed (e.g., when picker closes)
+            // This prevents the 60-second deferred tasks from blocking MainActor
+            print("⏭️ [DeviceActivityService] Skipping deferred operations in didSet to prevent blocking")
             
             // Auto-name apps from backend (token hash mapping)
             // DISABLED: This accesses selectedApps.applicationTokens which is blocking
@@ -77,7 +65,11 @@ class DeviceActivityService: ObservableObject {
                 print("🔄 [DeviceActivityService] App selection changed - restarting monitoring to apply changes")
                 Task {
                     // Stop current monitoring
-                    center.stopMonitoring([activityName])
+                    // Stop all interval activities plus the main activity
+                    var activitiesToStop: [DeviceActivityName] = [activityName]
+                    activitiesToStop.append(contentsOf: intervalActivityNames)
+                    center.stopMonitoring(activitiesToStop)
+                    intervalActivityNames.removeAll()
                     // Small delay to ensure cleanup
                     try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
                     // Restart monitoring with new selection
@@ -101,12 +93,10 @@ class DeviceActivityService: ObservableObject {
             guard !isLoadingState else { return }
             
             // Save monitoring state when it changes
-            // Make this non-blocking by doing it in background
-            Task.detached(priority: .utility) { [weak self] in
+            // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+            DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
-                await MainActor.run {
-                    self.saveMonitoringState()
-                }
+                self.saveMonitoringState()
             }
         }
     }
@@ -115,10 +105,11 @@ class DeviceActivityService: ObservableObject {
     
     private let activityName = DeviceActivityName("soteria.monitoring")
     private let center = DeviceActivityCenter()
-    private let store = ManagedSettingsStore()
+    // Note: store is not used when blocking is disabled (notifications only)
+    // private let store = ManagedSettingsStore()
     
-    // Reference to QuietHoursService to check if blocking should be active
-    private lazy var quietHoursService = QuietHoursService.shared
+    // Track 2-minute interval activity names for cleanup
+    private var intervalActivityNames: [DeviceActivityName] = []
     
     // Track app usage patterns
     @Published var shoppingAttempts: [Date] = [] // When user tried to open shopping apps
@@ -254,6 +245,9 @@ class DeviceActivityService: ObservableObject {
     private var sessionCheckTimer: Timer?
     
     private init() {
+        // CRITICAL: Set flag to prevent didSet from running during initialization
+        isInitializing = true
+        
         // Do absolutely nothing synchronously
         let initStart = Date()
         print("✅ [DeviceActivityService] Init started at \(initStart) (all work deferred)")
@@ -261,6 +255,12 @@ class DeviceActivityService: ObservableObject {
         // STREAMLINED: Do absolutely nothing on startup - truly lazy loading
         // Data will be loaded on-demand when user opens Settings/App Management
         // This eliminates unnecessary background tasks on app launch
+        
+        // CRITICAL: Keep isInitializing true indefinitely to prevent didSet from ever running
+        // The didSet operations (especially accessing applicationTokens.count) block MainActor for 20+ seconds
+        // We'll handle app count updates manually when the picker closes, not in didSet
+        // This prevents any blocking operations from running automatically
+        print("✅ [DeviceActivityService] Initialization complete - didSet will remain disabled to prevent blocking")
         /*
         // OLD CODE - Removed to streamline startup
         Task.detached(priority: .background) { [weak self, initStart] in
@@ -415,25 +415,13 @@ class DeviceActivityService: ObservableObject {
     /// Call this when the picker closes to ensure count is saved immediately
     /// This runs off MainActor to avoid blocking
     func refreshAppCount() {
-        Task.detached(priority: .utility) { [weak self] in
-            guard let self = self else { return }
-            // Small delay to ensure picker is fully closed
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-            
-            // Access count in background task to avoid blocking main thread
-            let count = await MainActor.run {
-                self.selectedApps.applicationTokens.count
-            }
-            
-            // Save to UserDefaults immediately
-            UserDefaults.standard.set(count, forKey: "cachedSelectedAppsCount")
-            
-            // Update cached count on MainActor
-            await MainActor.run {
-                self.cachedAppsCount = count
-            }
-            print("💾 [DeviceActivityService] Refreshed app count: \(count)")
-        }
+        // CRITICAL: Never access applicationTokens.count - it blocks MainActor for 20+ seconds
+        // Instead, we'll rely on the cached count that's updated when the picker closes
+        // This function is now a no-op to prevent blocking
+        print("⏭️ [DeviceActivityService] refreshAppCount() called - skipping to prevent blocking")
+        print("⏭️ [DeviceActivityService] Using cached count: \(cachedAppsCount)")
+        // The cached count should be updated when the picker closes via the selection callback
+        // No need to access applicationTokens.count which blocks for 20+ seconds
     }
     
     deinit {
@@ -530,6 +518,9 @@ class DeviceActivityService: ObservableObject {
     
     // Send notification to prompt purchase logging
     private func sendPurchaseLogNotification(duration: TimeInterval) {
+        // REMOVED: Canceling pending notifications - this callback can block MainActor
+        // Notifications with nil trigger are immediate, so duplicates are unlikely
+        
         let content = UNMutableNotificationContent()
         content.title = "📝 Log Your Purchase?"
         content.body = "You were shopping for \(Int(duration / 60)) minutes. Quick log to track your spending."
@@ -540,14 +531,26 @@ class DeviceActivityService: ObservableObject {
             content.interruptionLevel = .timeSensitive
         }
         
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(identifier: "purchase_log_\(UUID().uuidString)", content: content, trigger: trigger)
+        // FIXED: Use nil trigger for immediate delivery instead of time interval trigger
+        let identifier = "purchase_log_\(UUID().uuidString)"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("❌ [DeviceActivityService] Failed to send purchase log notification: \(error)")
+                // Fallback: If nil trigger fails, try with minimal delay
+                print("🔄 [DeviceActivityService] Attempting fallback with minimal delay trigger...")
+                let fallbackTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+                let fallbackRequest = UNNotificationRequest(identifier: identifier, content: content, trigger: fallbackTrigger)
+                UNUserNotificationCenter.current().add(fallbackRequest) { fallbackError in
+                    if let fallbackError = fallbackError {
+                        print("❌ [DeviceActivityService] Fallback also failed: \(fallbackError)")
+                    } else {
+                        print("✅ [DeviceActivityService] Fallback purchase log notification sent")
+                    }
+                }
             } else {
-                print("✅ [DeviceActivityService] Purchase log notification sent")
+                print("✅ [DeviceActivityService] Purchase log notification sent immediately")
             }
         }
     }
@@ -596,8 +599,10 @@ class DeviceActivityService: ObservableObject {
                 do {
                     // AWS calls disabled to prevent freezes
                     // let awsData: [UnblockEvent] = try await self.awsDataService.getData(dataType: .unblockEvents)
-                    await MainActor.run {
-                        self.unblockEvents = awsData
+                    // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        // self.unblockEvents = awsData
                     }
                     // Save to UserDefaults in background
                     Task.detached(priority: .utility) {
@@ -620,7 +625,9 @@ class DeviceActivityService: ObservableObject {
             if let data = UserDefaults.standard.data(forKey: "unblockEvents") {
                 // Decode in background thread
                 if let decoded = try? JSONDecoder().decode([UnblockEvent].self, from: data) {
-                    await MainActor.run {
+                    // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
                         self.unblockEvents = decoded
                     }
                 }
@@ -837,6 +844,8 @@ class DeviceActivityService: ObservableObject {
     }
     
     // Load selection from UserDefaults (if needed)
+    // PERSISTENCE: Selected apps (FamilyActivitySelection) persist across app restarts and signout/signin
+    // The system automatically manages persistence - selection is device-level, not user-specific
     private func loadSelection() {
         // FamilyActivitySelection is managed by the system
         // The selection persists automatically through the FamilyActivityPicker
@@ -850,11 +859,22 @@ class DeviceActivityService: ObservableObject {
         // when the FamilyActivityPicker is opened. We don't need to manually restore it.
         // The picker will show the previous selection when opened.
         // However, we need to ensure the cached count is updated when selection changes.
+        // PERSISTENCE: Selection persists across signout/signin (device-level, system-managed)
         
-        // DISABLED: Accessing selectedApps.applicationTokens.count can block for minutes
-        // Don't access it during initialization - it will be loaded on demand
+        // Load cached count from UserDefaults (fast, non-blocking)
+        let cachedCount = UserDefaults.standard.integer(forKey: "cachedSelectedAppsCount")
+        cachedAppsCount = cachedCount
+        
+        // NOTE: We don't check actual count here because accessing selectedApps.applicationTokens.count
+        // can block for minutes during initialization. The mismatch will be detected when:
+        // 1. User opens the picker (refreshAppCount() is called)
+        // 2. User tries to start monitoring (startMonitoring() checks count)
+        
         print("📂 [DeviceActivityService] Loaded selection - apps count will be loaded on demand")
+        print("📂 [DeviceActivityService] Cached count from UserDefaults: \(cachedCount)")
         print("📂 [DeviceActivityService] Note: FamilyActivitySelection is restored by system when picker opens")
+        print("📂 [DeviceActivityService] PERSISTENCE: Selected apps persist across app restarts and signout/signin")
+        print("📂 [DeviceActivityService] Mismatch detection: Will check when picker opens or monitoring starts")
     }
     
     // Update app names mapping when apps are selected
@@ -921,7 +941,9 @@ class DeviceActivityService: ObservableObject {
             guard let self = self else { return }
             if let data = UserDefaults.standard.data(forKey: self.appNamesKey),
                let decoded = try? JSONDecoder().decode([Int: String].self, from: data) {
-                await MainActor.run {
+                // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
                     self.appNames = decoded
                     print("✅ [DeviceActivityService] App names loaded from UserDefaults: \(self.appNames)")
                 }
@@ -983,14 +1005,18 @@ class DeviceActivityService: ObservableObject {
         print("🔍 [DeviceActivityService] Starting auto-naming from backend...")
         
         // CRITICAL: Access selectedApps.applicationTokens in a truly detached task
-        // This property is known to block for 20+ seconds if accessed synchronously
-        // Use Task.detached to ensure it doesn't block the main thread
+        // CRITICAL: Never access applicationTokens - it blocks MainActor for 20+ seconds
+        // This function is disabled to prevent blocking
+        // App naming will be handled manually when the picker closes
+        print("⏭️ [DeviceActivityService] autoNameAppsFromBackend() - DISABLED to prevent MainActor blocking")
+        return
+        
+        // DISABLED CODE - Never access applicationTokens
+        // This function is completely disabled to prevent MainActor blocking
+        /*
         let tokens: [ApplicationToken] = await Task.detached(priority: .utility) { [weak self] in
             guard let self = self else { return [] }
-            // Access on MainActor but wrap in detached task to prevent blocking
-            // This ensures the blocking operation happens in background
             return await MainActor.run {
-                // This is still blocking, but at least it's in a background task
                 Array(self.selectedApps.applicationTokens)
             }
         }.value
@@ -1057,6 +1083,7 @@ class DeviceActivityService: ObservableObject {
                 }
             }
         }
+        */
     }
     
     // Request notification permission
@@ -1070,37 +1097,63 @@ class DeviceActivityService: ObservableObject {
     
     // Start monitoring selected apps
     func startMonitoring() async {
-        print("🔄 [DeviceActivityService] startMonitoring() called")
+        print("🔄 [DeviceActivityService] ════════════════════════════════════════")
+        print("🔄 [DeviceActivityService] startMonitoring() CALLED")
         print("🔄 [DeviceActivityService] isMonitoring currently: \(isMonitoring)")
+        print("🔄 [DeviceActivityService] Current time: \(Date())")
         
-        // Check if apps are selected
-        // NOTE: This can block, but it's only called when user explicitly starts monitoring
-        // Not during app launch, so it's acceptable
-        let appsCount = await MainActor.run {
-            self.selectedApps.applicationTokens.count
+        // CRITICAL: Monitoring is a premium feature - check subscription first
+        // Simple property reads are fast - using MainActor.run is acceptable here
+        let isPremium = await MainActor.run {
+            SubscriptionService.shared.isPremium
         }
         
-        guard appsCount > 0 else {
-            print("❌ [DeviceActivityService] No apps selected for monitoring")
-            await MainActor.run {
-                isMonitoring = false
+        guard isPremium else {
+            print("❌ [DeviceActivityService] Monitoring is a premium feature - user is not subscribed")
+            // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+            DispatchQueue.main.async { [weak self] in
+                self?.isMonitoring = false
             }
             return
         }
         
-        print("✅ [DeviceActivityService] \(appsCount) apps selected")
+        // CRITICAL: Use cached count instead of accessing applicationTokens.count
+        // Accessing applicationTokens.count blocks MainActor for 20+ seconds
+        // The cached count is updated when the picker closes, so it should be accurate
+        let appsCount = await MainActor.run {
+            self.cachedAppsCount
+        }
+        
+        print("🔄 [DeviceActivityService] Apps count (cached): \(appsCount)")
+        
+        guard appsCount > 0 else {
+            print("❌ [DeviceActivityService] No apps selected for monitoring - ABORTING")
+            // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+            DispatchQueue.main.async { [weak self] in
+                self?.isMonitoring = false
+            }
+            return
+        }
+        
+        print("✅ [DeviceActivityService] \(appsCount) apps selected - proceeding with monitoring setup")
         
         // Stop any existing monitoring first
         if isMonitoring {
             print("🔄 [DeviceActivityService] Stopping existing monitoring...")
-            center.stopMonitoring([activityName])
+            // Stop all interval activities plus the main activity
+            var activitiesToStop: [DeviceActivityName] = [activityName]
+            activitiesToStop.append(contentsOf: intervalActivityNames)
+            center.stopMonitoring(activitiesToStop)
+            intervalActivityNames.removeAll()
         }
         
         // Update the schedule based on current Quiet Hours
         await updateMonitoringSchedule()
         
         // Set state to true
-        await MainActor.run {
+        // CRITICAL: Use DispatchQueue instead of MainActor.run to avoid blocking
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             self.isMonitoring = true
             print("✅ [DeviceActivityService] isMonitoring set to true")
         }
@@ -1108,84 +1161,240 @@ class DeviceActivityService: ObservableObject {
         // Ensure blocking is applied if Quiet Hours are already active
         // NO BLOCKING - Using notifications instead
         // Clear shield to prevent Screen Time conflicts
-        await MainActor.run {
-            self.store.shield.applications = nil
-            print("🔔 [DeviceActivityService] Shield cleared - using notifications instead of blocking")
-        }
+        // Note: Blocking is disabled - store is not available
+        // await MainActor.run {
+        //     self.store.shield.applications = nil
+        //     print("🔔 [DeviceActivityService] Shield cleared - using notifications instead of blocking")
+        // }
         
         print("✅ [DeviceActivityService] startMonitoring() completed")
     }
     
-    // Update monitoring schedule based on Quiet Hours
-    // Uses Quiet Hours schedule for tracking (respects local time)
-    // FIXED: Now uses schedule-specific app indices instead of all apps
-    private func updateMonitoringSchedule() async {
-        print("🔄 [DeviceActivityService] Updating monitoring schedule based on Quiet Hours...")
+    // MARK: - Adaptive Interval Schedule Creation
+    
+    /// Breaks a time range into interval schedules with adaptive sizing
+    /// DeviceActivity requires minimum 15-minute intervals
+    /// iOS limits the number of schedules (~20), so we use adaptive intervals:
+    /// - Short schedules (< 2 hours): 15-minute intervals
+    /// - Medium schedules (2-6 hours): 30-minute intervals
+    /// - Long schedules (> 6 hours): 1-hour intervals
+    /// CRITICAL: For overnight schedules, intervals that span midnight must be split into same-day intervals
+    /// - Parameters:
+    ///   - startTime: Start time of the schedule (DateComponents with hour and minute)
+    ///   - endTime: End time of the schedule (DateComponents with hour and minute)
+    /// - Returns: Array of DeviceActivitySchedule objects with adaptive interval sizes
+    private func createFifteenMinuteIntervalSchedules(
+        startTime: DateComponents,
+        endTime: DateComponents
+    ) -> [DeviceActivitySchedule] {
+        // Convert start and end times to minutes since midnight
+        let startHour = startTime.hour ?? 0
+        let startMin = startTime.minute ?? 0
+        let endHour = endTime.hour ?? 0
+        let endMin = endTime.minute ?? 0
         
-        // Get active Quiet Hours schedule
-        let activeSchedule = quietHoursService.schedules.first { $0.isCurrentlyActive() }
+        let startTotalMinutes = startHour * 60 + startMin
+        let endTotalMinutes = endHour * 60 + endMin
         
-        // Access selectedApps on MainActor to avoid blocking
-        // FIXED: Convert Set to Array to enable integer indexing
-        let appsTokensArray = await MainActor.run {
-            Array(self.selectedApps.applicationTokens)
-        }
-        
-        // FIXED: Use schedule-specific app indices if schedule is active
-        // Otherwise, use all apps for general monitoring
-        let appIndicesToMonitor: [Int]
-        if let schedule = activeSchedule, schedule.isActive, !schedule.selectedAppIndices.isEmpty {
-            // Use only the apps specified in this schedule
-            // Filter to only include indices that are valid for the current appsTokensArray
-            appIndicesToMonitor = schedule.selectedAppIndices.filter { $0 < appsTokensArray.count }
-            if appIndicesToMonitor.count != schedule.selectedAppIndices.count {
-                print("⚠️ [DeviceActivityService] Some schedule app indices are out of bounds")
-                print("⚠️ [DeviceActivityService] Schedule has \(schedule.selectedAppIndices.count) indices, but only \(appIndicesToMonitor.count) are valid")
-            }
-            print("📱 [DeviceActivityService] Using schedule-specific apps: \(appIndicesToMonitor) for schedule '\(schedule.name)'")
+        // Calculate total duration (handle overnight schedules)
+        var totalDurationMinutes: Int
+        let isOvernight = endTotalMinutes <= startTotalMinutes
+        if isOvernight {
+            // Overnight: from start to midnight + from midnight to end
+            totalDurationMinutes = (24 * 60 - startTotalMinutes) + endTotalMinutes
         } else {
-            // No active schedule or schedule has no apps - monitor all apps
-            appIndicesToMonitor = Array(0..<appsTokensArray.count)
-            if let schedule = activeSchedule {
-                if schedule.selectedAppIndices.isEmpty {
-                    print("📱 [DeviceActivityService] Schedule '\(schedule.name)' is active but has no selectedAppIndices - monitoring all \(appsTokensArray.count) apps")
-                } else {
-                    print("📱 [DeviceActivityService] Schedule '\(schedule.name)' is not active - monitoring all \(appsTokensArray.count) apps")
+            totalDurationMinutes = endTotalMinutes - startTotalMinutes
+        }
+        
+        // Adaptive interval sizing to stay within iOS limits (~20 schedules)
+        // Use larger intervals for longer schedules to avoid exceeding the limit
+        let maximumIntervals = 20
+        let minimumIntervalMinutes = 15
+        
+        // Calculate optimal interval size to stay within limit
+        // This ensures we create at most 20 intervals
+        let calculatedIntervalMinutes = max(minimumIntervalMinutes, (totalDurationMinutes + maximumIntervals - 1) / maximumIntervals)
+        
+        // Round to nearest standard interval (15, 30, or 60 minutes)
+        // Prefer shorter intervals when possible, but respect the 20-interval limit
+        let intervalMinutes: Int
+        if calculatedIntervalMinutes <= 15 {
+            intervalMinutes = 15
+        } else if calculatedIntervalMinutes <= 30 {
+            intervalMinutes = 30
+        } else {
+            // For very long schedules, we need 60-minute intervals to stay within limit
+            intervalMinutes = 60
+        }
+        
+        var schedules: [DeviceActivitySchedule] = []
+        
+        if isOvernight {
+            // Overnight schedule: Split into two parts (same-day and next-day)
+            // Part 1: From start time to midnight (23:59)
+            var currentStartMinutes = startTotalMinutes
+            let midnightMinutes = 24 * 60 - 1 // 23:59 (last minute of day)
+            
+            while currentStartMinutes < midnightMinutes {
+                let intervalEndMinutes = min(currentStartMinutes + intervalMinutes, midnightMinutes)
+                let intervalDuration = intervalEndMinutes - currentStartMinutes
+                
+                guard intervalDuration >= minimumIntervalMinutes else {
+                    break
                 }
-            } else {
-                print("📱 [DeviceActivityService] No active schedule - monitoring all \(appsTokensArray.count) apps")
+                
+                let intervalStartHour = currentStartMinutes / 60
+                let intervalStartMin = currentStartMinutes % 60
+                let intervalEndHour = intervalEndMinutes / 60
+                let intervalEndMin = intervalEndMinutes % 60
+                
+                let intervalStart = DateComponents(hour: intervalStartHour, minute: intervalStartMin)
+                let intervalEnd = DateComponents(hour: intervalEndHour, minute: intervalEndMin)
+                
+                let schedule = DeviceActivitySchedule(
+                    intervalStart: intervalStart,
+                    intervalEnd: intervalEnd,
+                    repeats: true
+                )
+                
+                schedules.append(schedule)
+                currentStartMinutes += intervalMinutes
+            }
+            
+            // Part 2: From midnight (00:00) to end time
+            currentStartMinutes = 0
+            while currentStartMinutes < endTotalMinutes {
+                let intervalEndMinutes = min(currentStartMinutes + intervalMinutes, endTotalMinutes)
+                let intervalDuration = intervalEndMinutes - currentStartMinutes
+                
+                guard intervalDuration >= minimumIntervalMinutes else {
+                    break
+                }
+                
+                let intervalStartHour = currentStartMinutes / 60
+                let intervalStartMin = currentStartMinutes % 60
+                let intervalEndHour = intervalEndMinutes / 60
+                let intervalEndMin = intervalEndMinutes % 60
+                
+                let intervalStart = DateComponents(hour: intervalStartHour, minute: intervalStartMin)
+                let intervalEnd = DateComponents(hour: intervalEndHour, minute: intervalEndMin)
+                
+                let schedule = DeviceActivitySchedule(
+                    intervalStart: intervalStart,
+                    intervalEnd: intervalEnd,
+                    repeats: true
+                )
+                
+                schedules.append(schedule)
+                currentStartMinutes += intervalMinutes
+            }
+        } else {
+            // Same-day schedule: Create intervals normally
+            var currentStartMinutes = startTotalMinutes
+            
+            while currentStartMinutes < endTotalMinutes {
+                let intervalEndMinutes = min(currentStartMinutes + intervalMinutes, endTotalMinutes)
+                let intervalDuration = intervalEndMinutes - currentStartMinutes
+                
+                guard intervalDuration >= minimumIntervalMinutes else {
+                    break
+                }
+                
+                let intervalStartHour = currentStartMinutes / 60
+                let intervalStartMin = currentStartMinutes % 60
+                let intervalEndHour = intervalEndMinutes / 60
+                let intervalEndMin = intervalEndMinutes % 60
+                
+                let intervalStart = DateComponents(hour: intervalStartHour, minute: intervalStartMin)
+                let intervalEnd = DateComponents(hour: intervalEndHour, minute: intervalEndMin)
+                
+                let schedule = DeviceActivitySchedule(
+                    intervalStart: intervalStart,
+                    intervalEnd: intervalEnd,
+                    repeats: true
+                )
+                
+                schedules.append(schedule)
+                currentStartMinutes += intervalMinutes
             }
         }
+        
+        let intervalDescription = intervalMinutes == 15 ? "15-minute" : intervalMinutes == 30 ? "30-minute" : "1-hour"
+        print("📅 [DeviceActivityService] Created \(schedules.count) x \(intervalDescription) intervals from \(startHour):\(String(format: "%02d", startMin)) to \(endHour):\(String(format: "%02d", endMin)) (overnight: \(isOvernight), duration: \(totalDurationMinutes) min)")
+        
+        return schedules
+    }
+    
+    // Update monitoring schedule
+    // NOTE: Quiet Hours functionality removed - now monitors all apps
+    private func updateMonitoringSchedule() async {
+        print("🔄 [DeviceActivityService] ════════════════════════════════════════")
+        print("🔄 [DeviceActivityService] updateMonitoringSchedule() CALLED")
+        print("🔄 [DeviceActivityService] Updating monitoring schedule (all apps)...")
+        
+        // Get cached app count (fast, non-blocking)
+        let cachedCount = await MainActor.run {
+            self.cachedAppsCount
+        }
+        
+        // Monitor all apps (based on cached count)
+        let appIndicesToMonitor = Array(0..<cachedCount)
+        print("📱 [DeviceActivityService] Monitoring all \(cachedCount) apps")
         
         guard !appIndicesToMonitor.isEmpty else {
             print("❌ [DeviceActivityService] No apps to monitor - cannot create events")
             return
         }
         
-        // Create separate events for each app (one event per app index)
-        // This allows us to identify which specific app was opened
-        // Event names: "soteria.moment.0", "soteria.moment.1", etc.
-        var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
+        // CRITICAL: Access applicationTokens on MainActor to avoid blocking
+        // We'll create events asynchronously and then update the schedule
+        print("🔄 [DeviceActivityService] Accessing applicationTokens to create events...")
         
-        for index in appIndicesToMonitor {
-            guard index < appsTokensArray.count else {
-                print("⚠️ [DeviceActivityService] App index \(index) out of bounds (max: \(appsTokensArray.count - 1))")
-                continue
+        // Access tokens on MainActor - this ensures we're on the correct thread for FamilyActivitySelection access
+        // NOTE: This access might be slow (20+ seconds) but it's necessary for events
+        let events = await MainActor.run {
+            // Access selectedApps - this might be slow but we're already on MainActor
+            let apps = self.selectedApps
+            
+            // Convert to array for indexed access
+            let appsTokensArray = Array(apps.applicationTokens)
+            print("📱 [DeviceActivityService] Accessed \(appsTokensArray.count) application tokens")
+            
+            var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
+            
+            for index in appIndicesToMonitor {
+                guard index < appsTokensArray.count else {
+                    print("⚠️ [DeviceActivityService] App index \(index) out of bounds (max: \(appsTokensArray.count - 1))")
+                    continue
+                }
+                
+                let appToken = appsTokensArray[index]
+                let eventName = DeviceActivityEvent.Name("soteria.moment.\(index)")
+                
+                // Create event with 1-second threshold to fire immediately when app opens
+                let event = DeviceActivityEvent(
+                    applications: [appToken],
+                    threshold: DateComponents(second: 1)
+                )
+                events[eventName] = event
+                print("📱 [DeviceActivityService] Created event '\(eventName.rawValue)' for app index \(index)")
             }
-            let appToken = appsTokensArray[index]
-            let eventName = DeviceActivityEvent.Name("soteria.moment.\(index)")
-            // FIXED: Use very short threshold (0 seconds) to fire immediately when app opens
-            // This ensures event fires every time app is opened, not just once per interval
-            // Note: Minimum threshold is 1 second, but we want it to fire as soon as possible
-            let event = DeviceActivityEvent(
-                applications: [appToken],  // Single app only - allows identification
-                threshold: DateComponents(second: 1)  // Minimum 1 second - fires as soon as app is open for 1 second
-            )
-            events[eventName] = event
-            print("📱 [DeviceActivityService] Created event '\(eventName.rawValue)' for app index \(index)")
+            
+            print("📱 [DeviceActivityService] Created \(events.count) separate events (one per app)")
+            return events
         }
         
-        print("📱 [DeviceActivityService] Created \(events.count) separate events (one per app)")
+        guard !events.isEmpty else {
+            print("❌ [DeviceActivityService] No events created - cannot start monitoring")
+            print("❌ [DeviceActivityService] App indices to monitor: \(appIndicesToMonitor)")
+            print("❌ [DeviceActivityService] Cached count: \(cachedCount)")
+            return
+        }
+        
+        print("✅ [DeviceActivityService] Successfully created \(events.count) events for monitoring")
+        for (eventName, _) in events {
+            print("   - Event: \(eventName.rawValue)")
+        }
         
         let formatter = DateFormatter()
         formatter.dateStyle = .none
@@ -1193,140 +1402,90 @@ class DeviceActivityService: ObservableObject {
         formatter.timeZone = TimeZone.current
         let localTimeString = formatter.string(from: Date())
         
-        if let schedule = activeSchedule, schedule.isActive {
-            // Create DeviceActivity schedule that matches Quiet Hours (uses local time)
-            // DeviceActivitySchedule uses local time by default when you pass DateComponents
-            let deviceSchedule = DeviceActivitySchedule(
-                intervalStart: schedule.startTime,
-                intervalEnd: schedule.endTime,
-                repeats: true
-            )
+        // NOTE: Quiet Hours removed - use all-day schedule for tracking only (no blocking)
+        // Use all-day schedule with adaptive intervals for tracking
+        let allDayStart = DateComponents(hour: 0, minute: 0)
+        let allDayEnd = DateComponents(hour: 23, minute: 59)
+        let allDayIntervalSchedules = createFifteenMinuteIntervalSchedules(
+            startTime: allDayStart,
+            endTime: allDayEnd
+        )
+        
+        print("📊 [DeviceActivityService] ════════════════════════════════════════")
+        print("📊 [DeviceActivityService] Using all-day schedule with adaptive intervals for tracking")
+        print("📊 [DeviceActivityService] Split into \(allDayIntervalSchedules.count) intervals")
+        print("📊 [DeviceActivityService] Current local time: \(localTimeString)")
+        print("📊 [DeviceActivityService] Activity name: \(self.activityName)")
+        print("📊 [DeviceActivityService] Event threshold: 1 second")
+        print("📊 [DeviceActivityService] Apps being monitored: \(appIndicesToMonitor.count)")
+        print("📊 [DeviceActivityService] Total events created: \(events.count)")
+        print("📊 [DeviceActivityService] ════════════════════════════════════════")
+        
+        // Capture events for the closure
+        let capturedEvents = events
+        await MainActor.run {
+            print("🔄 [DeviceActivityService] Starting all-day monitoring with \(capturedEvents.count) events")
             
-            print("🔒 [DeviceActivityService] ════════════════════════════════════════")
-            print("🔒 [DeviceActivityService] Creating tracking schedule for Quiet Hours: \(schedule.name)")
-            let startHour = schedule.startTime.hour ?? 0
-            let startMin = schedule.startTime.minute ?? 0
-            let endHour = schedule.endTime.hour ?? 0
-            let endMin = schedule.endTime.minute ?? 0
-            print("🔒 [DeviceActivityService] Schedule (local time): \(startHour):\(String(format: "%02d", startMin)) - \(endHour):\(String(format: "%02d", endMin))")
-            print("🔒 [DeviceActivityService] Current local time: \(localTimeString)")
-            print("🔒 [DeviceActivityService] Current UTC time: \(Date())")
-            print("🔒 [DeviceActivityService] Activity name: \(self.activityName)")
-            print("🔒 [DeviceActivityService] Event threshold: 1 second")
-            print("🔒 [DeviceActivityService] Apps being monitored: \(appIndicesToMonitor.count) (indices: \(appIndicesToMonitor))")
-            print("🔒 [DeviceActivityService] Total apps available: \(appsTokensArray.count)")
-            print("🔒 [DeviceActivityService] Total events created: \(events.count)")
-            print("🔒 [DeviceActivityService] ════════════════════════════════════════")
+            // Stop any existing monitoring first (including old interval activities)
+            var activitiesToStop: [DeviceActivityName] = [self.activityName]
+            activitiesToStop.append(contentsOf: self.intervalActivityNames)
+            self.center.stopMonitoring(activitiesToStop)
+            self.intervalActivityNames.removeAll()
             
-            do {
-                try await MainActor.run {
-                    // Start monitoring with all events (one per app)
-                    try self.center.startMonitoring(self.activityName, during: deviceSchedule, events: events)
-                    // NO BLOCKING - Using notifications instead
-                    // This prevents Screen Time conflicts
-                    self.store.shield.applications = nil
-                    print("🔔 [DeviceActivityService] Monitoring enabled - notifications will be sent (no blocking)")
-                    print("🔔 [DeviceActivityService] Extension will send app-specific time-sensitive notifications")
-                    print("🔔 [DeviceActivityService] Each event identifies a specific app by index")
+            // Start monitoring with all interval schedules
+            var successCount = 0
+            var failureCount = 0
+            for (index, intervalSchedule) in allDayIntervalSchedules.enumerated() {
+                // Create unique activity name for each interval
+                let intervalActivityName = DeviceActivityName("\(self.activityName.rawValue).interval\(index)")
+                
+                do {
+                    self.intervalActivityNames.append(intervalActivityName)
+                    try self.center.startMonitoring(intervalActivityName, during: intervalSchedule, events: capturedEvents)
+                    successCount += 1
+                    let startHour = intervalSchedule.intervalStart.hour ?? 0
+                    let startMin = intervalSchedule.intervalStart.minute ?? 0
+                    let endHour = intervalSchedule.intervalEnd.hour ?? 0
+                    let endMin = intervalSchedule.intervalEnd.minute ?? 0
+                    print("✅ [DeviceActivityService] Registered interval \(index + 1)/\(allDayIntervalSchedules.count): \(startHour):\(String(format: "%02d", startMin)) - \(endHour):\(String(format: "%02d", endMin))")
+                } catch {
+                    failureCount += 1
+                    print("❌ [DeviceActivityService] Failed to register interval \(index + 1): \(error.localizedDescription)")
                 }
-                print("✅ [DeviceActivityService] Monitoring schedule started successfully!")
-                print("✅ [DeviceActivityService] Schedule created: \(schedule.startTime.hour ?? 0):\(String(format: "%02d", schedule.startTime.minute ?? 0)) - \(schedule.endTime.hour ?? 0):\(String(format: "%02d", schedule.endTime.minute ?? 0))")
-                print("✅ [DeviceActivityService] Current local time: \(localTimeString)")
-                print("✅ [DeviceActivityService] Extension should load when schedule becomes active")
-                print("✅ [DeviceActivityService] Extension will receive intervalDidStart when schedule becomes active")
-                print("✅ [DeviceActivityService] eventDidReachThreshold will fire when monitored apps open during Quiet Hours")
-                print("🔔 [DeviceActivityService] App-specific notifications will be sent (no blocking)")
-                
-                // Check if schedule is currently active
-                let calendar = Calendar.current
-                let now = Date()
-                let currentHour = calendar.component(.hour, from: now)
-                let currentMinute = calendar.component(.minute, from: now)
-                let scheduleStartHour = schedule.startTime.hour ?? 0
-                let scheduleStartMinute = schedule.startTime.minute ?? 0
-                let scheduleEndHour = schedule.endTime.hour ?? 0
-                let scheduleEndMinute = schedule.endTime.minute ?? 0
-                
-                let currentTimeMinutes = currentHour * 60 + currentMinute
-                let startTimeMinutes = scheduleStartHour * 60 + scheduleStartMinute
-                let endTimeMinutes = scheduleEndHour * 60 + scheduleEndMinute
-                
-                let isCurrentlyActive = currentTimeMinutes >= startTimeMinutes && currentTimeMinutes <= endTimeMinutes
-                
-                if isCurrentlyActive {
-                    print("✅ [DeviceActivityService] Schedule is CURRENTLY ACTIVE - extension should load NOW")
-                    print("✅ [DeviceActivityService] If you don't see extension logs, the extension may not be installed")
-                } else {
-                    print("⏳ [DeviceActivityService] Schedule is NOT currently active")
-                    print("⏳ [DeviceActivityService] Extension will load when schedule becomes active at \(scheduleStartHour):\(String(format: "%02d", scheduleStartMinute))")
-                }
-            } catch {
-                print("❌ [DeviceActivityService] Failed to start tracking schedule: \(error.localizedDescription)")
-                print("❌ [DeviceActivityService] Error: \(error)")
             }
-        } else {
-            // No Quiet Hours active - use all-day schedule for tracking only (no blocking)
-            let allDaySchedule = DeviceActivitySchedule(
-                intervalStart: DateComponents(hour: 0, minute: 0),
-                intervalEnd: DateComponents(hour: 23, minute: 59),
-                repeats: true
-            )
             
-            print("📊 [DeviceActivityService] ════════════════════════════════════════")
-            print("📊 [DeviceActivityService] No Quiet Hours active - using all-day schedule for tracking only")
-            print("📊 [DeviceActivityService] Current local time: \(localTimeString)")
-            print("📊 [DeviceActivityService] Current UTC time: \(Date())")
-            print("📊 [DeviceActivityService] Activity name: \(self.activityName)")
-            print("📊 [DeviceActivityService] Event threshold: 1 second")
-            print("📊 [DeviceActivityService] Apps being monitored: \(appIndicesToMonitor.count) (indices: \(appIndicesToMonitor))")
-            print("📊 [DeviceActivityService] Total apps available: \(appsTokensArray.count)")
-            print("📊 [DeviceActivityService] Total events created: \(events.count)")
-            print("📊 [DeviceActivityService] ════════════════════════════════════════")
-            
-            do {
-                try await MainActor.run {
-                    // Start monitoring with all events (one per app)
-                    try self.center.startMonitoring(self.activityName, during: allDaySchedule, events: events)
-                    // No blocking - just tracking
-                    self.store.shield.applications = nil
-                }
-                print("✅ [DeviceActivityService] All-day tracking schedule started - apps will NOT be blocked")
-            } catch {
-                print("❌ [DeviceActivityService] Failed to start tracking schedule: \(error.localizedDescription)")
-                print("❌ [DeviceActivityService] Error: \(error)")
-            }
+            print("📊 [DeviceActivityService] Interval registration summary: \(successCount) succeeded, \(failureCount) failed out of \(allDayIntervalSchedules.count) total")
+            print("🔔 [DeviceActivityService] Monitoring enabled - notifications will be sent (no blocking)")
         }
+        
+        // OLD QUIET HOURS CODE REMOVED - replaced with simple all-day monitoring above
     }
     
     // Stop monitoring
     func stopMonitoring() {
-        center.stopMonitoring([activityName])
+        // Stop all interval activities plus the main activity
+        var activitiesToStop: [DeviceActivityName] = [activityName]
+        activitiesToStop.append(contentsOf: intervalActivityNames)
+        center.stopMonitoring(activitiesToStop)
+        intervalActivityNames.removeAll()
+        
         // Clear shield (already nil, but ensure it's cleared)
-        store.shield.applications = nil
+        // Note: Blocking is disabled - store is not available
+        // store.shield.applications = nil
         // Stopping monitoring stops notifications
         // Setting isMonitoring will trigger saveMonitoringState via didSet
         isMonitoring = false
         print("🛑 [DeviceActivityService] Stopped monitoring - notifications will no longer be sent")
-        print("🛑 [DeviceActivityService] Shield cleared")
+        print("🛑 [DeviceActivityService] Stopped \(activitiesToStop.count) activity/activities")
+        // print("🛑 [DeviceActivityService] Shield cleared")
     }
     
     // Check if there are existing Screen Time restrictions (from Apple Settings or other apps)
     // Returns true if restrictions exist that weren't set by Soteria
+    // NOTE: This method is not used when blocking is disabled (notifications only)
     private func hasExistingRestrictions() -> Bool {
-        // Check if shield.applications is set but we haven't set it yet
-        // This indicates another app or Screen Time is controlling restrictions
-        let currentShieldCount = store.shield.applications?.count ?? 0
-        let ourAppCount = selectedApps.applicationTokens.count
-        
-        // If there are restrictions but we haven't set any, or the count doesn't match,
-        // there might be existing restrictions from Screen Time
-        if currentShieldCount > 0 && ourAppCount == 0 {
-            print("⚠️ [DeviceActivityService] Detected existing Screen Time restrictions (\(currentShieldCount) apps)")
-            return true
-        }
-        
-        // Note: We can't perfectly detect if restrictions are from Screen Time vs another app
-        // But we can at least warn if we're about to override existing restrictions
+        // Blocking is disabled - always return false
+        // This method is kept for potential future use but not actively used
         return false
     }
     
@@ -1334,26 +1493,7 @@ class DeviceActivityService: ObservableObject {
     func updateBlockingStatus() async {
         guard isMonitoring else {
             print("⚠️ [DeviceActivityService] Not monitoring - cannot update blocking status")
-            // If monitoring isn't active but Quiet Hours are, we should still set the shield
-            // This handles the case where user toggles monitoring off/on
-            // DISABLED: Accessing selectedApps.applicationTokens can block
-            // if quietHoursService.isQuietModeActive && !selectedApps.applicationTokens.isEmpty {
-            //     await MainActor.run {
-            //         self.store.shield.applications = self.selectedApps.applicationTokens
-            //         print("🔒 [DeviceActivityService] Shield set even though monitoring is off (Quiet Hours active)")
-            //     }
-            // }
             return
-        }
-        
-        // Check for existing restrictions before overriding
-        let existingRestrictions = await MainActor.run {
-            hasExistingRestrictions()
-        }
-        if existingRestrictions {
-            print("⚠️ [DeviceActivityService] WARNING: Existing Screen Time restrictions detected!")
-            print("⚠️ [DeviceActivityService] Soteria will override these restrictions when setting shield")
-            print("⚠️ [DeviceActivityService] User's existing Screen Time settings may be affected")
         }
         
         // Restart monitoring with updated schedule based on Quiet Hours
@@ -1361,14 +1501,10 @@ class DeviceActivityService: ObservableObject {
         await updateMonitoringSchedule()
         
         // NO BLOCKING - Using notifications instead
-        // Always clear shield to prevent Screen Time conflicts
-        await MainActor.run {
-            self.store.shield.applications = nil
-            print("🔔 [DeviceActivityService] Shield cleared - using notifications instead of blocking")
-            print("🔔 [DeviceActivityService] App-specific notifications will be sent when apps open during Quiet Hours")
-        }
+        // Blocking code has been removed to prevent startup delays
+        // Notifications will be sent via DeviceActivity events
         
-        print("✅ [DeviceActivityService] Blocking status updated - Quiet Hours: \(quietHoursService.isQuietModeActive ? "ACTIVE (blocking)" : "INACTIVE (tracking only)")")
+        print("✅ [DeviceActivityService] Blocking status updated - monitoring restarted (notifications only)")
     }
     
     // Note: Blocking is now handled automatically by DeviceActivity schedules
@@ -1395,9 +1531,7 @@ class DeviceActivityService: ObservableObject {
         // Time since last unblock
         let timeSinceLastUnblock = unblockEvents.last.map { now.timeIntervalSince($0.timestamp) }
         
-        // Check if during quiet hours
-        let isQuietHoursActive = quietHoursService.isQuietModeActive
-        let activeSchedule = quietHoursService.schedules.first { $0.isCurrentlyActive() }
+        // NOTE: Quiet Hours removed - no longer checking quiet hours status
         
         // Get app name if available
         let appName = appIndex.map { getAppName(forIndex: $0) }
@@ -1413,8 +1547,8 @@ class DeviceActivityService: ObservableObject {
             appIndex: appIndex,
             appName: appName,
             durationMinutes: durationMinutes,
-            wasDuringQuietHours: isQuietHoursActive,
-            quietHoursScheduleName: activeSchedule?.name,
+            wasDuringQuietHours: false, // Quiet Hours removed
+            quietHoursScheduleName: nil, // Quiet Hours removed
             timeSinceLastUnblock: timeSinceLastUnblock,
             unblockCountToday: unblockCountToday,
             unblockCountThisWeek: unblockCountThisWeek,
@@ -1427,7 +1561,7 @@ class DeviceActivityService: ObservableObject {
         print("   - Time: \(unblockEvent.timeOfDayCategory) (\(unblockEvent.dayName))")
         print("   - Type: \(purchaseType ?? "unknown")")
         print("   - App: \(appName ?? "unknown") (index: \(appIndex ?? -1))")
-        print("   - During Quiet Hours: \(isQuietHoursActive)")
+        print("   - During Quiet Hours: false (Quiet Hours removed)")
         print("   - Unblocks today: \(unblockCountToday), this week: \(unblockCountThisWeek)")
         if let timeSince = timeSinceLastUnblock {
             print("   - Time since last unblock: \(Int(timeSince / 60)) minutes")
@@ -1444,10 +1578,15 @@ class DeviceActivityService: ObservableObject {
         }
         
         // Stop monitoring (notifications will stop)
-        center.stopMonitoring([activityName])
+        // Stop all interval activities plus the main activity
+        var activitiesToStop: [DeviceActivityName] = [activityName]
+        activitiesToStop.append(contentsOf: intervalActivityNames)
+        center.stopMonitoring(activitiesToStop)
+        intervalActivityNames.removeAll()
         
         // Clear shield (already nil, but ensure it's cleared)
-        store.shield.applications = nil
+        // Note: Blocking is disabled - store is not available
+        // store.shield.applications = nil
         print("🔓 [DeviceActivityService] Monitoring stopped - notifications will no longer be sent")
         
         // Re-start monitoring after duration to re-block apps
@@ -1457,13 +1596,11 @@ class DeviceActivityService: ObservableObject {
             Task {
                 print("⏰ [DeviceActivityService] Timer expired - checking if apps should be re-blocked")
                 print("⏰ [DeviceActivityService] isMonitoring: \(self.isMonitoring)")
-                print("⏰ [DeviceActivityService] Quiet Hours active: \(self.quietHoursService.isQuietModeActive)")
                 
-                if self.isMonitoring && self.quietHoursService.isQuietModeActive {
-                    // Quiet Hours are still active - re-block apps
+                if self.isMonitoring {
+                    // Re-start monitoring
                     await self.updateMonitoringSchedule()
-                    print("🔒 [DeviceActivityService] ✅ Apps RE-BLOCKED after \(durationMinutes) minutes")
-                    print("🔒 [DeviceActivityService] Apps will be blocked again during Quiet Hours")
+                    print("🔒 [DeviceActivityService] ✅ Monitoring restarted after \(durationMinutes) minutes")
                     
                     // End any active usage sessions when blocking resumes
                     // This handles the case where user was using app and blocking resumed
@@ -1750,6 +1887,9 @@ class DeviceActivityService: ObservableObject {
     
     // Send local notification for SOTERIA Moment
     func sendSoteriaMomentNotification() {
+        // REMOVED: Canceling pending notifications - this callback can block MainActor
+        // Notifications with nil trigger are immediate, so duplicates are unlikely
+        
         let content = UNMutableNotificationContent()
         content.title = "SOTERIA Moment"
         content.body = "You're about to open a shopping app. Take a moment to pause and think."
@@ -1757,12 +1897,30 @@ class DeviceActivityService: ObservableObject {
         content.categoryIdentifier = "SOTERIA_MOMENT"
         content.userInfo = ["type": "soteria_moment"]
         
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        if #available(iOS 15.0, *) {
+            content.interruptionLevel = .timeSensitive
+        }
+        
+        // FIXED: Use nil trigger for immediate delivery instead of time interval trigger
+        let identifier = UUID().uuidString
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Failed to send notification: \(error)")
+                print("❌ [DeviceActivityService] Failed to send notification: \(error)")
+                // Fallback: If nil trigger fails, try with minimal delay
+                print("🔄 [DeviceActivityService] Attempting fallback with minimal delay trigger...")
+                let fallbackTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+                let fallbackRequest = UNNotificationRequest(identifier: identifier, content: content, trigger: fallbackTrigger)
+                UNUserNotificationCenter.current().add(fallbackRequest) { fallbackError in
+                    if let fallbackError = fallbackError {
+                        print("❌ [DeviceActivityService] Fallback also failed: \(fallbackError)")
+                    } else {
+                        print("✅ [DeviceActivityService] Fallback SOTERIA moment notification sent")
+                    }
+                }
+            } else {
+                print("✅ [DeviceActivityService] SOTERIA moment notification sent immediately")
             }
         }
     }

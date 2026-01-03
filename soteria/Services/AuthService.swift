@@ -9,7 +9,12 @@ import Foundation
 import Combine
 
 class AuthService: ObservableObject {
-    private let cognitoService = CognitoAuthService.shared
+    // CRITICAL: Don't access CognitoAuthService until sign-in/sign-up is called
+    // Accessing .shared during init or property access blocks MainActor
+    // We'll access it only when user actually tries to authenticate
+    private func getCognitoService() -> CognitoAuthService {
+        return CognitoAuthService.shared
+    }
     
     @Published var currentUser: CognitoUser? = nil
     @Published var isAuthenticated: Bool = false
@@ -24,62 +29,57 @@ class AuthService: ObservableObject {
         return currentUser?.userId
     }
     
+    private var hasInitialized = false
+    
     init() {
-        let initStart = Date()
-        MainActorMonitor.shared.logOperation("AuthService.init() started")
-        print("🔍 [AuthService] init() started")
+        // CRITICAL: Do ABSOLUTELY NOTHING in init() - not even setting @Published properties
+        // Setting @Published properties during init can trigger SwiftUI's observation system
+        // All initialization happens in startInitialization() which is called from RootView.onAppear
+        // Default values are set by property initializers (isAuthenticated = false, etc.)
+    }
+    
+    // Call this from RootView.onAppear or AuthView.onAppear - AFTER UI is rendered
+    func startInitialization() {
+        guard !hasInitialized else { return }
+        hasInitialized = true
         
-        // CRITICAL: Check for cached tokens IMMEDIATELY (synchronously, before UI renders)
-        // This prevents authenticated users from seeing the sign-in screen
-        let beforeUserDefaults = Date()
+        // Check authentication immediately (UserDefaults reads are fast and non-blocking)
+        // This ensures users stay logged in across app rebuilds
         let storedIdToken = UserDefaults.standard.string(forKey: "cognito_id_token")
         let storedUserId = UserDefaults.standard.string(forKey: "cognito_user_id")
         let storedEmail = UserDefaults.standard.string(forKey: "cognito_user_email")
-        let userDefaultsDuration = Date().timeIntervalSince(beforeUserDefaults)
-        if userDefaultsDuration > 0.01 {
-            MainActorMonitor.shared.logOperation("AuthService: UserDefaults read (SLOW)", duration: userDefaultsDuration)
-            print("⚠️ [AuthService] UserDefaults read took \(String(format: "%.3f", userDefaultsDuration))s")
-        }
         
-        // If we have tokens, check if they're valid (fast, synchronous check)
-        let beforeTokenCheck = Date()
-        let hasValidToken = storedIdToken != nil && storedUserId != nil && storedEmail != nil && (storedIdToken.map { !isTokenExpiredSync($0) } ?? false)
-        let tokenCheckDuration = Date().timeIntervalSince(beforeTokenCheck)
-        if tokenCheckDuration > 0.01 {
-            MainActorMonitor.shared.logOperation("AuthService: Token expiration check (SLOW)", duration: tokenCheckDuration)
-        }
+        let hasValidToken = storedIdToken != nil && storedUserId != nil && storedEmail != nil && (storedIdToken.map { !self.isTokenExpiredSync($0) } ?? false)
         
         if hasValidToken, let userId = storedUserId, let email = storedEmail {
-            // Token exists and is valid - set authenticated immediately
-            // This prevents showing sign-in screen to authenticated users
             self.currentUser = CognitoUser(userId: userId, email: email, username: nil)
             self.isAuthenticated = true
             self.isCheckingAuth = false
-            print("✅ [AuthService] Restored session from cache (optimistic)")
+            print("✅ [AuthService] Restored session from cache (immediate)")
+            
+            // Defer SubscriptionService access
+            DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) {
+                SubscriptionService.shared.setPremiumForTesting(email: email)
+            }
+            
+            // Reinstall detection
+            let lastSyncTimestamp = UserDefaults.standard.double(forKey: "last_sync_timestamp")
+            if lastSyncTimestamp == 0 {
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sync_timestamp")
+                print("ℹ️ [AuthService] No last_sync_timestamp found - treating as new session")
+            }
         } else {
-            // No valid tokens - show sign-in screen
             self.isAuthenticated = false
             self.isCheckingAuth = false
-            print("ℹ️ [AuthService] No valid cached tokens")
         }
         
-        let initDuration = Date().timeIntervalSince(initStart)
-        MainActorMonitor.shared.logOperation("AuthService.init() completed", duration: initDuration)
-        if initDuration > 0.1 {
-            print("⚠️ [AuthService] Init took \(String(format: "%.3f", initDuration))s (SLOW)")
-        }
-        
-        // Defer Combine subscription setup to avoid blocking init
-        // CRITICAL: Use Task.detached instead of Task { @MainActor in } to avoid blocking MainActor
-        Task.detached(priority: .utility) { [weak self] in
+        // CRITICAL: Defer Combine subscription to 60+ seconds after startup
+        // Only subscribe when actually needed (after user signs in)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) { [weak self] in
             guard let self = self else { return }
-            
-            // Small delay to let UI render first
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-            
-            // Set up Combine subscription - receive on main thread but don't block MainActor
-            await MainActor.run {
-                self.cognitoService.$isAuthenticated
+            // Only subscribe if user is authenticated (cognitoService already accessed)
+            if self.isAuthenticated {
+                self.getCognitoService().$isAuthenticated
                     .receive(on: DispatchQueue.main)
                     .sink { [weak self] _ in
                         self?.updateAuthState()
@@ -89,58 +89,82 @@ class AuthService: ObservableObject {
         }
         
         // Verify/refresh tokens in background (non-blocking)
-        // CRITICAL: Set isCheckingAuth = true to keep splash screen visible during verification
-        // This prevents showing sign-in screen while auth is being verified
+        // CRITICAL: Defer auth verification to 30+ seconds after startup to avoid blocking
+        // This ensures TextFields are interactive immediately
         Task.detached(priority: .background) { [weak self] in
             guard let self = self else { return }
             
-            // Set checking state immediately to keep splash screen visible
-            await MainActor.run {
+            // CRITICAL: Wait 30 seconds to ensure app is fully interactive before checking auth
+            // This prevents MainActor blocking during sign-in
+            try? await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds
+            
+            // Set checking state (use DispatchQueue to avoid MainActor.run blocking)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
                 // Only set isCheckingAuth if we have cached tokens (optimistic auth)
-                // This keeps splash screen visible while we verify
                 if self.isAuthenticated {
                     self.isCheckingAuth = true
-                    print("🔄 [AuthService] Starting background auth verification (keeping splash visible)")
+                    print("🔄 [AuthService] Starting background auth verification (deferred 30s)")
                 }
             }
             
-            // CRITICAL: Wait before checking to ensure UI is interactive
-            // But don't wait too long - user wants to see home page quickly
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds - reduced from 30s
-            
             // Run auth check off main thread (verifies token, refreshes if expired)
-            // Use Task with timeout to prevent hanging
+            // Use Task with timeout to prevent hanging, but handle cancellation gracefully
             do {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     group.addTask {
-                        await self.cognitoService.checkAuthState()
+                        await self.getCognitoService().checkAuthState()
                     }
                     
                     group.addTask {
-                        try await Task.sleep(nanoseconds: 5_000_000_000) // 5 second timeout
+                        try await Task.sleep(nanoseconds: 10_000_000_000) // 10 second timeout (increased from 5s)
                         throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Auth check timed out"])
                     }
                     
-                    try await group.next()
+                    // Wait for first task to complete
+                    _ = try await group.next()
+                    
+                    // Cancel remaining tasks (timeout or auth check)
                     group.cancelAll()
+                    
+                    // If we got here, auth check completed (either success or failure)
+                    // The timeout task will be cancelled
                 }
                 
-                // Auth verified successfully
-                await MainActor.run {
+                // Auth verified successfully (use DispatchQueue to avoid MainActor.run blocking)
+                DispatchQueue.main.async {
                     self.updateAuthState()
                     self.isCheckingAuth = false
                     print("✅ [AuthService] Background auth verification completed - user authenticated")
                 }
             } catch {
+                // Check if this is a cancellation error
+                let isCancelled = (error as? CancellationError) != nil || error.localizedDescription.contains("cancelled")
+                
+                if isCancelled {
+                    // Task was cancelled - this is OK, don't treat as failure
+                    print("ℹ️ [AuthService] Auth check was cancelled (likely timeout task)")
+                    DispatchQueue.main.async {
+                        self.isCheckingAuth = false
+                        // Keep optimistic auth state - don't clear if we have cached tokens
+                    }
+                    return
+                }
                 // Auth verification failed - only then show sign-in screen
-                print("⚠️ [AuthService] Auth check failed: \(error.localizedDescription)")
-                await MainActor.run {
+                let errorMsg = error.localizedDescription
+                // Don't log "cancelled" as an error - it's expected when timeout fires
+                if !errorMsg.contains("cancelled") {
+                    print("⚠️ [AuthService] Auth check failed: \(errorMsg)")
+                }
+                DispatchQueue.main.async {
                     // Only set authenticated to false if verification actually failed
                     // Don't clear if we still have valid cached tokens
                     self.isCheckingAuth = false
                     // Keep isAuthenticated as-is if we have cached tokens (optimistic)
                     // Only clear if verification explicitly failed
-                    print("⚠️ [AuthService] Auth verification failed - user may need to sign in")
+                    if !errorMsg.contains("cancelled") && !errorMsg.contains("timed out") {
+                        print("⚠️ [AuthService] Auth verification failed - user may need to sign in")
+                    }
                 }
             }
         }
@@ -148,7 +172,7 @@ class AuthService: ObservableObject {
     
     // Fast synchronous token expiration check (for immediate auth state)
     // This avoids async/await overhead during init
-    private func isTokenExpiredSync(_ token: String) -> Bool {
+    nonisolated private func isTokenExpiredSync(_ token: String) -> Bool {
         let parts = token.components(separatedBy: ".")
         guard parts.count == 3, parts[1].count > 0 else { return true }
         
@@ -169,6 +193,11 @@ class AuthService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     private func updateAuthState() {
+        // CRITICAL: Only update if cognitoService was already accessed (user signed in)
+        // Don't access cognitoService here - it blocks MainActor
+        // This method is only called after user has signed in
+        let cognitoService = getCognitoService()
+        
         // CRITICAL: Don't clear optimistic auth state during background verification
         // If we optimistically set isAuthenticated = true, keep it true until verification completes
         // Only update if we're not checking auth (to preserve optimistic state)
@@ -196,41 +225,58 @@ class AuthService: ObservableObject {
     // Sign up with email and password
     @MainActor
     func signUp(email: String, password: String) async throws {
-        try await cognitoService.signUp(email: email, password: password)
+        try await getCognitoService().signUp(email: email, password: password)
         self.updateAuthState()
+        
+        // Mark as new sign-up to show Unit account creation banner
+        UserDefaults.standard.set(true, forKey: "is_new_signup")
+        
+        // Store sign-up date for premium card display
+        UserDefaults.standard.set(Date(), forKey: "user_signup_date")
     }
     
     // Sign in with email and password
     @MainActor
     func signIn(email: String, password: String) async throws {
-        try await cognitoService.signIn(email: email, password: password)
+        try await getCognitoService().signIn(email: email, password: password)
         self.updateAuthState()
+        
+        // Clear new sign-up flag (this is a returning user)
+        UserDefaults.standard.set(false, forKey: "is_new_signup")
+        
+        // Set premium status for test accounts
+        if let userEmail = currentUserEmail {
+            SubscriptionService.shared.setPremiumForTesting(email: userEmail)
+        }
     }
     
     // Sign out
     func signOut() throws {
-        cognitoService.signOut()
+        getCognitoService().signOut()
         updateAuthState()
     }
     
     // Get current ID token string for API calls
     func getIDToken() async throws -> String? {
-        return try await cognitoService.getIDToken()
+        return try await getCognitoService().getIDToken()
     }
     
     // Get current user ID
     func getUserId() -> String? {
-        return cognitoService.getUserId()
+        return getCognitoService().getUserId()
     }
     
     // Send password reset email
     func resetPassword(email: String) async throws {
-        try await cognitoService.resetPassword(email: email)
+        try await getCognitoService().resetPassword(email: email)
     }
     
     // Confirm signup with verification code
     @MainActor
     func confirmSignUp(email: String, confirmationCode: String) async throws {
-        try await cognitoService.confirmSignUp(email: email, confirmationCode: confirmationCode)
+        try await getCognitoService().confirmSignUp(email: email, confirmationCode: confirmationCode)
+        
+        // Set premium status for test accounts after confirmation
+        SubscriptionService.shared.setPremiumForTesting(email: email)
     }
 }

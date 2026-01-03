@@ -11,6 +11,7 @@ struct MetricsDashboardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var deviceActivityService: DeviceActivityService
     @EnvironmentObject var subscriptionService: SubscriptionService
+    @ObservedObject private var premiumAnalytics = PremiumAnalyticsService.shared
     @State private var showPaywall = false
     
     @State private var selectedTimeRange: TimeRange = .week
@@ -23,7 +24,7 @@ struct MetricsDashboardView: View {
         if subscriptionService.isPremium {
             return TimeRange.allCases
         } else {
-            return [.today, .week] // Free tier limited to today and this week
+            return [.today, .week] // Free tier limited to today and this week (7 days)
         }
     }
     
@@ -302,12 +303,26 @@ struct MetricsDashboardView: View {
                             }
                         }
                         .padding(.horizontal, 20)
+                        
+                        // Premium Analytics Section (Goal Predictions & Savings Velocity)
+                        if subscriptionService.isPremium {
+                            premiumAnalyticsSection
+                                .padding(.horizontal, 20)
+                        } else {
+                            premiumAnalyticsLockedSection
+                                .padding(.horizontal, 20)
+                        }
                     }
                     .padding(.vertical, 20)
                 }
             }
             .navigationTitle("Metrics")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if subscriptionService.isPremium {
+                    premiumAnalytics.refreshAnalytics()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
@@ -363,7 +378,16 @@ struct MetricsDashboardView: View {
             startDate = Date.distantPast
         }
         
-        return (startDate, now)
+        // Free users limited to last 7 days regardless of selected range
+        let finalStartDate: Date
+        if !subscriptionService.isPremium {
+            let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+            finalStartDate = max(startDate, sevenDaysAgo)
+        } else {
+            finalStartDate = startDate
+        }
+        
+        return (finalStartDate, now)
     }
     
     private func getUsageStats() -> [Int: (totalTime: TimeInterval, sessionCount: Int, appName: String)] {
@@ -401,6 +425,228 @@ struct MetricsDashboardView: View {
             "other": "Other"
         ]
         return moodMap[mood] ?? mood.capitalized
+    }
+    
+    // MARK: - Premium Analytics Section
+    
+    @ViewBuilder
+    private var premiumAnalyticsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.orange)
+                Text("Premium Analytics")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.midnightSlate)
+            }
+            
+            // Goal Predictions
+            if !premiumAnalytics.goalPredictions.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Goal Predictions")
+                        .font(.headline)
+                        .foregroundColor(.midnightSlate)
+                    
+                    ForEach(premiumAnalytics.goalPredictions, id: \.goalId) { prediction in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(prediction.goalName)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.midnightSlate)
+                                Spacer()
+                                if prediction.onTrack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                } else {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                            
+                            Text(prediction.reason)
+                                .font(.system(size: 14))
+                                .foregroundColor(.softGraphite)
+                            
+                            if let predictedDate = prediction.predictedCompletionDate,
+                               let daysUntil = prediction.daysUntilPredicted {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "calendar")
+                                        .font(.system(size: 12))
+                                    Text("Predicted completion: \(formatDate(predictedDate)) (\(daysUntil) days)")
+                                        .font(.system(size: 12))
+                                }
+                                .foregroundColor(.reverBlue)
+                            }
+                            
+                            // Confidence indicator
+                            HStack(spacing: 4) {
+                                Text("Confidence:")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.softGraphite)
+                                Text("\(Int(prediction.confidence * 100))%")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.reverBlue)
+                            }
+                        }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.dreamMist)
+                        )
+                    }
+                }
+            }
+            
+            // Savings Velocity
+            if let velocity = premiumAnalytics.savingsVelocity {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Savings Velocity")
+                        .font(.headline)
+                        .foregroundColor(.midnightSlate)
+                    
+                    VStack(spacing: 12) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Average Daily")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.softGraphite)
+                                Text("$\(String(format: "%.2f", velocity.averageDailySavings))")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.midnightSlate)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("Average Weekly")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.softGraphite)
+                                Text("$\(String(format: "%.2f", velocity.averageWeeklySavings))")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.midnightSlate)
+                            }
+                        }
+                        
+                        // Trend indicator
+                        HStack(spacing: 8) {
+                            Image(systemName: velocity.trend == .increasing ? "arrow.up.right" : velocity.trend == .decreasing ? "arrow.down.right" : "arrow.right")
+                                .font(.system(size: 14))
+                                .foregroundColor(velocity.trend == .increasing ? .green : velocity.trend == .decreasing ? .orange : .gray)
+                            Text(velocity.trend == .increasing ? "Increasing" : velocity.trend == .decreasing ? "Decreasing" : "Stable")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.midnightSlate)
+                        }
+                        
+                        if let projectedDate = velocity.projectedCompletionDate {
+                            HStack(spacing: 4) {
+                                Image(systemName: "calendar")
+                                    .font(.system(size: 12))
+                                Text("Projected completion: \(formatDate(projectedDate))")
+                                    .font(.system(size: 12))
+                            }
+                            .foregroundColor(.reverBlue)
+                        }
+                        
+                        if let daysDiff = velocity.daysAheadOrBehind {
+                            HStack(spacing: 4) {
+                                Image(systemName: daysDiff > 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                    .font(.system(size: 12))
+                                Text(daysDiff > 0 ? "\(daysDiff) days ahead of target" : "\(abs(daysDiff)) days behind target")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundColor(daysDiff > 0 ? .green : .orange)
+                        }
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.dreamMist)
+                    )
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+    
+    @ViewBuilder
+    private var premiumAnalyticsLockedSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                Text("Premium Analytics")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.midnightSlate)
+            }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Unlock advanced insights")
+                    .font(.headline)
+                    .foregroundColor(.midnightSlate)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.reverBlue)
+                        Text("Goal completion predictions")
+                            .font(.system(size: 14))
+                            .foregroundColor(.softGraphite)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.reverBlue)
+                        Text("Savings velocity tracking")
+                            .font(.system(size: 14))
+                            .foregroundColor(.softGraphite)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.reverBlue)
+                        Text("Trend analysis and insights")
+                            .font(.system(size: 14))
+                            .foregroundColor(.softGraphite)
+                    }
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.dreamMist)
+                )
+                
+                Button(action: {
+                    showPaywall = true
+                }) {
+                    HStack {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 14))
+                        Text("Upgrade to Plus")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.reverBlue)
+                    )
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 }
 

@@ -14,8 +14,8 @@ enum PurchaseType: String, Codable {
     
     var displayName: String {
         switch self {
-        case .planned: return "Planned Purchase"
-        case .impulse: return "Impulse Purchase"
+        case .planned: return "Planned Visit"
+        case .impulse: return "Impulse Visit"
         }
     }
 }
