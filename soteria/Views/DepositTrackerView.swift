@@ -232,7 +232,7 @@ struct DepositTrackerView: View {
                     showDatePicker = true
                 }) {
                     Image(systemName: "calendar")
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 }
             }
         }
@@ -278,13 +278,7 @@ struct DepositTrackerView: View {
                 
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 40))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.reverBlue, Color.deepReverBlue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundColor(.softGraphite)
             }
             
             Divider()
@@ -307,7 +301,7 @@ struct DepositTrackerView: View {
                         .foregroundColor(.softGraphite)
                     Text(formatCurrency(totalForPeriod))
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 }
             }
         }
@@ -342,9 +336,9 @@ struct DepositTrackerView: View {
                             .padding(.vertical, 10)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedPeriod == period ? Color.reverBlue : Color.white)
+                                    .fill(selectedPeriod == period ? Color.softGraphite : Color.white)
                             )
-                            .shadow(color: selectedPeriod == period ? Color.reverBlue.opacity(0.3) : Color.black.opacity(0.05), radius: selectedPeriod == period ? 8 : 2, x: 0, y: 2)
+                            .shadow(color: selectedPeriod == period ? Color.softGraphite.opacity(0.3) : Color.black.opacity(0.05), radius: selectedPeriod == period ? 8 : 2, x: 0, y: 2)
                         }
                     }
                     
@@ -398,7 +392,7 @@ struct DepositTrackerView: View {
             HStack {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 
                 Text("Savings Trend")
                     .font(.system(size: 18, weight: .semibold))
@@ -416,7 +410,7 @@ struct DepositTrackerView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color.reverBlue, Color.deepReverBlue],
+                            colors: [Color.softGraphite, Color.softGraphite.opacity(0.7)],
                             startPoint: .bottom,
                             endPoint: .top
                         )
@@ -467,7 +461,7 @@ struct DepositTrackerView: View {
             HStack {
                 Image(systemName: "chart.pie.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 
                 Text("Period Summary")
                     .font(.system(size: 18, weight: .semibold))
@@ -483,14 +477,14 @@ struct DepositTrackerView: View {
                             title: "Total",
                             value: formatCurrency(totalForPeriod),
                             icon: "dollarsign.circle.fill",
-                            color: .reverBlue
+                            color: .softGraphite
                         )
                         
                         StatBox(
                             title: "Average",
                             value: formatCurrency(averageForPeriod),
                             icon: "chart.bar.xaxis",
-                            color: .deepReverBlue
+                            color: .softGraphite.opacity(0.8)
                         )
                     }
                     
@@ -534,7 +528,7 @@ struct DepositTrackerView: View {
             HStack {
                 Image(systemName: "list.bullet")
                     .font(.system(size: 20))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 
                 Text("Deposit History")
                     .font(.system(size: 18, weight: .semibold))
@@ -660,8 +654,8 @@ struct DepositRow: View {
     
     private var typeColor: Color {
         switch deposit.type {
-        case .manual: return .reverBlue
-        case .plaid: return .deepReverBlue
+        case .manual: return .softGraphite
+        case .plaid: return .softGraphite.opacity(0.8)
         case .virtual: return .comfortLavender
         case .decisionWindow: return .gentleRose
         case .goalDeposit: return .warmSand
@@ -712,21 +706,21 @@ struct DepositRow: View {
                             if deposit.goalId != nil {
                                 Image(systemName: "target")
                                     .font(.system(size: 10))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                             }
                             
                             // Screenshot indicator
                             if hasScreenshot {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 10))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                             }
                             
                             // Reference ID indicator
                             if deposit.referenceId != nil {
                                 Image(systemName: "number")
                                     .font(.system(size: 10))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                             }
                         }
                         
@@ -761,7 +755,7 @@ struct DepositRow: View {
                         HStack(spacing: 8) {
                             Image(systemName: "number")
                                 .font(.system(size: 14))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                             Text("Reference ID:")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.softGraphite)
@@ -778,7 +772,7 @@ struct DepositRow: View {
                             HStack {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 14))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                                 Text("Receipt/Screenshot")
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(.softGraphite)
@@ -819,12 +813,12 @@ struct DepositRow: View {
                                 Text("Edit Deposit")
                                     .font(.system(size: 13, weight: .medium))
                             }
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.reverBlue.opacity(0.1))
+                                    .fill(Color.softGraphite.opacity(0.1))
                             )
                         }
                     }
@@ -890,7 +884,7 @@ struct CustomBarChart: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
-                                colors: [Color.reverBlue, Color.deepReverBlue],
+                                colors: [Color.softGraphite, Color.softGraphite.opacity(0.7)],
                                 startPoint: .bottom,
                                 endPoint: .top
                             )
@@ -941,7 +935,7 @@ struct DatePickerSheet: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 }
             }
         }

@@ -55,7 +55,7 @@ struct GoalsView: View {
                                 }) {
                                     Image(systemName: isActiveGoalsExpanded ? "minus.circle.fill" : "plus.circle.fill")
                                         .font(.system(size: 20))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -126,7 +126,7 @@ struct GoalsView: View {
                                 }) {
                                     Image(systemName: isHistoricalGoalsExpanded ? "minus.circle.fill" : "plus.circle.fill")
                                         .font(.system(size: 20))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -231,7 +231,7 @@ struct GoalsView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.deepReverBlue)
+                                            .fill(Color.softGraphite)
                                     )
                             }
                         }
@@ -257,7 +257,7 @@ struct GoalsView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.reverBlue)
+                                    .fill(Color.softGraphite)
                             )
                         }
                         .padding(.horizontal, 20)
@@ -389,7 +389,7 @@ struct GoalCard: View {
     private func statusColor(for status: SavingsGoal.GoalStatus) -> Color {
         switch status {
         case .active:
-            return .reverBlue
+            return .softGraphite
         case .achieved:
             return .green
         case .failed:
@@ -414,7 +414,7 @@ struct GoalCard: View {
             HStack {
                 Image(systemName: goal.category.icon)
                     .font(.system(size: 24))
-                    .foregroundColor(Color.reverBlue)
+                    .foregroundColor(Color.softGraphite)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -450,7 +450,7 @@ struct GoalCard: View {
                 if goalsService.activeGoal?.id == goal.id && goal.status == .active {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(Color.reverBlue)
+                        .foregroundColor(Color.softGraphite)
                 }
             }
             
@@ -467,10 +467,10 @@ struct GoalCard: View {
                 HStack {
                     Image(systemName: "calendar")
                         .font(.system(size: 14))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                     Text(countdown)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
@@ -500,7 +500,7 @@ struct GoalCard: View {
                 HStack {
                     Text(formattedCurrent)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(Color.reverBlue)
+                        .foregroundColor(Color.softGraphite)
                     
                     Text("of \(formattedTarget)")
                         .font(.system(size: 14, weight: .regular, design: .default))
@@ -510,7 +510,7 @@ struct GoalCard: View {
                     
                     Text("\(progressPercentage)%")
                         .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(Color.reverBlue)
+                        .foregroundColor(Color.softGraphite)
                 }
                 
                 GeometryReader { geometry in
@@ -520,7 +520,7 @@ struct GoalCard: View {
                             .frame(height: 8)
                         
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.reverBlue)
+                            .fill(Color.softGraphite)
                             .frame(width: geometry.size.width * CGFloat(goal.progress), height: 8)
                     }
                 }
@@ -544,7 +544,7 @@ struct GoalCard: View {
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.reverBlue)
+                                .fill(Color.softGraphite)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -555,7 +555,7 @@ struct GoalCard: View {
                         }) {
                             Text("Set as Active")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.reverBlue)
+                                .foregroundColor(Color.softGraphite)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                                 .background(

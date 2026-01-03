@@ -49,7 +49,7 @@ struct OnboardingSurveyView: View {
                     HStack {
                         ForEach(0..<totalSteps, id: \.self) { index in
                             Circle()
-                                .fill(index <= currentStep ? Color.reverBlue : Color.mistGray)
+                                .fill(index <= currentStep ? Color.softGraphite : Color.mistGray)
                                 .frame(width: 8, height: 8)
                                 .scaleEffect(index == currentStep ? 1.2 : 1.0)
                                 .animation(.spring(response: 0.3), value: currentStep)
@@ -161,10 +161,10 @@ struct OnboardingSurveyView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(
-                            canProceed ? Color.deepReverBlue : Color.gray.opacity(0.3)
+                            canProceed ? Color.softGraphite : Color.gray.opacity(0.3)
                         )
                         .cornerRadius(16)
-                        .shadow(color: canProceed ? Color.deepReverBlue.opacity(0.4) : Color.clear, radius: 12, x: 0, y: 4)
+                        .shadow(color: canProceed ? Color.softGraphite.opacity(0.4) : Color.clear, radius: 12, x: 0, y: 4)
                         .scaleEffect(buttonScale)
                     }
                     .disabled(!canProceed)
@@ -273,24 +273,12 @@ struct OnboardingSurveyView: View {
             // Animated icon
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.reverBlueLight.opacity(0.2), Color.reverBlueDark.opacity(0.2)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.softGraphite.opacity(0.2))
                     .frame(width: 120, height: 120)
                 
                 Image(systemName: "tree.fill")
                     .font(.system(size: 60))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.reverBlueLight, Color.reverBlueDark],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundColor(.softGraphite)
             }
             .scaleEffect(showContent ? 1.0 : 0.8)
             .animation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.4), value: showContent)
@@ -322,7 +310,7 @@ struct OnboardingSurveyView: View {
                 HStack {
                     Image(systemName: value.wrappedValue ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
-                        .foregroundColor(value.wrappedValue ? .reverBlue : .softGraphite)
+                        .foregroundColor(value.wrappedValue ? .softGraphite : .softGraphite.opacity(0.5))
                     
                     Text(yesText)
                         .font(.system(size: 18, weight: .semibold))
@@ -333,13 +321,13 @@ struct OnboardingSurveyView: View {
                 .padding(20)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(value.wrappedValue ? Color.reverBlue.opacity(0.1) : Color.white)
+                        .fill(value.wrappedValue ? Color.softGraphite.opacity(0.1) : Color.white)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(value.wrappedValue ? Color.reverBlue : Color.mistGray, lineWidth: value.wrappedValue ? 3 : 1)
+                        .stroke(value.wrappedValue ? Color.softGraphite : Color.mistGray, lineWidth: value.wrappedValue ? 3 : 1)
                 )
-                .shadow(color: value.wrappedValue ? Color.reverBlue.opacity(0.2) : Color.black.opacity(0.05), radius: value.wrappedValue ? 8 : 4, x: 0, y: 2)
+                .shadow(color: value.wrappedValue ? Color.softGraphite.opacity(0.2) : Color.black.opacity(0.05), radius: value.wrappedValue ? 8 : 4, x: 0, y: 2)
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -351,7 +339,7 @@ struct OnboardingSurveyView: View {
                 HStack {
                     Image(systemName: !value.wrappedValue ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
-                        .foregroundColor(!value.wrappedValue ? .reverBlue : .softGraphite)
+                        .foregroundColor(!value.wrappedValue ? .softGraphite : .softGraphite.opacity(0.5))
                     
                     Text(noText)
                         .font(.system(size: 18, weight: .semibold))
@@ -362,13 +350,13 @@ struct OnboardingSurveyView: View {
                 .padding(20)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(!value.wrappedValue ? Color.reverBlue.opacity(0.1) : Color.white)
+                        .fill(!value.wrappedValue ? Color.softGraphite.opacity(0.1) : Color.white)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(!value.wrappedValue ? Color.reverBlue : Color.mistGray, lineWidth: !value.wrappedValue ? 3 : 1)
+                        .stroke(!value.wrappedValue ? Color.softGraphite : Color.mistGray, lineWidth: !value.wrappedValue ? 3 : 1)
                 )
-                .shadow(color: !value.wrappedValue ? Color.reverBlue.opacity(0.2) : Color.black.opacity(0.05), radius: !value.wrappedValue ? 8 : 4, x: 0, y: 2)
+                .shadow(color: !value.wrappedValue ? Color.softGraphite.opacity(0.2) : Color.black.opacity(0.05), radius: !value.wrappedValue ? 8 : 4, x: 0, y: 2)
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -434,9 +422,9 @@ struct OnboardingSurveyView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(value.wrappedValue > 0 ? Color.reverBlue : Color.mistGray, lineWidth: value.wrappedValue > 0 ? 3 : 1)
+                    .stroke(value.wrappedValue > 0 ? Color.softGraphite : Color.mistGray, lineWidth: value.wrappedValue > 0 ? 3 : 1)
             )
-            .shadow(color: value.wrappedValue > 0 ? Color.reverBlue.opacity(0.2) : Color.black.opacity(0.05), radius: value.wrappedValue > 0 ? 12 : 4, x: 0, y: 4)
+            .shadow(color: value.wrappedValue > 0 ? Color.softGraphite.opacity(0.2) : Color.black.opacity(0.05), radius: value.wrappedValue > 0 ? 12 : 4, x: 0, y: 4)
         }
     }
     
@@ -451,7 +439,7 @@ struct OnboardingSurveyView: View {
             if !selectedChallenges.isEmpty {
                 Text("\(selectedChallenges.count) of 3 selected")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
             }
             
             ForEach(Array(savingChallenges.enumerated()), id: \.element) { index, challenge in
@@ -473,7 +461,7 @@ struct OnboardingSurveyView: View {
                     HStack(spacing: 16) {
                         Image(systemName: selectedChallenges.contains(challenge) ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
-                            .foregroundColor(selectedChallenges.contains(challenge) ? .reverBlue : .softGraphite)
+                            .foregroundColor(selectedChallenges.contains(challenge) ? .softGraphite : .softGraphite.opacity(0.5))
                         
                         Text(challenge)
                             .font(.system(size: 17, weight: .medium))
@@ -485,13 +473,13 @@ struct OnboardingSurveyView: View {
                     .padding(20)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(selectedChallenges.contains(challenge) ? Color.reverBlue.opacity(0.1) : Color.white)
+                            .fill(selectedChallenges.contains(challenge) ? Color.softGraphite.opacity(0.1) : Color.white)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(selectedChallenges.contains(challenge) ? Color.reverBlue : Color.mistGray, lineWidth: selectedChallenges.contains(challenge) ? 3 : 1)
+                            .stroke(selectedChallenges.contains(challenge) ? Color.softGraphite : Color.mistGray, lineWidth: selectedChallenges.contains(challenge) ? 3 : 1)
                     )
-                    .shadow(color: selectedChallenges.contains(challenge) ? Color.reverBlue.opacity(0.2) : Color.black.opacity(0.05), radius: selectedChallenges.contains(challenge) ? 8 : 4, x: 0, y: 2)
+                    .shadow(color: selectedChallenges.contains(challenge) ? Color.softGraphite.opacity(0.2) : Color.black.opacity(0.05), radius: selectedChallenges.contains(challenge) ? 8 : 4, x: 0, y: 2)
                     .opacity(!selectedChallenges.contains(challenge) && selectedChallenges.count >= 3 ? 0.5 : 1.0) // Dim if max selected and this one isn't
                 }
                 .buttonStyle(PlainButtonStyle())

@@ -547,10 +547,22 @@ class DeviceActivityService: ObservableObject {
                         print("❌ [DeviceActivityService] Fallback also failed: \(fallbackError)")
                     } else {
                         print("✅ [DeviceActivityService] Fallback purchase log notification sent")
+                        // Update badge when notification is added
+                        NotificationBadgeManager.shared.updateBadgeCount()
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("NotificationDelivered"),
+                            object: nil
+                        )
                     }
                 }
             } else {
                 print("✅ [DeviceActivityService] Purchase log notification sent immediately")
+                // Update badge when notification is added
+                NotificationBadgeManager.shared.updateBadgeCount()
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("NotificationDelivered"),
+                    object: nil
+                )
             }
         }
     }

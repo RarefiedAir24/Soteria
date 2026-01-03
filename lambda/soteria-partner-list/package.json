@@ -7,9 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.962.0",
+    "@aws-sdk/lib-dynamodb": "^3.962.0",
     "aws-sdk": "^2.1691.0"
   },
   "author": "Soteria",
-  "license": "ISC"
+  "license": "ISC",
+  "keywords": []
 }
-

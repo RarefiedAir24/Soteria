@@ -22,6 +22,8 @@ struct Partner: Identifiable, Codable {
     let maxRedemptionsPerUser: Int?
     let validUntil: Date?
     let isActive: Bool
+    let website: String?
+    let hasBrickAndMortar: Bool?
     
     enum CodingKeys: String, CodingKey {
         case partnerId = "partner_id"
@@ -37,6 +39,8 @@ struct Partner: Identifiable, Codable {
         case maxRedemptionsPerUser = "max_redemptions_per_user"
         case validUntil = "valid_until"
         case isActive = "is_active"
+        case website
+        case hasBrickAndMortar = "has_brick_and_mortar"
     }
     
     init(from decoder: Decoder) throws {
@@ -52,6 +56,8 @@ struct Partner: Identifiable, Codable {
         location = try container.decodeIfPresent(String.self, forKey: .location)
         terms = try container.decodeIfPresent(String.self, forKey: .terms)
         maxRedemptionsPerUser = try container.decodeIfPresent(Int.self, forKey: .maxRedemptionsPerUser)
+        website = try container.decodeIfPresent(String.self, forKey: .website)
+        hasBrickAndMortar = try container.decodeIfPresent(Bool.self, forKey: .hasBrickAndMortar)
         
         if let validUntilString = try container.decodeIfPresent(String.self, forKey: .validUntil) {
             let formatter = ISO8601DateFormatter()
@@ -108,6 +114,10 @@ struct PartnerListResponse: Codable {
     let error: String?
 }
 
+struct APIErrorResponse: Codable {
+    let message: String?
+}
+
 struct ValidateMemberResponse: Codable {
     let success: Bool
     let valid: Bool
@@ -162,6 +172,12 @@ struct RedemptionResponse: Codable {
     let error: String?
 }
 
+struct DeletePartnerResponse: Codable {
+    let success: Bool
+    let message: String?
+    let error: String?
+}
+
 class PartnerLoyaltyService: ObservableObject {
     static let shared = PartnerLoyaltyService()
     
@@ -212,19 +228,53 @@ class PartnerLoyaltyService: ObservableObject {
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            // Add authentication token if available
+            if let idToken = try await cognitoService.getIDToken() {
+                request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+            }
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw NSError(domain: "PartnerLoyaltyService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
             }
             
-            guard (200...299).contains(httpResponse.statusCode) else {
-                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            // Parse response body first to check for success field
+            let responseString = String(data: data, encoding: .utf8) ?? "{}"
+            print("📥 [PartnerLoyaltyService] Response: \(responseString.prefix(500))")
+            
+            // Check if response contains "message" field (API Gateway error format)
+            if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               jsonObject["message"] != nil && jsonObject["success"] == nil {
+                // This is an API Gateway error format
+                let errorMessage = jsonObject["message"] as? String ?? "Internal server error"
                 throw NSError(domain: "PartnerLoyaltyService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
             }
             
             let decoder = JSONDecoder()
-            let result = try decoder.decode(PartnerListResponse.self, from: data)
+            let result: PartnerListResponse
+            do {
+                result = try decoder.decode(PartnerListResponse.self, from: data)
+            } catch {
+                print("❌ [PartnerLoyaltyService] JSON decode error: \(error)")
+                print("❌ [PartnerLoyaltyService] Response data: \(responseString)")
+                throw error
+            }
+            
+            // Check if Lambda returned success:false (even with 200 status)
+            if !result.success {
+                throw NSError(domain: "PartnerLoyaltyService", code: -1, userInfo: [NSLocalizedDescriptionKey: result.error ?? "Failed to load partners"])
+            }
+            
+            // Also check HTTP status code
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                throw NSError(domain: "PartnerLoyaltyService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+            }
             
             await MainActor.run {
                 if result.success {
@@ -336,6 +386,53 @@ class PartnerLoyaltyService: ObservableObject {
         // For now, we'll load from local state
         // In the future, we can add an API endpoint to fetch user's redemption history
         print("ℹ️ [PartnerLoyaltyService] Loading redemption history from local state")
+    }
+    
+    /// Delete a partner (admin only)
+    func deletePartner(partnerId: String) async throws {
+        guard let url = URL(string: "\(apiBaseURL)/soteria/partner/\(partnerId)") else {
+            throw NSError(domain: "PartnerLoyaltyService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Add authentication token
+        if let idToken = try await cognitoService.getIDToken() {
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "PartnerLoyaltyService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+        
+        // Parse response
+        let responseString = String(data: data, encoding: .utf8) ?? "{}"
+        print("📥 [PartnerLoyaltyService] Delete response: \(responseString)")
+        
+        // Check if response contains "message" field (API Gateway error format)
+        if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           jsonObject["message"] != nil && jsonObject["success"] == nil {
+            let errorMessage = jsonObject["message"] as? String ?? "Internal server error"
+            throw NSError(domain: "PartnerLoyaltyService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        }
+        
+        let decoder = JSONDecoder()
+        let result = try decoder.decode(DeletePartnerResponse.self, from: data)
+        
+        if !result.success {
+            throw NSError(domain: "PartnerLoyaltyService", code: -1, userInfo: [NSLocalizedDescriptionKey: result.error ?? "Failed to delete partner"])
+        }
+        
+        // Remove from local partners list
+        await MainActor.run {
+            partners.removeAll { $0.partnerId == partnerId }
+        }
+        
+        print("✅ [PartnerLoyaltyService] Partner deleted: \(partnerId)")
     }
 }
 

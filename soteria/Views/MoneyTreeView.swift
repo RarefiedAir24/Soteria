@@ -344,14 +344,14 @@ struct MoneyTreeView: View {
         VStack(spacing: 8) {
             Text("$\(String(format: "%.2f", totalSaved))")
                 .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.reverBlue)
+                .foregroundColor(.softGraphite)
             
             if let next = nextMilestone {
                 milestoneProgressView(next: next)
             } else {
                 Text("Maximum Growth Reached! 🌳")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
             }
         }
     }
@@ -371,13 +371,7 @@ struct MoneyTreeView: View {
                         .frame(height: 10)
                     
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.reverBlueLight, Color.reverBlueDark],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .fill(Color.softGraphite)
                         .frame(width: geometry.size.width * progressToNextMilestone, height: 10)
                         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: progressToNextMilestone)
                 }
@@ -1024,10 +1018,7 @@ struct LeafView: View {
                             LeafShape()
                                 .fill(
                                     LinearGradient(
-                                        colors: isActiveGoal ? [
-                                            Color(red: 0.2, green: 0.6, blue: 1.0).opacity(0.3), // Light blue for active
-                                            Color(red: 0.1, green: 0.5, blue: 0.9).opacity(0.2)
-                                        ] : isDarkTheme ? [
+                                        colors: isDarkTheme ? [
                                             Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.1), // Very subtle for night - only shows outline
                                             Color(red: 0.4, green: 0.6, blue: 0.95).opacity(0.05)
                                         ] : [
@@ -1047,10 +1038,6 @@ struct LeafView: View {
                                         colors: isReached ? [
                                             Color(red: 0.9, green: 0.7, blue: 0.1), // Gold for completed
                                             Color(red: 0.8, green: 0.6, blue: 0.0)
-                                        ] : isActiveGoal ? [
-                                            // Highlighted colors for active goal
-                                            Color(red: 0.2, green: 0.6, blue: 1.0), // Bright blue
-                                            Color(red: 0.1, green: 0.5, blue: 0.9)  // Deeper blue
                                         ] : isDarkTheme ? [
                                             // Lighter blue for night theme to stand out
                                             Color(red: 0.5, green: 0.7, blue: 1.0), // Bright light blue
@@ -1080,7 +1067,7 @@ struct LeafView: View {
                             LeafShape()
                                 .stroke(
                                     isReached ? Color(red: 0.7, green: 0.5, blue: 0.0).opacity(0.3) : Color.white.opacity(0.2),
-                                    lineWidth: isActiveGoal ? 2 : 1
+                                    lineWidth: 1
                                 )
                                 .frame(width: leafSize.width, height: leafSize.height)
                                 .rotationEffect(.degrees(angle))
@@ -1116,10 +1103,10 @@ struct LeafView: View {
                                 .offset(x: 0, y: -2)
                             }
                             
-                            Image(systemName: isReached ? "checkmark.circle.fill" : (isActiveGoal ? "star.fill" : "tree.fill"))
-                                .font(.system(size: isActiveGoal ? min(leafSize.width * 0.5, 20) : min(leafSize.width * 0.4, 18)))
-                                .foregroundColor(isActiveGoal ? Color.yellow : .white)
-                                .shadow(color: isActiveGoal ? Color.yellow.opacity(0.8) : Color.black.opacity(0.5), radius: 4, x: 0, y: 0)
+                            Image(systemName: isReached ? "checkmark.circle.fill" : "tree.fill")
+                                .font(.system(size: min(leafSize.width * 0.4, 18)))
+                                .foregroundColor(.white)
+                                .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 0)
                                 .offset(x: 0, y: leafData.goal != nil ? leafSize.height * 0.2 : -2)
                         }
                     }
@@ -1131,16 +1118,14 @@ struct LeafView: View {
                 .shadow(
                     color: isReached 
                         ? Color(red: 0.9, green: 0.7, blue: 0.1).opacity(0.8) 
-                        : isActiveGoal
-                            ? Color.yellow.opacity(0.9) // Bright yellow shadow for active goal
-                            : isDarkTheme 
-                                ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.8) // Brighter shadow for night
-                                : Color.reverBlue.opacity(0.6), 
-                    radius: isReached ? 10 : (isActiveGoal ? 12 : (isDarkTheme ? 9 : 7)), 
+                        : isDarkTheme 
+                            ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.8) // Brighter shadow for night
+                            : Color.reverBlue.opacity(0.6), 
+                    radius: isReached ? 10 : (isDarkTheme ? 9 : 7), 
                     x: 0, 
                     y: 4
                 )
-                .scaleEffect(isReached ? 1.1 : (isActiveGoal ? 1.15 : 1.0)) // Larger when reached or active
+                .scaleEffect(isReached ? 1.1 : 1.0) // Larger when reached
             } else {
                 // Milestone leaf - green with actual leaf shape, fills in as savings grow
                 ZStack {

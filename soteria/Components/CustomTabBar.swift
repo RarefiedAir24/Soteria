@@ -58,14 +58,26 @@ struct TabBarButton: View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? Color.reverBlue : Color.softGraphite)
+                    .foregroundColor(Color.softGraphite)
                 
                 Text(label)
                     .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? Color.reverBlue : Color.softGraphite)
+                    .foregroundColor(Color.softGraphite)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
+            .overlay(
+                // Halo light effect for selected tab
+                Group {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.softGraphite.opacity(0.2))
+                            .frame(height: 3)
+                            .offset(y: 20) // Position below the tab content
+                            .shadow(color: Color.softGraphite.opacity(0.4), radius: 4, x: 0, y: 0)
+                    }
+                }
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }

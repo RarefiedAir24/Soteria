@@ -133,7 +133,7 @@ struct GoalDetailView: View {
                                 HStack {
                                     Image(systemName: displayGoal.category.icon)
                                         .font(.system(size: 28))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(displayGoal.name)
@@ -179,13 +179,7 @@ struct GoalDetailView: View {
                                                 .frame(height: 16)
                                             
                                             RoundedRectangle(cornerRadius: 8)
-                                                .fill(
-                                                    LinearGradient(
-                                                        colors: [Color.reverBlue, Color.deepReverBlue],
-                                                        startPoint: .leading,
-                                                        endPoint: .trailing
-                                                    )
-                                                )
+                                                .fill(Color.softGraphite)
                                                 .frame(width: geometry.size.width * min(displayGoal.progress, 1.0), height: 16)
                                                 .animation(.spring(response: 0.5, dampingFraction: 0.7), value: displayGoal.progress)
                                         }
@@ -200,7 +194,7 @@ struct GoalDetailView: View {
                                                 .foregroundColor(.softGraphite)
                                             Text(formattedCurrent(for: displayGoal))
                                                 .font(.system(size: 20, weight: .bold))
-                                                .foregroundColor(.reverBlue)
+                                                .foregroundColor(.softGraphite)
                                         }
                                         
                                         Spacer()
@@ -219,7 +213,7 @@ struct GoalDetailView: View {
                                     HStack {
                                         Text("\(progressPercentage(for: displayGoal))% Complete")
                                             .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.reverBlue)
+                                            .foregroundColor(.softGraphite)
                                         
                                         Spacer()
                                         
@@ -253,7 +247,7 @@ struct GoalDetailView: View {
                                         .padding(.vertical, 14)
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.reverBlue)
+                                                .fill(Color.softGraphite)
                                         )
                                     }
                                     
@@ -265,12 +259,12 @@ struct GoalDetailView: View {
                                             Text("Edit Goal")
                                         }
                                         .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.reverBlue.opacity(0.1))
+                                                .fill(Color.softGraphite.opacity(0.1))
                                         )
                                     }
                                 }
@@ -319,7 +313,7 @@ struct GoalDetailView: View {
                                             if daysUntil > 0 {
                                                 Text("\(daysUntil) days remaining")
                                                     .font(.system(size: 12, weight: .regular))
-                                                    .foregroundColor(.reverBlue)
+                                                    .foregroundColor(.softGraphite)
                                             } else if daysUntil == 0 {
                                                 Text("Due today!")
                                                     .font(.system(size: 12, weight: .semibold))
@@ -360,7 +354,7 @@ struct GoalDetailView: View {
                             }
                         }) {
                             Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                         }
                     }
                 }
@@ -368,7 +362,7 @@ struct GoalDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 }
             }
         }
@@ -425,7 +419,7 @@ struct GoalDetailView: View {
     private func statusColor(for status: SavingsGoal.GoalStatus) -> Color {
         switch status {
         case .active:
-            return .reverBlue
+            return .softGraphite
         case .achieved:
             return .green
         case .failed:
@@ -442,7 +436,7 @@ struct GoalDetailView: View {
             HStack {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 18))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 
                 Text("Forecasting Insights")
                     .font(.system(size: 18, weight: .semibold))
@@ -460,7 +454,7 @@ struct GoalDetailView: View {
                             icon: "calendar",
                             title: "Projected Completion",
                             message: "Based on your current savings rate, you'll reach this goal on \(formatDate(projectedDate))",
-                            color: .reverBlue
+                            color: .softGraphite
                         )
                     }
                     

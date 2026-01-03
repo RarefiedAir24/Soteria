@@ -232,8 +232,15 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
+        let identifier = response.notification.request.identifier
         
-        print("📱 [App] Notification tapped - userInfo: \(userInfo)")
+        print("📱 [App] Notification tapped - userInfo: \(userInfo), identifier: \(identifier)")
+        
+        // Mark notification as read when tapped (user has seen it)
+        NotificationBadgeManager.shared.markNotificationAsRead(identifier: identifier)
+        
+        // Update badge count when notification is tapped
+        NotificationBadgeManager.shared.updateBadgeCount()
         
         // Track that app was opened from notification
         let notificationType = userInfo["type"] as? String ?? "unknown"
@@ -285,6 +292,23 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                     NotificationCenter.default.post(name: NSNotification.Name("ShowPurchaseIntentPrompt"), object: nil)
                 }
             }
+        } else if userInfo["type"] as? String == "decision_window" || userInfo["type"] as? String == "decision_window_save_first" {
+            // Handle decision window notification tap - show the prompt
+            print("✅ [App] Decision window notification tapped - showing prompt")
+            if let windowId = userInfo["windowId"] as? String {
+                // Find the window and post notification to show prompt
+                let windows = DecisionWindowsService.shared.windows
+                if let window = windows.first(where: { $0.id == windowId }) {
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("DecisionWindowActive"),
+                            object: window
+                        )
+                    }
+                } else {
+                    print("⚠️ [App] Decision window not found for id: \(windowId)")
+                }
+            }
         } else {
             print("⚠️ [App] Unknown notification type: \(userInfo["type"] ?? "nil")")
         }
@@ -301,6 +325,15 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         print("📱 [App] Body: \(notification.request.content.body)")
         print("📱 [App] UserInfo: \(userInfo)")
         print("📱 [App] Trigger: \(notification.request.trigger?.description ?? "nil")")
+        
+        // Update badge immediately when notification is received
+        NotificationBadgeManager.shared.updateBadgeCount()
+        
+        // Post notification for UI updates
+        NotificationCenter.default.post(
+            name: NSNotification.Name("NotificationDelivered"),
+            object: nil
+        )
         
         // Check notification type
         if userInfo["type"] as? String == "soteria_moment" {
@@ -342,8 +375,21 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             } else {
                 completionHandler([.alert, .sound, .badge])
             }
+        } else if userInfo["type"] as? String == "decision_window" || userInfo["type"] as? String == "decision_window_reminder" {
+            print("✅ [App] Decision window notification detected in foreground - showing banner")
+            // Mark notification as unread and update badge
+            NotificationBadgeManager.shared.markNotificationAsUnread(identifier: identifier)
+            NotificationBadgeManager.shared.updateBadgeCount()
+            if #available(iOS 15.0, *) {
+                completionHandler([.banner, .list, .sound, .badge])
+            } else {
+                completionHandler([.alert, .sound, .badge])
+            }
         } else {
             print("⚠️ [App] Unknown notification type in foreground")
+            // Still mark as unread and update badge for any notification
+            NotificationBadgeManager.shared.markNotificationAsUnread(identifier: identifier)
+            NotificationBadgeManager.shared.updateBadgeCount()
             if #available(iOS 15.0, *) {
                 completionHandler([.banner, .list, .sound, .badge])
             } else {
@@ -482,6 +528,11 @@ struct RootView: View {
                         }
                 }
             }
+        }
+        .onAppear {
+            // Initialize notification badge manager on app launch
+            NotificationBadgeManager.shared.startObserving()
+            NotificationBadgeManager.shared.updateBadgeCount()
         }
     }
     

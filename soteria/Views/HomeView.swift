@@ -76,6 +76,7 @@ struct HomeView: View {
     @State private var showDecisionWindows = false
     @State private var showNotificationCenter = false
     @State private var notificationCount: Int = 0
+    @State private var badgePulse: Bool = false
     @AppStorage("last_sign_in_timestamp") private var lastSignInTimestamp: Double = 0
     @AppStorage("welcome_back_shown_for_session") private var welcomeBackShownForSession: Bool = false
     
@@ -187,7 +188,7 @@ struct HomeView: View {
                                     }) {
                                         Image(systemName: "pencil.circle.fill")
                                             .font(.system(size: 18))
-                                            .foregroundColor(.reverBlue)
+                                            .foregroundColor(.softGraphite)
                                     }
                                 }
                             }
@@ -203,7 +204,7 @@ struct HomeView: View {
                         } else {
                             Text("Press Enter or tap ✓ to save")
                                 .font(.system(size: 11))
-                                .foregroundColor(.reverBlue.opacity(0.7))
+                                .foregroundColor(.softGraphite.opacity(0.7))
                                 .padding(.leading, 2)
                         }
                     }
@@ -240,13 +241,7 @@ struct HomeView: View {
                     HStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.reverBlueLight.opacity(0.2), Color.reverBlueDark.opacity(0.2)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .fill(Color.softGraphite.opacity(0.2))
                                 .frame(width: 50, height: 50)
                             
                             Text(StreakService.shared.streakEmoji)
@@ -259,7 +254,7 @@ struct HomeView: View {
                                 .foregroundColor(.softGraphite)
                             Text("\(streak) days")
                                 .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                         }
                         
                         Spacer()
@@ -268,13 +263,7 @@ struct HomeView: View {
                     // Premium CTA Phrase
                     Text("Execute a Save and Grow your Money Tree")
                         .font(.system(size: 17, weight: .medium, design: .default))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color.reverBlueDark, Color.reverBlueLight],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .foregroundColor(.softGraphite)
                         .tracking(0.5)
                         .italic()
                         .multilineTextAlignment(.center)
@@ -294,24 +283,12 @@ struct HomeView: View {
                 HStack {
                     ZStack {
                         Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.reverBlueLight.opacity(0.2), Color.reverBlueDark.opacity(0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .fill(Color.softGraphite.opacity(0.2))
                             .frame(width: 50, height: 50)
                         
                         Image(systemName: "bell.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color.reverBlueLight, Color.reverBlueDark],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .foregroundColor(.softGraphite)
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -349,24 +326,12 @@ struct HomeView: View {
                         HStack {
                             ZStack {
                                 Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.reverBlueLight.opacity(0.2), Color.reverBlueDark.opacity(0.2)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+                                    .fill(Color.softGraphite.opacity(0.2))
                                     .frame(width: 50, height: 50)
                                 
                                 Image(systemName: "chart.line.uptrend.xyaxis")
                                     .font(.system(size: 24))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [Color.reverBlueLight, Color.reverBlueDark],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+                                    .foregroundColor(.softGraphite)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
@@ -396,7 +361,7 @@ struct HomeView: View {
                                         .foregroundColor(.softGraphite)
                                     Text("\(plaidService.depositHistory.count)")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                 }
                                 
                                 Spacer()
@@ -412,7 +377,7 @@ struct HomeView: View {
                                     
                                     Text(formatCurrency(monthlyDepositsTotal))
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                 }
                             }
                             
@@ -451,7 +416,7 @@ struct HomeView: View {
                                             HStack(spacing: 6) {
                                                 Image(systemName: "lock.fill")
                                                     .font(.system(size: 12))
-                                                    .foregroundColor(.reverBlue)
+                                                    .foregroundColor(.softGraphite)
                                                 Text("Limited to 7 days")
                                                     .font(.system(size: 13, weight: .semibold))
                                                     .foregroundColor(.midnightSlate)
@@ -602,6 +567,31 @@ struct HomeView: View {
             return firstSubscriptionDate
         }
         return Date()
+    }
+    
+    // Helper functions for widget data
+    private func determineCardTypeForWidget() -> String {
+        let subscriptionType = SubscriptionStreakService.shared.lastSubscriptionType ?? .monthly
+        let isAnnual = subscriptionType == .annual
+        let isBeta = isBetaTester()
+        let isRoseGold = isRoseGoldFounder()
+        let isBlack = (isBeta || isRoseGold) ? false : isBlackCardEligible()
+        
+        if isBeta {
+            return "beta"
+        } else if isRoseGold {
+            return "rosegold"
+        } else if isBlack {
+            return "black"
+        } else if isAnnual {
+            return "platinum"
+        } else {
+            return "gold"
+        }
+    }
+    
+    private func getSignUpYearForWidget() -> String {
+        return getUserSignUpYear()
     }
     
     @State private var isCardFlipped = false
@@ -820,8 +810,14 @@ struct HomeView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("DecisionWindowActive"))) { notification in
                 if let window = notification.object as? DecisionWindow {
-                    self.activeDecisionWindow = window
-                    self.showDecisionWindowPrompt = true
+                    // Ensure we're on main thread and add a small delay to ensure view is ready
+                    DispatchQueue.main.async {
+                        self.activeDecisionWindow = window
+                        // Small delay to ensure view hierarchy is ready
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.showDecisionWindowPrompt = true
+                        }
+                    }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenPlaidTransferForDecisionWindow"))) { notification in
@@ -846,6 +842,24 @@ struct HomeView: View {
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenDecisionWindows"))) { _ in
                 print("🔔 [HomeView] Received OpenDecisionWindows notification - opening Decision Notifications")
                 showDecisionWindows = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NotificationCountUpdated"))) { notification in
+                if let count = notification.object as? Int {
+                    notificationCount = count
+                    // Restart animation if count > 0
+                    if count > 0 && !badgePulse {
+                        withAnimation(
+                            Animation.easeInOut(duration: 1.0)
+                                .repeatForever(autoreverses: true)
+                        ) {
+                            badgePulse = true
+                        }
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NotificationDelivered"))) { _ in
+                // Update badge when notification is delivered
+                checkNotificationCount()
             }
             .onAppear {
                 checkNotificationCount()
@@ -934,13 +948,27 @@ struct HomeView: View {
                         self.plaidTransferInitialAmount = nil
                     }
             }
-            .fullScreenCover(isPresented: $showDecisionWindowPrompt) {
+            .fullScreenCover(isPresented: Binding(
+                get: { showDecisionWindowPrompt && activeDecisionWindow != nil },
+                set: { showDecisionWindowPrompt = $0 }
+            )) {
                 if let window = self.activeDecisionWindow {
                     DecisionWindowPromptView(window: window) {
                         self.showDecisionWindowPrompt = false
                         self.activeDecisionWindow = nil
                         self.totalSaved = self.plaidService.totalSaved
+                        // Clear the UserDefaults flag when prompt is dismissed
+                        UserDefaults.standard.set(false, forKey: "shouldShowDecisionWindowPrompt")
+                        UserDefaults.standard.removeObject(forKey: "activeDecisionWindowId")
                     }
+                } else {
+                    // Fallback view if window is nil (shouldn't happen, but prevents white screen)
+                    Color.cloudWhite
+                        .ignoresSafeArea()
+                        .onAppear {
+                            print("⚠️ [HomeView] DecisionWindowPromptView attempted to show but activeDecisionWindow is nil")
+                            self.showDecisionWindowPrompt = false
+                        }
                 }
             }
             .overlay {
@@ -1275,21 +1303,40 @@ struct HomeView: View {
                         .font(.system(size: 22))
                         .foregroundColor(.midnightSlate)
                     
-                    // Badge indicator when there are notifications - sleek and stylish
+                    // Badge indicator when there are notifications - flashing red light
                     if notificationCount > 0 {
                         ZStack {
-                            // Outer glow/shadow
+                            // Outer pulsing glow - more pronounced
                             Circle()
                                 .fill(Color.red)
-                                .frame(width: 10, height: 10)
-                                .shadow(color: Color.red.opacity(0.6), radius: 3, x: 0, y: 1)
+                                .frame(width: 14, height: 14)
+                                .shadow(color: Color.red.opacity(0.8), radius: 6, x: 0, y: 2)
+                                .opacity(badgePulse ? 1.0 : 0.4)
+                                .scaleEffect(badgePulse ? 1.0 : 0.9)
                             
-                            // Inner dot
+                            // Middle ring - pulsing
+                            Circle()
+                                .stroke(Color.red, lineWidth: 2)
+                                .frame(width: 12, height: 12)
+                                .opacity(badgePulse ? 0.9 : 0.5)
+                                .scaleEffect(badgePulse ? 1.0 : 0.95)
+                            
+                            // Inner bright dot
                             Circle()
                                 .fill(Color.white)
-                                .frame(width: 6, height: 6)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: Color.red.opacity(0.5), radius: 2, x: 0, y: 1)
                         }
-                        .offset(x: 6, y: -6)
+                        .offset(x: 8, y: -8)
+                        .onAppear {
+                            // Start pulsing animation
+                            withAnimation(
+                                Animation.easeInOut(duration: 1.0)
+                                    .repeatForever(autoreverses: true)
+                            ) {
+                                badgePulse = true
+                            }
+                        }
                     }
                 }
                 .frame(width: 30, height: 30)
@@ -1438,9 +1485,9 @@ struct HomeView: View {
     
     private var usernameBannerBackgroundGradient: LinearGradient {
         guard subscriptionService.isPremium else {
-            // Free users get gray
+            // Free users get softGraphite
             return LinearGradient(
-                colors: [Color.mistGray.opacity(0.75)],
+                colors: [Color.softGraphite.opacity(0.15)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -1643,6 +1690,9 @@ struct HomeView: View {
             userEmail = "there"
             userName = "User"
         }
+        
+        // Save userName to UserDefaults for widget access
+        UserDefaults.standard.set(userName, forKey: "user_name")
         
         // Load avatar from UserDefaults (same as ProfileView)
         loadAvatar()

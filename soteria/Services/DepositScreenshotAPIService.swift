@@ -51,7 +51,12 @@ class DepositScreenshotAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        
+        // Ensure Authorization header is properly formatted
+        let authHeader = "Bearer \(idToken)"
+        request.setValue(authHeader, forHTTPHeaderField: "Authorization")
+        print("🔐 [DepositScreenshotAPIService] Authorization header format: Bearer <token> (length: \(authHeader.count))")
+        
         request.timeoutInterval = 15.0 // 15 seconds for larger images
         
         // Create request body
@@ -71,6 +76,15 @@ class DepositScreenshotAPIService {
         
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ [DepositScreenshotAPIService] Upload failed with status \(httpResponse.statusCode): \(errorMessage)")
+            print("❌ [DepositScreenshotAPIService] Response headers: \(httpResponse.allHeaderFields)")
+            
+            // Check if this is an authentication error
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                print("⚠️ [DepositScreenshotAPIService] Authentication error - token may be invalid or endpoint may not exist")
+                print("⚠️ [DepositScreenshotAPIService] Endpoint: \(url.absoluteString)")
+            }
+            
             throw NSError(domain: "DepositScreenshotAPIService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Upload failed: \(errorMessage)"])
         }
         

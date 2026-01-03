@@ -1,0 +1,16 @@
+{
+  "name": "soteria-partner-delete",
+  "version": "1.0.0",
+  "description": "Lambda function to delete partners",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "jwk-to-pem": "^2.0.0"
+  }
+}
+

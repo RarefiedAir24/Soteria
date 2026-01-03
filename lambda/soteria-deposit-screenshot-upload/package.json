@@ -1,0 +1,12 @@
+{
+  "name": "soteria-deposit-screenshot-upload",
+  "version": "1.0.0",
+  "description": "Lambda function to upload deposit screenshots to S3",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0"
+  }
+}
+

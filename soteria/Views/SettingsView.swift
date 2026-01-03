@@ -43,7 +43,7 @@ struct SettingsView: View {
     @State private var isDeletingAccount = false
     @State private var showPartnerLoyalty = false
     @State private var showRedemptionHistory = false
-    @State private var showNotificationCenter = false
+    @State private var showAdminPartnerManagement = false
     
     // MARK: - Card Color Helpers
     
@@ -463,7 +463,7 @@ struct SettingsView: View {
                             icon: "crown.fill",
                             title: subscriptionService.isPremium ? "Manage Subscription" : "Upgrade to Premium",
                             subtitle: subscriptionService.isPremium ? "Manage or cancel your subscription" : "Unlock all features",
-                            color: subscriptionService.isPremium ? Color(red: 1.0, green: 0.84, blue: 0.0) : Color.reverBlue
+                            color: subscriptionService.isPremium ? Color(red: 1.0, green: 0.84, blue: 0.0) : Color.softGraphite
                         ) {
                             print("🔔 [SettingsView] Manage Subscription button tapped")
                             print("🔔 [SettingsView] subscriptionService.isPremium: \(subscriptionService.isPremium)")
@@ -486,17 +486,14 @@ struct SettingsView: View {
                     // Update Profile / Edit Onboarding
                     if OnboardingSurveyService.shared.hasCompletedSurvey {
                         VStack(alignment: .leading, spacing: 16) {
-                            Button(action: {
+                            SettingsRow(
+                                icon: "person.circle.fill",
+                                title: "Update Profile",
+                                subtitle: "Edit your savings preferences",
+                                color: Color.softGraphite
+                            ) {
                                 showEditOnboarding = true
-                            }) {
-                                SettingsRow(
-                                    icon: "person.circle.fill",
-                                    title: "Update Profile",
-                                    subtitle: "Edit your savings preferences",
-                                    color: Color.reverBlue
-                                ) {}
                             }
-                            .buttonStyle(.plain)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .reverCard()
@@ -530,7 +527,7 @@ struct SettingsView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Color.reverBlue)
+                                    .background(Color.softGraphite)
                                     .cornerRadius(8)
                             }
                         }
@@ -541,7 +538,7 @@ struct SettingsView: View {
                             icon: "bell.fill",
                             title: "Decision Notifications",
                             subtitle: "Time-based savings prompts",
-                            color: Color.reverBlue
+                            color: Color.softGraphite
                         ) {
                             if subscriptionService.isPremium {
                                 showDecisionWindows = true
@@ -550,22 +547,12 @@ struct SettingsView: View {
                             }
                         }
                         
-                        // Notification Center
-                        SettingsRow(
-                            icon: "bell.badge.fill",
-                            title: "Notification Center",
-                            subtitle: "View and manage notifications",
-                            color: Color.orange
-                        ) {
-                            showNotificationCenter = true
-                        }
-                        
                         // Mood Check-In
                         SettingsRow(
                             icon: "heart.fill",
                             title: "Mood Check-In",
                             subtitle: "Track your mood",
-                            color: Color.reverBlue
+                            color: Color.softGraphite
                         ) {
                             showMoodCheckIn = true
                         }
@@ -613,7 +600,9 @@ struct SettingsView: View {
                         }
                         
                         // Partner Benefits
-                        NavigationLink(destination: PartnerLoyaltyView()) {
+                        Button(action: {
+                            showPartnerLoyalty = true
+                        }) {
                             HStack {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 10)
@@ -674,8 +663,28 @@ struct SettingsView: View {
                         .disabled(!subscriptionService.isPremium)
                         .opacity(subscriptionService.isPremium ? 1.0 : 0.6)
                         
+                        // Admin Partner Management (only for supergeek@me.com)
+                        if userEmail.lowercased() == "supergeek@me.com" {
+                            Divider()
+                                .padding(.vertical, 8)
+                            
+                            Button(action: {
+                                showAdminPartnerManagement = true
+                            }) {
+                                SettingsRow(
+                                    icon: "gearshape.2.fill",
+                                    title: "Admin: Manage Partners",
+                                    subtitle: "Edit partner logos and information",
+                                    color: Color.orange
+                                ) {}
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        
                         // Redemption History
-                        NavigationLink(destination: RedemptionHistoryView()) {
+                        Button(action: {
+                            showRedemptionHistory = true
+                        }) {
                             HStack {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 10)
@@ -859,9 +868,6 @@ struct SettingsView: View {
             print("🔔 [SettingsView] Received OpenDecisionWindows notification - opening Decision Notifications")
             showDecisionWindows = true
         }
-        .sheet(isPresented: $showNotificationCenter) {
-            NotificationCenterView()
-        }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
                 .environmentObject(subscriptionService)
@@ -924,6 +930,22 @@ struct SettingsView: View {
             .onAppear {
                 print("🔵 [SettingsView] Profile sheet appeared")
             }
+        }
+        .sheet(isPresented: $showPartnerLoyalty) {
+            PartnerLoyaltyView()
+        }
+        .sheet(isPresented: $showRedemptionHistory) {
+            RedemptionHistoryView()
+        }
+        .sheet(isPresented: $showAdminPartnerManagement) {
+            NavigationView {
+                AdminPartnerManagementView()
+                    .environmentObject(authService)
+            }
+        }
+        .sheet(isPresented: $showAdminPartnerManagement) {
+            AdminPartnerManagementView()
+                .environmentObject(authService)
         }
         .onChange(of: showProfileView) { oldValue, newValue in
             print("🔵 [SettingsView] showProfileView changed from \(oldValue) to \(newValue)")

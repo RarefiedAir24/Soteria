@@ -213,7 +213,22 @@ class DecisionWindowsService: ObservableObject {
         
         windows.append(window)
         saveWindows()
-        scheduleNotifications()
+        
+        // Schedule notifications asynchronously to avoid blocking
+        DispatchQueue.main.async { [weak self] in
+            self?.scheduleNotifications()
+            
+            // Immediately check if the new window is currently active and send notification if so
+            if window.isEnabled && window.isCurrentlyActive() {
+                print("🔄 [DecisionWindowsService] New window is currently active, sending immediate notification")
+                self?.sendDecisionWindowNotification(for: window)
+                self?.notifiedWindowIds.insert(window.id)
+            }
+            
+            // Also trigger a check in case the window becomes active soon
+            self?.checkActiveWindows()
+        }
+        
         print("✅ [DecisionWindowsService] Added window: \(window.name), id: \(window.id), total windows: \(windows.count)")
     }
     
@@ -229,7 +244,24 @@ class DecisionWindowsService: ObservableObject {
             updatedWindow.createdDate = windows[index].createdDate
             windows[index] = updatedWindow
             saveWindows()
-            scheduleNotifications()
+            
+            // Schedule notifications asynchronously to avoid blocking
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.scheduleNotifications()
+                
+                // Immediately check if the updated window is currently active and send notification if so
+                if updatedWindow.isEnabled && updatedWindow.isCurrentlyActive() {
+                    print("🔄 [DecisionWindowsService] Updated window is currently active, sending immediate notification")
+                    // Remove from notified set to allow re-notification if window was just enabled
+                    self.notifiedWindowIds.remove(updatedWindow.id)
+                    self.sendDecisionWindowNotification(for: updatedWindow)
+                    self.notifiedWindowIds.insert(updatedWindow.id)
+                }
+                
+                // Also trigger a check in case the window becomes active soon
+                self.checkActiveWindows()
+            }
         }
     }
     
@@ -268,16 +300,54 @@ class DecisionWindowsService: ObservableObject {
         
         for window in activeWindows {
             // Only send notification if we haven't already notified for this window
+            // AND if there's no scheduled notification that will fire at the exact time
+            // This prevents duplicate notifications from both scheduled and active window checking
             if !notifiedWindowIds.contains(window.id) {
-                sendDecisionWindowNotification(for: window)
-                notifiedWindowIds.insert(window.id)
-                print("✅ [DecisionWindowsService] Notified for window: \(window.name), id: \(window.id)")
+                // Check if there's a scheduled notification for this window that will fire soon
+                // If a scheduled notification exists, let it handle the notification instead
+                let hasScheduledNotification = checkForScheduledNotification(for: window)
+                
+                if !hasScheduledNotification {
+                    // No scheduled notification found, send immediate notification
+                    sendDecisionWindowNotification(for: window)
+                    notifiedWindowIds.insert(window.id)
+                    print("✅ [DecisionWindowsService] Notified for window: \(window.name), id: \(window.id)")
+                } else {
+                    // Scheduled notification exists, mark as notified to prevent duplicate
+                    notifiedWindowIds.insert(window.id)
+                    print("⏭️ [DecisionWindowsService] Skipping immediate notification for \(window.name) - scheduled notification will fire")
+                }
             }
         }
         
         // Remove windows that are no longer active from the notified set
         let activeWindowIds = Set(activeWindows.map { $0.id })
         notifiedWindowIds = notifiedWindowIds.filter { activeWindowIds.contains($0) }
+    }
+    
+    // Check if there's a scheduled notification for this window that will fire soon
+    private func checkForScheduledNotification(for window: DecisionWindow) -> Bool {
+        let isJustRemindMe = window.defaultPauseIntention != nil && 
+                             window.defaultMicroSaveAmount == nil && 
+                             window.defaultSpendGate == nil
+        
+        let identifierPrefix = isJustRemindMe 
+            ? "decision_window_reminder_\(window.id)"
+            : "decision_window_\(window.id)"
+        
+        var hasScheduled = false
+        
+        // Check pending notifications synchronously (this is a quick check)
+        let semaphore = DispatchSemaphore(value: 0)
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            hasScheduled = requests.contains { request in
+                request.identifier.hasPrefix(identifierPrefix)
+            }
+            semaphore.signal()
+        }
+        semaphore.wait()
+        
+        return hasScheduled
     }
     
     // MARK: - Notifications
@@ -336,6 +406,13 @@ class DecisionWindowsService: ObservableObject {
             content.interruptionLevel = .timeSensitive
         }
         
+        let calendar = Calendar.current
+        let now = Date()
+        let currentDay = calendar.component(.weekday, from: now)
+        
+        // Track if we've scheduled a notification for today to avoid duplicates
+        var scheduledForToday = false
+        
         // Schedule for each day of week
         for day in window.daysOfWeek {
             var dateComponents = DateComponents()
@@ -343,23 +420,67 @@ class DecisionWindowsService: ObservableObject {
             dateComponents.hour = window.time.hour
             dateComponents.minute = window.time.minute
             
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-            let identifier = isJustRemindMe 
-                ? "decision_window_reminder_\(window.id)_\(day)"
-                : "decision_window_\(window.id)_\(day)"
+            // If this is today and the time hasn't passed yet, schedule an immediate notification for today
+            if day == currentDay {
+                if let windowHour = window.time.hour, let windowMinute = window.time.minute {
+                    if let windowTime = calendar.date(bySettingHour: windowHour, minute: windowMinute, second: 0, of: now) {
+                        // If the window time is in the future today, schedule a one-time notification for today
+                        if windowTime > now {
+                            let timeInterval = windowTime.timeIntervalSince(now)
+                            // Only schedule if it's within the next 24 hours (to avoid scheduling too far in advance)
+                            if timeInterval > 0 && timeInterval < 86400 {
+                                let immediateTrigger = UNTimeIntervalNotificationTrigger(timeInterval: timeInterval, repeats: false)
+                                let immediateIdentifier = isJustRemindMe 
+                                    ? "decision_window_reminder_\(window.id)_today"
+                                    : "decision_window_\(window.id)_today"
+                                
+                                let immediateRequest = UNNotificationRequest(
+                                    identifier: immediateIdentifier,
+                                    content: content,
+                                    trigger: immediateTrigger
+                                )
+                                
+                                UNUserNotificationCenter.current().add(immediateRequest) { error in
+                                    if let error = error {
+                                        print("❌ [DecisionWindowsService] Failed to schedule today's notification: \(error)")
+                                    } else {
+                                        let type = isJustRemindMe ? "reminder" : "prompt"
+                                        print("✅ [DecisionWindowsService] Scheduled \(type) notification for \(window.name) today at \(windowHour):\(String(format: "%02d", windowMinute))")
+                                        // Mark as unread when scheduled (will be delivered when notification fires)
+                                        NotificationBadgeManager.shared.markNotificationAsUnread(identifier: immediateIdentifier)
+                                    }
+                                }
+                                scheduledForToday = true // Mark that we've scheduled for today
+                            }
+                        }
+                    }
+                }
+            }
             
-            let request = UNNotificationRequest(
-                identifier: identifier,
-                content: content,
-                trigger: trigger
-            )
-            
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("❌ [DecisionWindowsService] Failed to schedule notification: \(error)")
-                } else {
-                    let type = isJustRemindMe ? "reminder" : "prompt"
-                    print("✅ [DecisionWindowsService] Scheduled \(type) notification for \(window.name) on day \(day)")
+            // Schedule recurring notification for future occurrences
+            // BUT: Skip today since we already scheduled a one-time notification for today
+            // This prevents duplicate notifications on the same day
+            if day != currentDay || !scheduledForToday {
+                let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+                let identifier = isJustRemindMe 
+                    ? "decision_window_reminder_\(window.id)_\(day)"
+                    : "decision_window_\(window.id)_\(day)"
+                
+                let request = UNNotificationRequest(
+                    identifier: identifier,
+                    content: content,
+                    trigger: trigger
+                )
+                
+                UNUserNotificationCenter.current().add(request) { error in
+                    if let error = error {
+                        print("❌ [DecisionWindowsService] Failed to schedule recurring notification: \(error)")
+                    } else {
+                        let type = isJustRemindMe ? "reminder" : "prompt"
+                        print("✅ [DecisionWindowsService] Scheduled recurring \(type) notification for \(window.name) on day \(day)")
+                        // Mark as unread when scheduled (will be delivered when notification fires)
+                        NotificationBadgeManager.shared.markNotificationAsUnread(identifier: identifier)
+                    }
                 }
             }
         }
@@ -400,6 +521,14 @@ class DecisionWindowsService: ObservableObject {
                     print("❌ [DecisionWindowsService] Failed to send reminder notification: \(error)")
                 } else {
                     print("✅ [DecisionWindowsService] Sent reminder notification: \(reminderText)")
+                    // Mark as unread and update badge when notification is successfully added
+                    let identifier = request.identifier
+                    NotificationBadgeManager.shared.markNotificationAsUnread(identifier: identifier)
+                    NotificationBadgeManager.shared.updateBadgeCount()
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("NotificationDelivered"),
+                        object: nil
+                    )
                 }
             }
             
@@ -436,6 +565,12 @@ class DecisionWindowsService: ObservableObject {
                     print("❌ [DecisionWindowsService] Failed to send Save First notification: \(error)")
                 } else {
                     print("✅ [DecisionWindowsService] Sent Save First notification for $\(saveAmount)")
+                    // Update badge when notification is successfully added
+                    NotificationBadgeManager.shared.updateBadgeCount()
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("NotificationDelivered"),
+                        object: nil
+                    )
                 }
             }
             
@@ -474,23 +609,29 @@ class DecisionWindowsService: ObservableObject {
             trigger: nil // Immediate delivery
         )
         
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("❌ [DecisionWindowsService] Failed to send immediate notification: \(error)")
-            } else {
-                print("✅ [DecisionWindowsService] Sent Decision Window notification: \(title)")
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("❌ [DecisionWindowsService] Failed to send immediate notification: \(error)")
+                } else {
+                    print("✅ [DecisionWindowsService] Sent Decision Window notification: \(title)")
+                    // Mark as unread and update badge when notification is successfully added
+                    let identifier = request.identifier
+                    NotificationBadgeManager.shared.markNotificationAsUnread(identifier: identifier)
+                    NotificationBadgeManager.shared.updateBadgeCount()
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("NotificationDelivered"),
+                        object: nil
+                    )
+                }
             }
-        }
         
-        // Set flag for in-app prompt
+        // Set flag for in-app prompt (only show when user taps notification, not immediately)
         UserDefaults.standard.set(true, forKey: "shouldShowDecisionWindowPrompt")
         UserDefaults.standard.set(window.id, forKey: "activeDecisionWindowId")
         
-        // Post notification for in-app handling
-        NotificationCenter.default.post(
-            name: NSNotification.Name("DecisionWindowActive"),
-            object: window
-        )
+        // DO NOT post DecisionWindowActive notification here - it will be posted by NotificationDelegate
+        // when the user actually taps the notification. This prevents the prompt from showing
+        // when notifications are sent programmatically (e.g., when creating a window).
     }
     
     // MARK: - Notification Copy

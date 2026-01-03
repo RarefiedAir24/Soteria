@@ -33,8 +33,13 @@
  * }
  */
 
-const AWS = require('aws-sdk');
-const dynamodb = new AWS.DynamoDB.DocumentClient();
+// Use AWS SDK v3 for Node.js 18+ runtime
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, ScanCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+
+// Create DynamoDB client
+const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const dynamodb = DynamoDBDocumentClient.from(client);
 
 // DynamoDB table names
 const TABLES = {
@@ -57,7 +62,7 @@ async function getUserRedemptionCount(userId, partnerId) {
             }
         };
         
-        const result = await dynamodb.query(params).promise();
+        const result = await dynamodb.send(new QueryCommand(params));
         return result.Items ? result.Items.length : 0;
     } catch (error) {
         console.error('❌ [Lambda] Error getting redemption count:', error);
@@ -87,6 +92,9 @@ exports.handler = async (event) => {
     }
     
     try {
+        // Log headers for debugging
+        console.log('📋 [Lambda] Headers:', JSON.stringify(event.headers || {}, null, 2));
+        
         const queryParams = event.queryStringParameters || {};
         const userId = queryParams.user_id;
         const category = queryParams.category;
@@ -122,7 +130,9 @@ exports.handler = async (event) => {
             params.ExpressionAttributeValues[':location'] = location;
         }
         
-        const result = await dynamodb.scan(params).promise();
+        console.log('📊 [Lambda] Scanning DynamoDB with params:', JSON.stringify(params, null, 2));
+        const result = await dynamodb.send(new ScanCommand(params));
+        console.log('📊 [Lambda] Scan result count:', result.Items?.length || 0);
         
         let partners = result.Items || [];
         
@@ -138,17 +148,20 @@ exports.handler = async (event) => {
                         partner_id: partner.partner_id,
                         name: partner.name,
                         description: partner.description,
-                        discount_percentage: partner.discount_percentage || 0,
-                        discount_amount: partner.discount_amount || null,
-                        discount_type: partner.discount_type || 'percentage',
+                        loyalty_percentage: partner.loyalty_percentage || partner.discount_percentage || 0,
+                        loyalty_amount: partner.loyalty_amount || partner.discount_amount || null,
+                        loyalty_type: partner.loyalty_type || partner.discount_type || 'percentage',
                         logo_url: partner.logo_url || null,
                         category: partner.category || 'Other',
                         location: partner.location || null,
                         terms: partner.terms || null,
                         max_redemptions_per_user: maxRedemptions,
+                        valid_until: partner.valid_until || null,
+                        is_active: partner.is_active !== false,
+                        website: partner.website || null,
+                        has_brick_and_mortar: partner.has_brick_and_mortar || null,
                         user_redemption_count: redemptionCount,
-                        can_redeem: canRedeem,
-                        valid_until: partner.valid_until || null
+                        can_redeem: canRedeem
                     };
                 })
             );
@@ -160,15 +173,18 @@ exports.handler = async (event) => {
                 partner_id: partner.partner_id,
                 name: partner.name,
                 description: partner.description,
-                discount_percentage: partner.discount_percentage || 0,
-                discount_amount: partner.discount_amount || null,
-                discount_type: partner.discount_type || 'percentage',
+                loyalty_percentage: partner.loyalty_percentage || partner.discount_percentage || 0,
+                loyalty_amount: partner.loyalty_amount || partner.discount_amount || null,
+                loyalty_type: partner.loyalty_type || partner.discount_type || 'percentage',
                 logo_url: partner.logo_url || null,
                 category: partner.category || 'Other',
                 location: partner.location || null,
                 terms: partner.terms || null,
                 max_redemptions_per_user: partner.max_redemptions_per_user || null,
-                valid_until: partner.valid_until || null
+                valid_until: partner.valid_until || null,
+                is_active: partner.is_active !== false,
+                website: partner.website || null,
+                has_brick_and_mortar: partner.has_brick_and_mortar || null
             }));
         }
         
@@ -188,13 +204,18 @@ exports.handler = async (event) => {
         
     } catch (error) {
         console.error('❌ [Lambda] Error listing partners:', error);
+        console.error('❌ [Lambda] Error stack:', error.stack);
+        console.error('❌ [Lambda] Error name:', error.name);
+        console.error('❌ [Lambda] Error code:', error.code);
         
+        // Return error in format that matches success response
         return {
-            statusCode: 500,
+            statusCode: 200, // Return 200 so API Gateway doesn't transform it
             headers,
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Internal server error'
+                error: error.message || 'Internal server error',
+                partners: [] // Empty array on error
             })
         };
     }

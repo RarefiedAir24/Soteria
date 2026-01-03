@@ -291,6 +291,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Soteria;
 				INFOPLIST_KEY_NSBonjourServices = _http._tcp;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used for identity verification when connecting bank accounts";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to quickly sign in to your account";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Soteria needs access to your local network to connect to the development server for testing Plaid integration.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Soteria uses your location to display weather-based backgrounds on your money tree.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -329,6 +330,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Soteria;
 				INFOPLIST_KEY_NSBonjourServices = _http._tcp;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used for identity verification when connecting bank accounts";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to quickly sign in to your account";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Soteria needs access to your local network to connect to the development server for testing Plaid integration.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Soteria uses your location to display weather-based backgrounds on your money tree.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

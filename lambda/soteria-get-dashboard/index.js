@@ -31,7 +31,7 @@
 
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
-const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
+const { validateUserAccess, getCorsHeaders } = require('./auth-utils');
 
 // DynamoDB table names
 const TABLES = {

@@ -72,18 +72,12 @@ struct WelcomeBackView: View {
                         // Welcome icon
                         ZStack {
                             Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.reverBlue.opacity(0.2), Color.deepReverBlue.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .fill(Color.softGraphite.opacity(0.2))
                                 .frame(width: 80, height: 80)
                             
                             Image(systemName: "hand.wave.fill")
                                 .font(.system(size: 36))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                         }
                         
                         VStack(spacing: 6) {
@@ -93,7 +87,7 @@ struct WelcomeBackView: View {
                             
                             Text("Welcome Back")
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                             
                             Text("Would you like to make a deposit?")
                                 .font(.system(size: 15, weight: .regular))
@@ -109,18 +103,12 @@ struct WelcomeBackView: View {
                             // Category icon with background
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.reverBlue.opacity(0.15), Color.deepReverBlue.opacity(0.1)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
+                                    .fill(Color.softGraphite.opacity(0.15))
                                     .frame(width: 50, height: 50)
                                 
                                 Image(systemName: goal.category.icon)
                                     .font(.system(size: 24))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
@@ -130,11 +118,11 @@ struct WelcomeBackView: View {
                                 
                                 HStack(spacing: 4) {
                                     Circle()
-                                        .fill(Color.reverBlue)
+                                        .fill(Color.softGraphite)
                                         .frame(width: 6, height: 6)
                                     Text("in progress")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                 }
                             }
                             
@@ -149,13 +137,7 @@ struct WelcomeBackView: View {
                                     .frame(height: 12)
                                 
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.reverBlue, Color.deepReverBlue],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
+                                    .fill(Color.softGraphite)
                                     .frame(width: geometry.size.width * min(goal.progress, 1.0), height: 12)
                                     .animation(.spring(response: 0.5, dampingFraction: 0.7), value: goal.progress)
                             }
@@ -170,7 +152,7 @@ struct WelcomeBackView: View {
                                     .foregroundColor(.softGraphite)
                                 Text(formatCurrency(goal.currentAmount))
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                             }
                             
                             Spacer()
@@ -189,7 +171,7 @@ struct WelcomeBackView: View {
                         HStack {
                             Text("\(progressPercentage(for: goal))% Complete")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                             
                             Spacer()
                             
@@ -202,17 +184,10 @@ struct WelcomeBackView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color.white)
-                            .shadow(color: Color.reverBlue.opacity(0.1), radius: 12, x: 0, y: 4)
+                            .shadow(color: Color.softGraphite.opacity(0.1), radius: 12, x: 0, y: 4)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [Color.reverBlue.opacity(0.2), Color.clear],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1
-                                    )
+                                    .stroke(Color.softGraphite.opacity(0.2), lineWidth: 1)
                             )
                     )
                     .padding(.horizontal, 20)
@@ -231,14 +206,8 @@ struct WelcomeBackView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.reverBlue, Color.deepReverBlue],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .shadow(color: Color.reverBlue.opacity(0.3), radius: 8, x: 0, y: 4)
+                                    .fill(Color.softGraphite)
+                                    .shadow(color: Color.softGraphite.opacity(0.3), radius: 8, x: 0, y: 4)
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -265,18 +234,12 @@ struct WelcomeBackView: View {
                     VStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.reverBlue.opacity(0.2), Color.deepReverBlue.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .fill(Color.softGraphite.opacity(0.2))
                                 .frame(width: 80, height: 80)
                             
                             Image(systemName: "hand.wave.fill")
                                 .font(.system(size: 36))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                         }
                         
                         VStack(spacing: 6) {
@@ -286,7 +249,7 @@ struct WelcomeBackView: View {
                             
                             Text("Welcome Back")
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                             
                             Text("Would you like to make a deposit?")
                                 .font(.system(size: 15, weight: .regular))
@@ -310,14 +273,8 @@ struct WelcomeBackView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.reverBlue, Color.deepReverBlue],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                    .shadow(color: Color.reverBlue.opacity(0.3), radius: 8, x: 0, y: 4)
+                                    .fill(Color.softGraphite)
+                                    .shadow(color: Color.softGraphite.opacity(0.3), radius: 8, x: 0, y: 4)
                             )
                         }
                         .buttonStyle(PlainButtonStyle())

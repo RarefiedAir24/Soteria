@@ -114,7 +114,7 @@ struct DecisionWindowsView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.reverBlue)
+                                            .fill(Color.softGraphite)
                                     )
                             }
                         }
@@ -135,7 +135,7 @@ struct DecisionWindowsView: View {
                                             .foregroundColor(.softGraphite)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 4)
-                                            .background(Color.reverBlue.opacity(0.1))
+                                            .background(Color.softGraphite.opacity(0.1))
                                             .cornerRadius(8)
                                     }
                                     
@@ -209,10 +209,8 @@ struct DecisionWindowsView: View {
                                                 isPremium: subscriptionService.isPremium,
                                                 onTap: {
                                                     if subscriptionService.isPremium {
-                                                        // Ensure editingWindow is set before showing sheet
-                                                        // This guarantees the edit modal opens on first tap
+                                                        // Set editing window - sheet will automatically show via item: binding
                                                         editingWindow = window
-                                                        showCreateWindow = true
                                                     } else {
                                                         showPaywall = true
                                                     }
@@ -273,7 +271,7 @@ struct DecisionWindowsView: View {
                                 .padding(.vertical, 16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.reverBlue)
+                                        .fill(Color.softGraphite)
                                 )
                             }
                         }
@@ -299,8 +297,11 @@ struct DecisionWindowsView: View {
                 }
             )
         }
-        // Separate sheet for creating new windows
-        .sheet(isPresented: $showCreateWindow) {
+        // Separate sheet for creating new windows (only when not editing)
+        .sheet(isPresented: Binding(
+            get: { showCreateWindow && editingWindow == nil },
+            set: { showCreateWindow = $0 }
+        )) {
             DecisionWindowSetupFlow()
                 .environmentObject(subscriptionService)
         }
@@ -446,7 +447,7 @@ struct DecisionWindowCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: window.isEnabled ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 20))
-                            .foregroundColor(window.isEnabled ? .reverBlue : .softGraphite)
+                            .foregroundColor(window.isEnabled ? .softGraphite : .softGraphite.opacity(0.5))
                         Text(window.isEnabled ? "Enabled" : "Disabled")
                             .font(.system(size: 12))
                             .foregroundColor(.softGraphite)
@@ -467,10 +468,10 @@ struct DecisionWindowCard: View {
                 HStack {
                     Image(systemName: "dollarsign.circle.fill")
                         .font(.system(size: 14))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                     Text("Suggested micro-save: $\(String(format: "%.2f", amount))")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 }
             }
         }
@@ -593,7 +594,7 @@ struct CreateDecisionWindowView: View {
                                             .padding(.vertical, 10)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 8)
-                                                    .fill(selectedDays.contains(day) ? Color.reverBlue : Color.dreamMist)
+                                                    .fill(selectedDays.contains(day) ? Color.softGraphite : Color.dreamMist)
                                             )
                                     }
                                 }
@@ -642,7 +643,7 @@ struct CreateDecisionWindowView: View {
                         saveWindow()
                     }
                     .disabled(name.isEmpty || selectedDays.isEmpty)
-                    .foregroundColor(.deepReverBlue)
+                    .foregroundColor(.softGraphite)
                     .fontWeight(.semibold)
                 }
             }

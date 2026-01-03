@@ -104,7 +104,7 @@ struct DecisionWindowSetupFlow: View {
                     // Progress indicator
                     if currentStep <= 5 {
                         ProgressView(value: Double(currentStep), total: 5.0)
-                            .progressViewStyle(LinearProgressViewStyle(tint: .reverBlue))
+                            .progressViewStyle(LinearProgressViewStyle(tint: .softGraphite))
                             .padding(.horizontal, 20)
                             .padding(.top, 20)
                     }
@@ -157,7 +157,7 @@ struct DecisionWindowSetupFlow: View {
                             Button("Back") {
                                 currentStep -= 1
                             }
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                         } else {
                             Button("Skip") {
                                 skipSetup = true
@@ -210,7 +210,7 @@ struct DecisionWindowSetupFlow: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.reverBlue)
+                        .background(Color.softGraphite)
                         .cornerRadius(12)
                 }
                 
@@ -290,7 +290,7 @@ struct DecisionWindowSetupFlow: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.reverBlue)
+                    .background(Color.softGraphite)
                     .cornerRadius(12)
             }
             .padding(.horizontal, 40)
@@ -353,7 +353,7 @@ struct DecisionWindowSetupFlow: View {
                                                     .foregroundColor(.white)
                                                     .padding(.horizontal, 8)
                                                     .padding(.vertical, 4)
-                                                    .background(Color.reverBlue)
+                                                    .background(Color.softGraphite)
                                                     .cornerRadius(6)
                                             }
                                         }
@@ -427,7 +427,7 @@ struct DecisionWindowSetupFlow: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(!selectedActions.isEmpty ? Color.reverBlue : Color.gray.opacity(0.5))
+                    .background(!selectedActions.isEmpty ? Color.softGraphite : Color.gray.opacity(0.5))
                     .cornerRadius(12)
             }
             .disabled(selectedActions.isEmpty)
@@ -481,7 +481,7 @@ struct DecisionWindowSetupFlow: View {
                                 .font(.system(size: 17, weight: .medium))
                                 .foregroundColor(.midnightSlate)
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: .reverBlue))
+                        .toggleStyle(SwitchToggleStyle(tint: .softGraphite))
                         
                         if wantsConditions {
                             VStack(alignment: .leading, spacing: 16) {
@@ -528,7 +528,7 @@ struct DecisionWindowSetupFlow: View {
                                 .font(.system(size: 17, weight: .medium))
                                 .foregroundColor(.midnightSlate)
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: .reverBlue))
+                        .toggleStyle(SwitchToggleStyle(tint: .softGraphite))
                     }
                     .padding(.horizontal, 40)
                 }
@@ -551,7 +551,7 @@ struct DecisionWindowSetupFlow: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.reverBlue)
+                    .background(Color.softGraphite)
                     .cornerRadius(12)
             }
             .padding(.horizontal, 40)
@@ -580,11 +580,6 @@ struct DecisionWindowSetupFlow: View {
                             protectAmount: windowProtectAmount,
                             pauseIntention: windowPauseIntention
                         )
-                        
-                        Text("• Only outside Quiet Hours")
-                            .font(.system(size: 14))
-                            .foregroundColor(.softGraphite)
-                            .padding(.top, 8)
                     }
                     .padding(.horizontal, 40)
                     
@@ -611,7 +606,7 @@ struct DecisionWindowSetupFlow: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.reverBlue)
+                    .background(Color.softGraphite)
                     .cornerRadius(12)
             }
             .padding(.horizontal, 40)
@@ -652,7 +647,7 @@ struct DecisionWindowSetupFlow: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.reverBlue)
+                    .background(Color.softGraphite)
                     .cornerRadius(12)
             }
             .padding(.horizontal, 40)
@@ -822,11 +817,11 @@ struct ActionCard<Content: View>: View {
                 HStack(spacing: 16) {
                     Image(systemName: icon)
                         .font(.system(size: 24))
-                        .foregroundColor(isSelected ? .white : .reverBlue)
+                        .foregroundColor(isSelected ? .white : .softGraphite)
                         .frame(width: 48, height: 48)
                         .background(
                             Circle()
-                                .fill(isSelected ? Color.reverBlue : Color.reverBlue.opacity(0.1))
+                                .fill(isSelected ? Color.softGraphite : Color.softGraphite.opacity(0.1))
                         )
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -843,15 +838,15 @@ struct ActionCard<Content: View>: View {
                     
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
-                        .foregroundColor(isSelected ? .reverBlue : .softGraphite)
+                        .foregroundColor(isSelected ? .softGraphite : .softGraphite.opacity(0.5))
                 }
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? Color.reverBlue.opacity(0.1) : Color.dreamMist)
+                        .fill(isSelected ? Color.softGraphite.opacity(0.1) : Color.dreamMist)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(isSelected ? Color.reverBlue : Color.clear, lineWidth: 2)
+                                .stroke(isSelected ? Color.softGraphite : Color.clear, lineWidth: 2)
                         )
                 )
             }
@@ -931,7 +926,7 @@ struct AmountPicker: View {
                 HStack {
                     Text("$")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                     TextField("0.00", text: $customAmountText)
                         .keyboardType(.decimalPad)
                         .onChange(of: customAmountText) { oldValue, newValue in
@@ -951,12 +946,12 @@ struct AmountPicker: View {
                         }) {
                             Text("$\(String(format: "%.0f", preset))")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(amount == preset ? .white : .reverBlue)
+                                .foregroundColor(amount == preset ? .white : .softGraphite)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(amount == preset ? Color.reverBlue : Color.reverBlue.opacity(0.1))
+                                        .fill(amount == preset ? Color.softGraphite : Color.softGraphite.opacity(0.1))
                                 )
                         }
                     }
@@ -967,12 +962,12 @@ struct AmountPicker: View {
                     }) {
                         Text("Custom")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.reverBlue.opacity(0.1))
+                                    .fill(Color.softGraphite.opacity(0.1))
                             )
                     }
                 }

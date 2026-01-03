@@ -132,7 +132,7 @@ struct DecisionWindowPromptView: View {
                                                 if let header = suggestion.userFacingCopy.header {
                                                     Text(header)
                                                         .font(.system(size: 14, weight: .semibold))
-                                                        .foregroundColor(.reverBlue)
+                                                        .foregroundColor(.softGraphite)
                                                 }
                                                 // Premium badge
                                                 Image(systemName: "crown.fill")
@@ -184,7 +184,7 @@ struct DecisionWindowPromptView: View {
                                     HStack {
                                         Text("$")
                                             .font(.system(size: 20, weight: .semibold))
-                                            .foregroundColor(.reverBlue)
+                                            .foregroundColor(.softGraphite)
                                         TextField("0.00", text: $microSaveAmount)
                                             .font(.system(size: 24, weight: .bold))
                                             .foregroundColor(.midnightSlate)
@@ -201,7 +201,7 @@ struct DecisionWindowPromptView: View {
                                             HStack(spacing: 4) {
                                                 Text("Smart Suggestions")
                                                     .font(.system(size: 12, weight: .semibold))
-                                                    .foregroundColor(.reverBlue)
+                                                    .foregroundColor(.softGraphite)
                                                 Image(systemName: "crown.fill")
                                                     .font(.system(size: 10))
                                                     .foregroundColor(.orange)
@@ -228,7 +228,7 @@ struct DecisionWindowPromptView: View {
                                                             VStack(alignment: .trailing, spacing: 2) {
                                                                 Text("\(suggestion.impact.formattedDaysCloser)")
                                                                     .font(.system(size: 14, weight: .semibold))
-                                                                    .foregroundColor(.reverBlue)
+                                                                    .foregroundColor(.softGraphite)
                                                                 Text("closer")
                                                                     .font(.system(size: 11))
                                                                     .foregroundColor(.softGraphite)
@@ -238,13 +238,13 @@ struct DecisionWindowPromptView: View {
                                                         .background(
                                                             RoundedRectangle(cornerRadius: 10)
                                                                 .fill(microSaveAmount == String(format: "%.2f", suggestion.amount) 
-                                                                      ? Color.reverBlue.opacity(0.15)
+                                                                      ? Color.softGraphite.opacity(0.15)
                                                                       : Color.dreamMist)
                                                         )
                                                         .overlay(
                                                             RoundedRectangle(cornerRadius: 10)
                                                                 .stroke(microSaveAmount == String(format: "%.2f", suggestion.amount) 
-                                                                        ? Color.reverBlue 
+                                                                        ? Color.softGraphite 
                                                                         : Color.clear, lineWidth: 2)
                                                         )
                                                     }
@@ -270,13 +270,13 @@ struct DecisionWindowPromptView: View {
                                                 }) {
                                                     Text("$\(String(format: "%.0f", amount))")
                                                         .font(.system(size: 14, weight: .medium))
-                                                        .foregroundColor(microSaveAmount == String(format: "%.2f", amount) ? .white : .reverBlue)
+                                                        .foregroundColor(microSaveAmount == String(format: "%.2f", amount) ? .white : .softGraphite)
                                                         .padding(.horizontal, 12)
                                                         .padding(.vertical, 8)
                                                         .background(
                                                             microSaveAmount == String(format: "%.2f", amount) 
-                                                                ? Color.reverBlue 
-                                                                : Color.reverBlue.opacity(0.1)
+                                                                ? Color.softGraphite 
+                                                                : Color.softGraphite.opacity(0.1)
                                                         )
                                                         .cornerRadius(8)
                                                 }
@@ -358,7 +358,7 @@ struct DecisionWindowPromptView: View {
                         //                 HStack {
                         //                     Text("$")
                         //                         .font(.system(size: 18, weight: .semibold))
-                        //                         .foregroundColor(.reverBlue)
+                        //                         .foregroundColor(.softGraphite)
                         //                     TextField("0.00", text: $spendGateAmount)
                         //                         .font(.system(size: 20, weight: .bold))
                         //                         .foregroundColor(.midnightSlate)
@@ -440,7 +440,7 @@ struct DecisionWindowPromptView: View {
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
-                                    .background(Color.reverBlue)
+                                    .background(Color.softGraphite)
                                     .cornerRadius(12)
                             }
                         // NOTE: Spend Gate button is commented out - not fully implemented yet
@@ -453,7 +453,7 @@ struct DecisionWindowPromptView: View {
                         //             .foregroundColor(.white)
                         //             .frame(maxWidth: .infinity)
                         //             .padding(.vertical, 16)
-                        //             .background(Color.reverBlue)
+                        //             .background(Color.softGraphite)
                         //             .cornerRadius(12)
                         //     }
                         // } else if selectedOption == .pauseIntention, !pauseIntentionText.isEmpty {
@@ -465,7 +465,7 @@ struct DecisionWindowPromptView: View {
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
-                                    .background(Color.reverBlue)
+                                    .background(Color.softGraphite)
                                     .cornerRadius(12)
                             }
                         } else if canSave {
@@ -477,7 +477,7 @@ struct DecisionWindowPromptView: View {
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
-                                    .background(Color.reverBlue)
+                                    .background(Color.softGraphite)
                                     .cornerRadius(12)
                             }
                         }
@@ -494,10 +494,10 @@ struct DecisionWindowPromptView: View {
                                 }) {
                                     Text("Save instead")
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.reverBlue)
+                                        .foregroundColor(.softGraphite)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 14)
-                                        .background(Color.reverBlue.opacity(0.1))
+                                        .background(Color.softGraphite.opacity(0.1))
                                         .cornerRadius(12)
                                 }
                             }
@@ -625,7 +625,7 @@ struct DecisionWindowPromptView: View {
                 HStack {
                     Image(systemName: goal.category.icon)
                         .font(.system(size: 20))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                     
                     Text(goal.name)
                         .font(.system(size: 18, weight: .bold))
@@ -661,7 +661,7 @@ struct DecisionWindowPromptView: View {
                         Text("\(daysUntil) day\(daysUntil == 1 ? "" : "s") until your goal")
                             .font(.system(size: 14, weight: .medium))
                     }
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 } else {
                     HStack(spacing: 4) {
                         Image(systemName: "chart.bar.fill")
@@ -669,7 +669,7 @@ struct DecisionWindowPromptView: View {
                         Text("\(Int(goal.progress * 100))% complete")
                             .font(.system(size: 14, weight: .medium))
                     }
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 }
             }
             
@@ -682,7 +682,7 @@ struct DecisionWindowPromptView: View {
                         .cornerRadius(4)
                     
                     Rectangle()
-                        .fill(Color.reverBlue)
+                        .fill(Color.softGraphite)
                         .frame(width: geometry.size.width * goal.progress, height: 8)
                         .cornerRadius(4)
                 }
@@ -750,14 +750,14 @@ struct DecisionWindowPromptView: View {
                 // Fallback: Goal icon with gradient background
                 ZStack {
                     LinearGradient(
-                        gradient: Gradient(colors: [Color.reverBlue.opacity(0.3), Color.reverBlue.opacity(0.1)]),
+                        gradient: Gradient(colors: [Color.softGraphite.opacity(0.3), Color.softGraphite.opacity(0.1)]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
                     Image(systemName: goal.category.icon)
                         .font(.system(size: 60))
-                        .foregroundColor(.reverBlue.opacity(0.6))
+                        .foregroundColor(.softGraphite.opacity(0.6))
                 }
                 .frame(height: 120)
             }
@@ -776,7 +776,7 @@ struct DecisionWindowPromptView: View {
                             Text("\(daysUntil) day\(daysUntil == 1 ? "" : "s") until your goal")
                                 .font(.system(size: 15, weight: .medium))
                         }
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                     } else {
                         HStack(spacing: 4) {
                             Image(systemName: "chart.bar.fill")
@@ -784,7 +784,7 @@ struct DecisionWindowPromptView: View {
                             Text("\(Int(goal.progress * 100))% complete")
                                 .font(.system(size: 15, weight: .medium))
                         }
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                     }
                 }
                 .padding(.top, 16)
@@ -801,7 +801,7 @@ struct DecisionWindowPromptView: View {
                             
                             // Current Progress
                             Rectangle()
-                                .fill(Color.reverBlue.opacity(0.6))
+                                .fill(Color.softGraphite.opacity(0.6))
                                 .frame(width: geometry.size.width * goal.progress, height: 10)
                                 .cornerRadius(5)
                             
@@ -809,7 +809,7 @@ struct DecisionWindowPromptView: View {
                             if let amount = Double(microSaveAmount), amount > 0,
                                let impact = goalImpactService.calculateImpact(amount: amount, goal: goal) {
                                 Rectangle()
-                                    .fill(Color.reverBlue)
+                                    .fill(Color.softGraphite)
                                     .frame(width: geometry.size.width * impact.projectedProgress, height: 10)
                                     .cornerRadius(5)
                                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: impact.projectedProgress)
@@ -830,7 +830,7 @@ struct DecisionWindowPromptView: View {
                            let impact = goalImpactService.calculateImpact(amount: amount, goal: goal) {
                             Text("→ $\(Int(goal.currentAmount + amount))")
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                         }
                     }
                 }
@@ -895,7 +895,7 @@ struct DecisionWindowPromptView: View {
                                     .padding(.vertical, 10)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(microSaveAmount == String(format: "%.2f", suggestion.amount) ? Color.deepReverBlue : Color.reverBlue)
+                                            .fill(microSaveAmount == String(format: "%.2f", suggestion.amount) ? Color.softGraphite : Color.softGraphite)
                                     )
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -910,17 +910,17 @@ struct DecisionWindowPromptView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 16))
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                         
                         Text("Saving $\(Int(amount)) = \(impact.formattedDaysCloser) closer to \(goal.name)!")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.reverBlue.opacity(0.1))
+                            .fill(Color.softGraphite.opacity(0.1))
                     )
                 }
                 
@@ -988,7 +988,7 @@ struct DecisionWindowPromptView: View {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 16))
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 Text("Smart Savings Suggestions")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.midnightSlate)
@@ -1006,7 +1006,7 @@ struct DecisionWindowPromptView: View {
                         Spacer()
                         Text("\(topSuggestion.impact.formattedDaysCloser) closer")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                     }
                     
                     if topSuggestion.type == .autoAdjust {
@@ -1023,7 +1023,7 @@ struct DecisionWindowPromptView: View {
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.reverBlue.opacity(0.08))
+                        .fill(Color.softGraphite.opacity(0.08))
                 )
             }
         }
@@ -1095,13 +1095,13 @@ struct DecisionWindowPromptView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(Color.reverBlue.opacity(0.3), lineWidth: 2))
+                .overlay(Circle().stroke(Color.softGraphite.opacity(0.3), lineWidth: 2))
         } else {
             Image(systemName: goalsService.activeGoal?.category.icon ?? "star.fill")
                 .font(.system(size: 24))
-                .foregroundColor(.reverBlue)
+                .foregroundColor(.softGraphite)
                 .frame(width: 50, height: 50)
-                .background(Color.reverBlue.opacity(0.1))
+                .background(Color.softGraphite.opacity(0.1))
                 .clipShape(Circle())
         }
     }
@@ -1167,11 +1167,11 @@ struct OptionCard<Content: View>: View {
                 HStack(spacing: 16) {
                     Image(systemName: icon)
                         .font(.system(size: 24))
-                        .foregroundColor(isSelected ? .white : .reverBlue)
+                        .foregroundColor(isSelected ? .white : .softGraphite)
                         .frame(width: 48, height: 48)
                         .background(
                             Circle()
-                                .fill(isSelected ? Color.reverBlue : Color.reverBlue.opacity(0.1))
+                                .fill(isSelected ? Color.softGraphite : Color.softGraphite.opacity(0.1))
                         )
                     
                     VStack(alignment: .leading, spacing: 4) {
@@ -1188,15 +1188,15 @@ struct OptionCard<Content: View>: View {
                     
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
-                        .foregroundColor(isSelected ? .reverBlue : .softGraphite)
+                        .foregroundColor(isSelected ? .softGraphite : .softGraphite.opacity(0.5))
                 }
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? Color.reverBlue.opacity(0.1) : Color.dreamMist)
+                        .fill(isSelected ? Color.softGraphite.opacity(0.1) : Color.dreamMist)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(isSelected ? Color.reverBlue : Color.clear, lineWidth: 2)
+                                .stroke(isSelected ? Color.softGraphite : Color.clear, lineWidth: 2)
                         )
                 )
             }

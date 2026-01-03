@@ -16,7 +16,7 @@
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const cognito = new AWS.CognitoIdentityServiceProvider();
-const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
+const { validateUserAccess, getCorsHeaders } = require('./auth-utils');
 
 // DynamoDB table names
 const TABLES = {

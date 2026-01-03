@@ -95,7 +95,7 @@ struct PlaidTransferView: View {
                                 
                                 Image(systemName: "arrow.down")
                                     .font(.system(size: 20))
-                                    .foregroundColor(.reverBlue)
+                                    .foregroundColor(.softGraphite)
                                 
                                 // To Account
                                 HStack {
@@ -155,7 +155,7 @@ struct PlaidTransferView: View {
                             // Amount Display
                             Text(formattedAmount)
                                 .font(.system(size: 48, weight: .bold))
-                                .foregroundColor(isValidAmount ? .reverBlue : .softGraphite)
+                                .foregroundColor(.softGraphite)
                                 .frame(height: 60)
                             
                             // Amount Input
@@ -170,7 +170,7 @@ struct PlaidTransferView: View {
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isAmountFocused ? Color.reverBlue : Color.clear, lineWidth: 2)
+                                        .stroke(isAmountFocused ? Color.softGraphite : Color.clear, lineWidth: 2)
                                 )
                         }
                         .padding(.horizontal, 20)
@@ -200,7 +200,7 @@ struct PlaidTransferView: View {
                             .padding(.vertical, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(isValidAmount && !isSubmitting ? Color.reverBlue : Color.gray)
+                                    .fill(isValidAmount && !isSubmitting ? Color.softGraphite : Color.gray)
                             )
                         }
                         .disabled(!isValidAmount || isSubmitting)

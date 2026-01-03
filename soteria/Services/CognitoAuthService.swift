@@ -222,6 +222,8 @@ class CognitoAuthService: ObservableObject {
             self.idToken = nil
             self.refreshToken = nil
             self.clearTokens()
+            // Clear biometric credentials on sign out
+            BiometricAuthService.shared.clearCredentials()
             print("✅ [CognitoAuthService] User signed out")
         }
     }

@@ -36,7 +36,7 @@ struct NotificationCenterView: View {
                     Button("Clear All") {
                         clearAllNotifications()
                     }
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                     .disabled(deliveredNotifications.isEmpty)
                 }
             }
@@ -103,8 +103,7 @@ struct NotificationCenterView: View {
                 
                 self.isLoading = false
                 
-                // Clear badge when notifications are viewed
-                clearBadge()
+                // DO NOT clear badge when opening - user must manually mark as read/delete
             }
         }
     }
@@ -114,9 +113,15 @@ struct NotificationCenterView: View {
         let identifier = notification.request.identifier
         print("🗑️ [NotificationCenterView] Removing notification with identifier: \(identifier)")
         
+        // Remove read status from UserDefaults
+        UserDefaults.standard.removeObject(forKey: "notification_read_\(identifier)")
+        
         UNUserNotificationCenter.current().removeDeliveredNotifications(
             withIdentifiers: [identifier]
         )
+        
+        // Update badge count after removal
+        NotificationBadgeManager.shared.updateBadgeCount()
         
         // Small delay to ensure iOS processes the removal before reloading
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -126,17 +131,26 @@ struct NotificationCenterView: View {
     }
     
     private func clearAllNotifications() {
+        // Remove all read statuses from UserDefaults
+        for notification in deliveredNotifications {
+            let identifier = notification.request.identifier
+            UserDefaults.standard.removeObject(forKey: "notification_read_\(identifier)")
+        }
+        
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         deliveredNotifications = []
         clearBadge()
     }
     
     private func clearBadge() {
-        // Clear badge using traditional method for better compatibility
-        DispatchQueue.main.async {
-            UIApplication.shared.applicationIconBadgeNumber = 0
-            print("✅ [NotificationCenterView] Badge cleared")
-        }
+        // Clear badge using NotificationBadgeManager
+        NotificationBadgeManager.shared.clearBadge()
+        
+        // Post notification for UI updates
+        NotificationCenter.default.post(
+            name: NSNotification.Name("NotificationCountUpdated"),
+            object: 0
+        )
     }
 }
 
@@ -145,6 +159,15 @@ struct NotificationRow: View {
     let onRemove: () -> Void
     
     @State private var showRemoveConfirmation = false
+    @State private var isRead: Bool
+    
+    init(notification: UNNotification, onRemove: @escaping () -> Void) {
+        self.notification = notification
+        self.onRemove = onRemove
+        // Check if notification is marked as read
+        let identifier = notification.request.identifier
+        _isRead = State(initialValue: UserDefaults.standard.bool(forKey: "notification_read_\(identifier)"))
+    }
     
     private var notificationType: String {
         let userInfo = notification.request.content.userInfo
@@ -185,7 +208,7 @@ struct NotificationRow: View {
     private var iconColor: Color {
         switch notificationType {
         case "goal_progress":
-            return .reverBlue
+            return .softGraphite
         case "goal_milestone":
             return .orange
         case "goal_achievement":
@@ -219,11 +242,13 @@ struct NotificationRow: View {
                 Text(notificationTitle)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.midnightSlate)
+                    .opacity(isRead ? 0.6 : 1.0)
                 
                 Text(notificationBody)
                     .font(.system(size: 14))
                     .foregroundColor(.softGraphite)
                     .lineLimit(3)
+                    .opacity(isRead ? 0.6 : 1.0)
                 
                 Text(formatDate(notificationDate))
                     .font(.system(size: 12))
@@ -232,19 +257,31 @@ struct NotificationRow: View {
             
             Spacer()
             
-            // Remove button
-            Button(action: {
-                showRemoveConfirmation = true
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.softGraphite.opacity(0.5))
+            // Action buttons
+            HStack(spacing: 8) {
+                // Mark as read/unread button
+                Button(action: {
+                    toggleReadStatus()
+                }) {
+                    Image(systemName: isRead ? "circle" : "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(isRead ? .softGraphite.opacity(0.5) : .softGraphite)
+                }
+                
+                // Remove button
+                Button(action: {
+                    showRemoveConfirmation = true
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.softGraphite.opacity(0.5))
+                }
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
+                .fill(isRead ? Color.white.opacity(0.5) : Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         )
         .confirmationDialog("Remove Notification", isPresented: $showRemoveConfirmation, titleVisibility: .visible) {
@@ -254,6 +291,17 @@ struct NotificationRow: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Remove this notification?")
+        }
+    }
+    
+    private func toggleReadStatus() {
+        let identifier = notification.request.identifier
+        isRead.toggle()
+        UserDefaults.standard.set(isRead, forKey: "notification_read_\(identifier)")
+        
+        // Update badge count when marking as read
+        if isRead {
+            NotificationBadgeManager.shared.updateBadgeCount()
         }
     }
     

@@ -116,10 +116,9 @@ class GoalNotificationService {
             "goalId": goal.id
         ]
         
-        // Add goal photo attachment if available
-        if let attachment = createGoalPhotoAttachment(for: goal) {
-            content.attachments = [attachment]
-        }
+        // Note: Attachments are skipped for scheduled notifications because temporary files
+        // may be cleaned up before the notification fires. Attachments are only used for
+        // immediate notifications (achievement, milestone).
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(
@@ -157,10 +156,9 @@ class GoalNotificationService {
             "goalId": goal.id
         ]
         
-        // Add goal photo attachment if available
-        if let attachment = createGoalPhotoAttachment(for: goal) {
-            content.attachments = [attachment]
-        }
+        // Note: Attachments are skipped for scheduled notifications because temporary files
+        // may be cleaned up before the notification fires. Attachments are only used for
+        // immediate notifications (achievement, milestone).
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(
@@ -201,10 +199,9 @@ class GoalNotificationService {
                 "goalId": goal.id
             ]
             
-            // Add goal photo attachment if available
-            if let attachment = createGoalPhotoAttachment(for: goal) {
-                content.attachments = [attachment]
-            }
+            // Note: Attachments are skipped for scheduled notifications because temporary files
+            // may be cleaned up before the notification fires. Attachments are only used for
+            // immediate notifications (achievement, milestone).
             
             let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
             let request = UNNotificationRequest(
@@ -377,6 +374,10 @@ class GoalNotificationService {
     
     // MARK: - Goal Photo Attachment
     
+    /// Creates a notification attachment for goal photos.
+    /// Note: Only use for immediate notifications (achievement, milestone).
+    /// For scheduled notifications, attachments are skipped because temporary files
+    /// may be cleaned up before the notification fires.
     private func createGoalPhotoAttachment(for goal: SavingsGoal) -> UNNotificationAttachment? {
         // Try to load goal photo from UserDefaults cache
         let cacheKey = "goal_photo_\(goal.id)"
@@ -392,11 +393,21 @@ class GoalNotificationService {
             ? image.resized(toMaxDimension: maxSize)
             : image
         
-        // Save to temporary file
+        // Save to app's cache directory (more persistent than temp directory)
         let fileManager = FileManager.default
-        let tempDirectory = fileManager.temporaryDirectory
+        let cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let notificationAttachmentsDir = cacheDirectory.appendingPathComponent("notification_attachments")
+        
+        // Create directory if it doesn't exist
+        do {
+            try fileManager.createDirectory(at: notificationAttachmentsDir, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+            print("⚠️ [GoalNotificationService] Failed to create notification attachments directory: \(error)")
+            return nil
+        }
+        
         let fileName = "goal_photo_\(goal.id).jpg"
-        let fileURL = tempDirectory.appendingPathComponent(fileName)
+        let fileURL = notificationAttachmentsDir.appendingPathComponent(fileName)
         
         guard let jpegData = resizedImage.jpegData(compressionQuality: 0.8) else {
             print("❌ [GoalNotificationService] Failed to convert image to JPEG")
@@ -405,6 +416,12 @@ class GoalNotificationService {
         
         do {
             try jpegData.write(to: fileURL)
+            
+            // Verify file exists and is accessible
+            guard fileManager.fileExists(atPath: fileURL.path) else {
+                print("❌ [GoalNotificationService] File was not created at path: \(fileURL.path)")
+                return nil
+            }
             
             // Create attachment
             // Options: nil uses default settings (thumbnail visible)
@@ -418,6 +435,8 @@ class GoalNotificationService {
             return attachment
         } catch {
             print("❌ [GoalNotificationService] Failed to create notification attachment: \(error)")
+            // Clean up file if attachment creation failed
+            try? fileManager.removeItem(at: fileURL)
             return nil
         }
     }

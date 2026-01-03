@@ -27,7 +27,7 @@ struct PlaidConnectionView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "building.columns.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(Color.reverBlue)
+                        .foregroundColor(Color.softGraphite)
                     
                     Text("Connect Your Accounts")
                         .font(.title.bold())
@@ -81,7 +81,7 @@ struct PlaidConnectionView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.reverBlue)
+                    .background(Color.softGraphite)
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
@@ -301,7 +301,7 @@ struct BenefitRow: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundColor(Color.reverBlue)
+                .foregroundColor(Color.softGraphite)
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: 4) {
