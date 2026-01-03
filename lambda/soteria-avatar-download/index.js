@@ -19,6 +19,7 @@
 
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
+const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
 
 const BUCKET_NAME = process.env.AVATAR_BUCKET_NAME || 'soteria-avatars-516141816050';
 const REGION = process.env.AWS_REGION || 'us-east-1'; // AWS_REGION is automatically set by Lambda
@@ -27,13 +28,8 @@ exports.handler = async (event) => {
     console.log('🔍 [Lambda] Avatar download request received');
     console.log('📥 [Lambda] Event:', JSON.stringify(event, null, 2));
     
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+    // CORS headers with restricted origin
+    const headers = getCorsHeaders(event);
     
     // Handle OPTIONS request (CORS preflight)
     if (event.httpMethod === 'OPTIONS') {
@@ -46,9 +42,9 @@ exports.handler = async (event) => {
     
     try {
         // Get user_id from query parameters
-        const userId = event.queryStringParameters?.user_id;
+        const requestedUserId = event.queryStringParameters?.user_id;
         
-        if (!userId) {
+        if (!requestedUserId) {
             return {
                 statusCode: 400,
                 headers,
@@ -59,8 +55,13 @@ exports.handler = async (event) => {
             };
         }
         
+        // SECURITY: Validate that authenticated user matches requested user_id
+        const authenticatedUserId = await validateUserAccess(event, requestedUserId);
+        // Use authenticated user ID instead of request parameter
+        const validatedUserId = authenticatedUserId;
+        
         // Generate S3 key (path) for avatar
-        const s3Key = `avatars/${userId}.jpg`;
+        const s3Key = `avatars/${validatedUserId}.jpg`;
         
         console.log(`📥 [Lambda] Downloading avatar from S3: s3://${BUCKET_NAME}/${s3Key}`);
         
@@ -106,13 +107,29 @@ exports.handler = async (event) => {
         }
         
     } catch (error) {
-        console.error('❌ [Lambda] Avatar download error:', error);
+        console.error('❌ [Lambda] Error downloading avatar:', error);
+        
+        // Return appropriate status code based on error type
+        let statusCode = 500;
+        let errorMessage = 'An error occurred while downloading the avatar';
+        
+        if (error.message === 'Missing Authorization header' || 
+            error.message.includes('Invalid Authorization') ||
+            error.message.includes('Empty token')) {
+            statusCode = 401;
+            errorMessage = 'Unauthorized';
+        } else if (error.message.includes('Forbidden') || 
+                   error.message.includes('Cannot access')) {
+            statusCode = 403;
+            errorMessage = 'Forbidden';
+        }
+        
         return {
-            statusCode: 500,
-            headers,
+            statusCode: statusCode,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Failed to download avatar'
+                error: errorMessage
             })
         };
     }

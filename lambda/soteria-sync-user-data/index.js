@@ -19,6 +19,7 @@
 
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
+const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
 
 // Table name based on data type
 const TABLE_MAPPING = {
@@ -47,13 +48,8 @@ const SORT_KEY_MAPPING = {
 exports.handler = async (event) => {
     console.log('📥 [Lambda] Sync request received:', JSON.stringify(event));
     
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS',
-        'Content-Type': 'application/json'
-    };
+    // CORS headers with restricted origin
+    const headers = getCorsHeaders(event);
     
     // Handle OPTIONS request for CORS
     if (event.httpMethod === 'OPTIONS') {
@@ -81,6 +77,11 @@ exports.handler = async (event) => {
             };
         }
         
+        // SECURITY: Validate that authenticated user matches requested user_id
+        const authenticatedUserId = await validateUserAccess(event, user_id);
+        // Use authenticated user ID instead of request parameter
+        const validatedUserId = authenticatedUserId;
+        
         // Get table name
         const tableName = TABLE_MAPPING[data_type];
         if (!tableName) {
@@ -100,7 +101,7 @@ exports.handler = async (event) => {
         // Prepare DynamoDB item
         const timestamp = Date.now();
         const item = {
-            user_id: user_id,
+            user_id: validatedUserId,
             [sortKeyName]: data_type === 'app_names' ? 'app_names' : (data.id || data.timestamp || timestamp.toString()),
             data: data,
             updated_at: timestamp,
@@ -113,7 +114,7 @@ exports.handler = async (event) => {
             Item: item
         }).promise();
         
-        console.log(`✅ [Lambda] Data synced successfully for user ${user_id}, type ${data_type}`);
+        console.log(`✅ [Lambda] Data synced successfully for user ${validatedUserId}, type ${data_type}`);
         
         return {
             statusCode: 200,
@@ -128,12 +129,29 @@ exports.handler = async (event) => {
     } catch (error) {
         console.error('❌ [Lambda] Error syncing data:', error);
         
+        // Return appropriate status code based on error type
+        let statusCode = 500;
+        let errorMessage = 'Internal server error';
+        
+        if (error.message === 'Missing Authorization header' || 
+            error.message.includes('Invalid Authorization') ||
+            error.message.includes('Empty token')) {
+            statusCode = 401;
+            errorMessage = 'Unauthorized';
+        } else if (error.message.includes('Forbidden') || 
+                   error.message.includes('Cannot access')) {
+            statusCode = 403;
+            errorMessage = 'Forbidden';
+        } else {
+            errorMessage = error.message || 'Internal server error';
+        }
+        
         return {
-            statusCode: 500,
-            headers,
+            statusCode: statusCode,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Internal server error'
+                error: errorMessage
             })
         };
     }

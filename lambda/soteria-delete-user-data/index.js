@@ -18,6 +18,7 @@
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const cognito = new AWS.CognitoIdentityServiceProvider();
+const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
 
 // All DynamoDB tables that store user data
 const TABLES = [
@@ -38,13 +39,8 @@ exports.handler = async (event) => {
     console.log('🔍 [Lambda] Delete user data request received');
     console.log('📥 [Lambda] Event:', JSON.stringify(event, null, 2));
     
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+    // CORS headers with restricted origin
+    const headers = getCorsHeaders(event);
     
     // Handle OPTIONS request (CORS preflight)
     if (event.httpMethod === 'OPTIONS') {
@@ -57,13 +53,13 @@ exports.handler = async (event) => {
     
     try {
         // Get user_id from request body
-        let userId;
+        let requestedUserId;
         if (event.body) {
             const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-            userId = body.user_id;
+            requestedUserId = body.user_id;
         }
         
-        if (!userId) {
+        if (!requestedUserId) {
             return {
                 statusCode: 400,
                 headers,
@@ -74,21 +70,26 @@ exports.handler = async (event) => {
             };
         }
         
-        console.log(`🗑️ [Lambda] Deleting all data for user: ${userId}`);
+        // SECURITY: Validate that authenticated user matches requested user_id
+        const authenticatedUserId = await validateUserAccess(event, requestedUserId);
+        // Use authenticated user ID instead of request parameter
+        const validatedUserId = authenticatedUserId;
+        
+        console.log(`🗑️ [Lambda] Deleting all data for user: ${validatedUserId}`);
         
         // Delete from all DynamoDB tables
-        const deletePromises = TABLES.map(tableName => deleteUserDataFromTable(tableName, userId));
+        const deletePromises = TABLES.map(tableName => deleteUserDataFromTable(tableName, validatedUserId));
         await Promise.all(deletePromises);
         
-        console.log(`✅ [Lambda] Deleted data from all DynamoDB tables for user: ${userId}`);
+        console.log(`✅ [Lambda] Deleted data from all DynamoDB tables for user: ${validatedUserId}`);
         
         // Delete Cognito user account
         try {
             await cognito.adminDeleteUser({
                 UserPoolId: USER_POOL_ID,
-                Username: userId
+                Username: validatedUserId
             }).promise();
-            console.log(`✅ [Lambda] Deleted Cognito user account: ${userId}`);
+            console.log(`✅ [Lambda] Deleted Cognito user account: ${validatedUserId}`);
         } catch (cognitoError) {
             // Log error but don't fail - DynamoDB deletion is more important
             console.error(`⚠️ [Lambda] Failed to delete Cognito user: ${cognitoError.message}`);
@@ -106,12 +107,30 @@ exports.handler = async (event) => {
         
     } catch (error) {
         console.error('❌ [Lambda] Delete user data error:', error);
+        
+        // Return appropriate status code based on error type
+        let statusCode = 500;
+        let errorMessage = 'Failed to delete user data';
+        
+        if (error.message === 'Missing Authorization header' || 
+            error.message.includes('Invalid Authorization') ||
+            error.message.includes('Empty token')) {
+            statusCode = 401;
+            errorMessage = 'Unauthorized';
+        } else if (error.message.includes('Forbidden') || 
+                   error.message.includes('Cannot access')) {
+            statusCode = 403;
+            errorMessage = 'Forbidden';
+        } else {
+            errorMessage = error.message || 'Failed to delete user data';
+        }
+        
         return {
-            statusCode: 500,
-            headers,
+            statusCode: statusCode,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Failed to delete user data'
+                error: errorMessage
             })
         };
     }

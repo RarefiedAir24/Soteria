@@ -31,6 +31,7 @@
 
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
+const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
 
 // DynamoDB table names
 const TABLES = {
@@ -408,13 +409,8 @@ exports.handler = async (event) => {
     console.log('🔍 [Lambda] Getting dashboard data...');
     console.log('📥 [Lambda] Event:', JSON.stringify(event, null, 2));
     
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+    // CORS headers with restricted origin
+    const headers = getCorsHeaders(event);
     
     // Handle OPTIONS request (CORS preflight)
     if (event.httpMethod === 'OPTIONS') {
@@ -427,9 +423,9 @@ exports.handler = async (event) => {
     
     try {
         // Get user_id from query parameters
-        const userId = event.queryStringParameters?.user_id;
+        const requestedUserId = event.queryStringParameters?.user_id;
         
-        if (!userId) {
+        if (!requestedUserId) {
             return {
                 statusCode: 400,
                 headers,
@@ -440,7 +436,12 @@ exports.handler = async (event) => {
             };
         }
         
-        console.log(`🔍 [Lambda] Getting dashboard data for user: ${userId}`);
+        // SECURITY: Validate that authenticated user matches requested user_id
+        const authenticatedUserId = await validateUserAccess(event, requestedUserId);
+        // Use authenticated user ID instead of request parameter
+        const validatedUserId = authenticatedUserId;
+        
+        console.log(`🔍 [Lambda] Getting dashboard data for user: ${validatedUserId}`);
         
         // Fetch all data in parallel for speed
         const [
@@ -454,15 +455,15 @@ exports.handler = async (event) => {
             recentMoodCount,
             recentPurchaseIntentsCount
         ] = await Promise.all([
-            getTotalSaved(userId),
-            calculateStreak(userId),
-            getActiveGoal(userId),
-            getRecentRegretCount(userId),
-            isQuietModeActive(userId),
-            getSoteriaMomentsCount(userId),
-            getCurrentMood(userId),
-            getRecentMoodCount(userId),
-            getRecentPurchaseIntentsCount(userId)
+            getTotalSaved(validatedUserId),
+            calculateStreak(validatedUserId),
+            getActiveGoal(validatedUserId),
+            getRecentRegretCount(validatedUserId),
+            isQuietModeActive(validatedUserId),
+            getSoteriaMomentsCount(validatedUserId),
+            getCurrentMood(validatedUserId),
+            getRecentMoodCount(validatedUserId),
+            getRecentPurchaseIntentsCount(validatedUserId)
         ]);
         
         // Calculate risk level
@@ -498,12 +499,29 @@ exports.handler = async (event) => {
     } catch (error) {
         console.error('❌ [Lambda] Error getting dashboard data:', error);
         
+        // Return appropriate status code based on error type
+        let statusCode = 500;
+        let errorMessage = 'Internal server error';
+        
+        if (error.message === 'Missing Authorization header' || 
+            error.message.includes('Invalid Authorization') ||
+            error.message.includes('Empty token')) {
+            statusCode = 401;
+            errorMessage = 'Unauthorized';
+        } else if (error.message.includes('Forbidden') || 
+                   error.message.includes('Cannot access')) {
+            statusCode = 403;
+            errorMessage = 'Forbidden';
+        } else {
+            errorMessage = error.message || 'Internal server error';
+        }
+        
         return {
-            statusCode: 500,
-            headers,
+            statusCode: statusCode,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Internal server error'
+                error: errorMessage
             })
         };
     }

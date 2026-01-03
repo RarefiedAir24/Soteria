@@ -17,6 +17,7 @@
 
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient();
+const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
 
 // Table name based on data type
 const TABLE_MAPPING = {
@@ -45,13 +46,8 @@ const SORT_KEY_MAPPING = {
 exports.handler = async (event) => {
     console.log('📥 [Lambda] Get request received:', JSON.stringify(event));
     
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        'Content-Type': 'application/json'
-    };
+    // CORS headers with restricted origin
+    const headers = getCorsHeaders(event);
     
     // Handle OPTIONS request for CORS
     if (event.httpMethod === 'OPTIONS') {
@@ -79,6 +75,11 @@ exports.handler = async (event) => {
             };
         }
         
+        // SECURITY: Validate that authenticated user matches requested user_id
+        const authenticatedUserId = await validateUserAccess(event, user_id);
+        // Use authenticated user ID instead of request parameter
+        const validatedUserId = authenticatedUserId;
+        
         // Get table name
         const tableName = TABLE_MAPPING[data_type];
         if (!tableName) {
@@ -102,7 +103,7 @@ exports.handler = async (event) => {
             const params = {
                 TableName: tableName,
                 Key: {
-                    user_id: user_id,
+                    user_id: validatedUserId,
                     [sortKeyName]: item_id
                 }
             };
@@ -116,7 +117,7 @@ exports.handler = async (event) => {
                 TableName: tableName,
                 KeyConditionExpression: 'user_id = :user_id',
                 ExpressionAttributeValues: {
-                    ':user_id': user_id
+                    ':user_id': validatedUserId
                 }
             };
             
@@ -133,7 +134,7 @@ exports.handler = async (event) => {
         // Extract data field from items
         const data = result.map(item => item.data || item);
         
-        console.log(`✅ [Lambda] Retrieved ${data.length} item(s) for user ${user_id}, type ${data_type}`);
+        console.log(`✅ [Lambda] Retrieved ${data.length} item(s) for user ${validatedUserId}, type ${data_type}`);
         
         return {
             statusCode: 200,
@@ -148,12 +149,29 @@ exports.handler = async (event) => {
     } catch (error) {
         console.error('❌ [Lambda] Error getting data:', error);
         
+        // Return appropriate status code based on error type
+        let statusCode = 500;
+        let errorMessage = 'Internal server error';
+        
+        if (error.message === 'Missing Authorization header' || 
+            error.message.includes('Invalid Authorization') ||
+            error.message.includes('Empty token')) {
+            statusCode = 401;
+            errorMessage = 'Unauthorized';
+        } else if (error.message.includes('Forbidden') || 
+                   error.message.includes('Cannot access')) {
+            statusCode = 403;
+            errorMessage = 'Forbidden';
+        } else {
+            errorMessage = error.message || 'Internal server error';
+        }
+        
         return {
-            statusCode: 500,
-            headers,
+            statusCode: statusCode,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Internal server error'
+                error: errorMessage
             })
         };
     }

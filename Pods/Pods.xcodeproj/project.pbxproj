@@ -3,50 +3,30 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 71;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		33EC571FF27A7C5F146210F27052A455 /* Pods-soteria-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 747658E9488B6D97B29E69197944DD1C /* Pods-soteria-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		40B66DA404F902EA17128161EC75335E /* Pods-soteria-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 9F0F67A716901996F774FD141F5985D9 /* Pods-soteria-dummy.m */; };
-		580616F758CD57497AC79F3C1A8C54F3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		A0F27DB34EB1AF9EBA00BB0503D3B9E0 /* Pods-soteria-SoteriaMonitor-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 2350D4196E1C2B784C703F4F8A30EF7F /* Pods-soteria-SoteriaMonitor-dummy.m */; };
+		33EC571FF27A7C5F146210F27052A455 /* Pods-soteria-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = 45CD160275800212A0DF19D90E62E7A0 /* Pods-soteria-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		40B66DA404F902EA17128161EC75335E /* Pods-soteria-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 65B4861A28029B01FA0E247FA4779E7A /* Pods-soteria-dummy.m */; };
 		B62626B1F3A0769A5D5C8B823AD555E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		C60DA34A07AE18C041BF9D2EA6C33BB9 /* Pods-soteria-SoteriaMonitor-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = FBC99E2C2E37D83374FC10AB181ED9AC /* Pods-soteria-SoteriaMonitor-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0F6166F17A6EEA881196DD9264F4F72D /* Pods-soteria-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-acknowledgements.plist"; sourceTree = "<group>"; };
-		2350D4196E1C2B784C703F4F8A30EF7F /* Pods-soteria-SoteriaMonitor-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-soteria-SoteriaMonitor-dummy.m"; sourceTree = "<group>"; };
-		284F41D454E7200A8D22745796DA328B /* Pods-soteria-SoteriaMonitor-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-SoteriaMonitor-acknowledgements.plist"; sourceTree = "<group>"; };
 		384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		719EBD6D57EE881ADA984A4212486D47 /* Pods-soteria */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-soteria"; path = Pods_soteria.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		747658E9488B6D97B29E69197944DD1C /* Pods-soteria-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-soteria-umbrella.h"; sourceTree = "<group>"; };
-		8787F75F08CFEC916896DB9F5DA8E377 /* Pods-soteria-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-soteria-acknowledgements.markdown"; sourceTree = "<group>"; };
-		8A7CECA2F16D473F66DC734F9AB00FE0 /* Pods-soteria.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria.debug.xcconfig"; sourceTree = "<group>"; };
-		8D2A86CFF0D8C82037645C9683A5C653 /* Pods-soteria-SoteriaMonitor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria-SoteriaMonitor.debug.xcconfig"; sourceTree = "<group>"; };
-		91FD22EC58FCA72A1E83CB511E5E8DE9 /* Pods-soteria-SoteriaMonitor-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-SoteriaMonitor-Info.plist"; sourceTree = "<group>"; };
-		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
-		9F0F67A716901996F774FD141F5985D9 /* Pods-soteria-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-soteria-dummy.m"; sourceTree = "<group>"; };
-		A91E39B1A625DF35BA597DACBE3B65A2 /* Pods-soteria-SoteriaMonitor-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-soteria-SoteriaMonitor-acknowledgements.markdown"; sourceTree = "<group>"; };
-		A921C2003B57BCEA0162382745D39971 /* Pods-soteria-SoteriaMonitor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria-SoteriaMonitor.release.xcconfig"; sourceTree = "<group>"; };
-		C41A18A992B0291D839885B9E0ABD558 /* Pods-soteria-SoteriaMonitor.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-soteria-SoteriaMonitor.modulemap"; sourceTree = "<group>"; };
-		C89334E9C42EB470D4E3A2FA805C99B1 /* Pods-soteria-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-Info.plist"; sourceTree = "<group>"; };
-		D451DEED895E488F2B52CE6A3104F192 /* Pods-soteria-SoteriaMonitor */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-soteria-SoteriaMonitor"; path = Pods_soteria_SoteriaMonitor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D4B560510BAF848354647EADC79B907A /* Pods-soteria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria.release.xcconfig"; sourceTree = "<group>"; };
-		F411CF6D48650A9D642B994CEE4ABB49 /* Pods-soteria.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-soteria.modulemap"; sourceTree = "<group>"; };
-		FBC99E2C2E37D83374FC10AB181ED9AC /* Pods-soteria-SoteriaMonitor-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-soteria-SoteriaMonitor-umbrella.h"; sourceTree = "<group>"; };
+		45CD160275800212A0DF19D90E62E7A0 /* Pods-soteria-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-soteria-umbrella.h"; sourceTree = "<group>"; };
+		58D2F551FB62497296FF7DDDE1BAFEA2 /* Pods-soteria-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-Info.plist"; sourceTree = "<group>"; };
+		65B4861A28029B01FA0E247FA4779E7A /* Pods-soteria-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-soteria-dummy.m"; sourceTree = "<group>"; };
+		719EBD6D57EE881ADA984A4212486D47 /* Pods_soteria.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_soteria.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		830B7EA679A2C3306F973F9717A0A829 /* Pods-soteria-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-soteria-acknowledgements.plist"; sourceTree = "<group>"; };
+		8F1FACDB9F06E3A0C50D69D02E56C741 /* Pods-soteria.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria.release.xcconfig"; sourceTree = "<group>"; };
+		967E12313FA14F4BC69B32B0223491E4 /* Pods-soteria.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-soteria.modulemap"; sourceTree = "<group>"; };
+		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		B88985DFAE3FC95CE39C51B2C69B523B /* Pods-soteria.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-soteria.debug.xcconfig"; sourceTree = "<group>"; };
+		E50961DDC24B05522D43342A9B0B4477 /* Pods-soteria-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-soteria-acknowledgements.markdown"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		74C719C7C44942C54D1494FA0DDEB1BB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				580616F758CD57497AC79F3C1A8C54F3 /* Foundation.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		F076581F983362B980C31F900A0FC244 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -58,54 +38,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		3FBB1A11B198926109B484DD57F19049 /* Pods-soteria-SoteriaMonitor */ = {
+		3C5703666B0C9C314E57B42AA1CFADCA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C41A18A992B0291D839885B9E0ABD558 /* Pods-soteria-SoteriaMonitor.modulemap */,
-				A91E39B1A625DF35BA597DACBE3B65A2 /* Pods-soteria-SoteriaMonitor-acknowledgements.markdown */,
-				284F41D454E7200A8D22745796DA328B /* Pods-soteria-SoteriaMonitor-acknowledgements.plist */,
-				2350D4196E1C2B784C703F4F8A30EF7F /* Pods-soteria-SoteriaMonitor-dummy.m */,
-				91FD22EC58FCA72A1E83CB511E5E8DE9 /* Pods-soteria-SoteriaMonitor-Info.plist */,
-				FBC99E2C2E37D83374FC10AB181ED9AC /* Pods-soteria-SoteriaMonitor-umbrella.h */,
-				8D2A86CFF0D8C82037645C9683A5C653 /* Pods-soteria-SoteriaMonitor.debug.xcconfig */,
-				A921C2003B57BCEA0162382745D39971 /* Pods-soteria-SoteriaMonitor.release.xcconfig */,
-			);
-			name = "Pods-soteria-SoteriaMonitor";
-			path = "Target Support Files/Pods-soteria-SoteriaMonitor";
-			sourceTree = "<group>";
-		};
-		9DDEC137C82DBC410F6DD8AA8E2EF719 /* Pods-soteria */ = {
-			isa = PBXGroup;
-			children = (
-				F411CF6D48650A9D642B994CEE4ABB49 /* Pods-soteria.modulemap */,
-				8787F75F08CFEC916896DB9F5DA8E377 /* Pods-soteria-acknowledgements.markdown */,
-				0F6166F17A6EEA881196DD9264F4F72D /* Pods-soteria-acknowledgements.plist */,
-				9F0F67A716901996F774FD141F5985D9 /* Pods-soteria-dummy.m */,
-				C89334E9C42EB470D4E3A2FA805C99B1 /* Pods-soteria-Info.plist */,
-				747658E9488B6D97B29E69197944DD1C /* Pods-soteria-umbrella.h */,
-				8A7CECA2F16D473F66DC734F9AB00FE0 /* Pods-soteria.debug.xcconfig */,
-				D4B560510BAF848354647EADC79B907A /* Pods-soteria.release.xcconfig */,
-			);
-			name = "Pods-soteria";
-			path = "Target Support Files/Pods-soteria";
-			sourceTree = "<group>";
-		};
-		A033D4281FD1D00A823BC52EF620A8A6 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				719EBD6D57EE881ADA984A4212486D47 /* Pods-soteria */,
-				D451DEED895E488F2B52CE6A3104F192 /* Pods-soteria-SoteriaMonitor */,
+				719EBD6D57EE881ADA984A4212486D47 /* Pods_soteria.framework */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		B8F4A335E58CAB7BD786AA48997A2BAE /* Targets Support Files */ = {
-			isa = PBXGroup;
-			children = (
-				9DDEC137C82DBC410F6DD8AA8E2EF719 /* Pods-soteria */,
-				3FBB1A11B198926109B484DD57F19049 /* Pods-soteria-SoteriaMonitor */,
-			);
-			name = "Targets Support Files";
 			sourceTree = "<group>";
 		};
 		CF1408CF629C7361332E53B88F7BD30C = {
@@ -113,8 +51,8 @@
 			children = (
 				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
 				D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */,
-				A033D4281FD1D00A823BC52EF620A8A6 /* Products */,
-				B8F4A335E58CAB7BD786AA48997A2BAE /* Targets Support Files */,
+				3C5703666B0C9C314E57B42AA1CFADCA /* Products */,
+				EA24C925E6F17640D65BB38BABA42B0B /* Targets Support Files */,
 			);
 			sourceTree = "<group>";
 		};
@@ -134,17 +72,33 @@
 			name = iOS;
 			sourceTree = "<group>";
 		};
+		EA24C925E6F17640D65BB38BABA42B0B /* Targets Support Files */ = {
+			isa = PBXGroup;
+			children = (
+				EB6DFE468C722BB5E456D2B6A4F518C9 /* Pods-soteria */,
+			);
+			name = "Targets Support Files";
+			sourceTree = "<group>";
+		};
+		EB6DFE468C722BB5E456D2B6A4F518C9 /* Pods-soteria */ = {
+			isa = PBXGroup;
+			children = (
+				967E12313FA14F4BC69B32B0223491E4 /* Pods-soteria.modulemap */,
+				E50961DDC24B05522D43342A9B0B4477 /* Pods-soteria-acknowledgements.markdown */,
+				830B7EA679A2C3306F973F9717A0A829 /* Pods-soteria-acknowledgements.plist */,
+				65B4861A28029B01FA0E247FA4779E7A /* Pods-soteria-dummy.m */,
+				58D2F551FB62497296FF7DDDE1BAFEA2 /* Pods-soteria-Info.plist */,
+				45CD160275800212A0DF19D90E62E7A0 /* Pods-soteria-umbrella.h */,
+				B88985DFAE3FC95CE39C51B2C69B523B /* Pods-soteria.debug.xcconfig */,
+				8F1FACDB9F06E3A0C50D69D02E56C741 /* Pods-soteria.release.xcconfig */,
+			);
+			name = "Pods-soteria";
+			path = "Target Support Files/Pods-soteria";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		398615C59EB95E2CBFBB506A167EB69B /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C60DA34A07AE18C041BF9D2EA6C33BB9 /* Pods-soteria-SoteriaMonitor-umbrella.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		A2A74D721723283470A326F73D25935D /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -171,25 +125,7 @@
 			);
 			name = "Pods-soteria";
 			productName = Pods_soteria;
-			productReference = 719EBD6D57EE881ADA984A4212486D47 /* Pods-soteria */;
-			productType = "com.apple.product-type.framework";
-		};
-		E5B58A61746FDC4B206595DA5D4C471D /* Pods-soteria-SoteriaMonitor */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 34B24416725AB669474BCED916D95C46 /* Build configuration list for PBXNativeTarget "Pods-soteria-SoteriaMonitor" */;
-			buildPhases = (
-				398615C59EB95E2CBFBB506A167EB69B /* Headers */,
-				049623C898E579FDDEF6C21A010C1993 /* Sources */,
-				74C719C7C44942C54D1494FA0DDEB1BB /* Frameworks */,
-				AFB81B296C8E2534D0B05F487CFC270B /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "Pods-soteria-SoteriaMonitor";
-			productName = Pods_soteria_SoteriaMonitor;
-			productReference = D451DEED895E488F2B52CE6A3104F192 /* Pods-soteria-SoteriaMonitor */;
+			productReference = 719EBD6D57EE881ADA984A4212486D47 /* Pods_soteria.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
@@ -198,8 +134,9 @@
 		BFDFE7DC352907FC980B868725387E98 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2610;
 			};
 			buildConfigurationList = 4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */;
 			compatibilityVersion = "Xcode 16.0";
@@ -210,26 +147,16 @@
 				en,
 			);
 			mainGroup = CF1408CF629C7361332E53B88F7BD30C;
-			minimizedProjectReferenceProxies = 0;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = A033D4281FD1D00A823BC52EF620A8A6 /* Products */;
+			productRefGroup = 3C5703666B0C9C314E57B42AA1CFADCA /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				DC2AE2A00C0F16AB41C9CA073574E386 /* Pods-soteria */,
-				E5B58A61746FDC4B206595DA5D4C471D /* Pods-soteria-SoteriaMonitor */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		AFB81B296C8E2534D0B05F487CFC270B /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B1201C6CD95BE098301C5D5C8A72AA3D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -240,14 +167,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		049623C898E579FDDEF6C21A010C1993 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A0F27DB34EB1AF9EBA00BB0503D3B9E0 /* Pods-soteria-SoteriaMonitor-dummy.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D4E24E4084A39D9D1DE93D10B04DC634 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -261,19 +180,16 @@
 /* Begin XCBuildConfiguration section */
 		5420AC27FF71142A5278F2BF49FCFEF7 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D4B560510BAF848354647EADC79B907A /* Pods-soteria.release.xcconfig */;
+			baseConfigurationReference = 8F1FACDB9F06E3A0C50D69D02E56C741 /* Pods-soteria.release.xcconfig */;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CODE_SIGN_IDENTITY = "";
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = "Target Support Files/Pods-soteria/Pods-soteria-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -285,85 +201,7 @@
 				);
 				MACH_O_TYPE = staticlib;
 				MODULEMAP_FILE = "Target Support Files/Pods-soteria/Pods-soteria.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Release;
-		};
-		554D7868601F971B2B6A503C11039791 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8D2A86CFF0D8C82037645C9683A5C653 /* Pods-soteria-SoteriaMonitor.debug.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-soteria-SoteriaMonitor/Pods-soteria-SoteriaMonitor-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-soteria-SoteriaMonitor/Pods-soteria-SoteriaMonitor.modulemap";
-				OTHER_LDFLAGS = "";
-				OTHER_LIBTOOLFLAGS = "";
-				PODS_ROOT = "$(SRCROOT)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-			};
-			name = Debug;
-		};
-		61DF85348BD266E20933924CB286DA55 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = A921C2003B57BCEA0162382745D39971 /* Pods-soteria-SoteriaMonitor.release.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = "Target Support Files/Pods-soteria-SoteriaMonitor/Pods-soteria-SoteriaMonitor-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MACH_O_TYPE = staticlib;
-				MODULEMAP_FILE = "Target Support Files/Pods-soteria-SoteriaMonitor/Pods-soteria-SoteriaMonitor.modulemap";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				OTHER_LDFLAGS = "";
 				OTHER_LIBTOOLFLAGS = "";
 				PODS_ROOT = "$(SRCROOT)";
@@ -380,19 +218,16 @@
 		};
 		90493A452B98388E7F8A7CB07AA33059 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8A7CECA2F16D473F66DC734F9AB00FE0 /* Pods-soteria.debug.xcconfig */;
+			baseConfigurationReference = B88985DFAE3FC95CE39C51B2C69B523B /* Pods-soteria.debug.xcconfig */;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
-				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=watchos*]" = "";
+				CODE_SIGN_IDENTITY = "";
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = NO;
+				ENABLE_MODULE_VERIFIER = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = "Target Support Files/Pods-soteria/Pods-soteria-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -404,6 +239,7 @@
 				);
 				MACH_O_TYPE = staticlib;
 				MODULEMAP_FILE = "Target Support Files/Pods-soteria/Pods-soteria.modulemap";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				OTHER_LDFLAGS = "";
 				OTHER_LIBTOOLFLAGS = "";
 				PODS_ROOT = "$(SRCROOT)";
@@ -452,6 +288,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -475,7 +312,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRIP_INSTALLED_PRODUCT = NO;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -518,6 +355,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -537,7 +375,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRIP_INSTALLED_PRODUCT = NO;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -548,15 +386,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		34B24416725AB669474BCED916D95C46 /* Build configuration list for PBXNativeTarget "Pods-soteria-SoteriaMonitor" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				554D7868601F971B2B6A503C11039791 /* Debug */,
-				61DF85348BD266E20933924CB286DA55 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		4821239608C13582E20E6DA73FD5F1F9 /* Build configuration list for PBXProject "Pods" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

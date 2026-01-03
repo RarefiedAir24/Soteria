@@ -1,0 +1,12 @@
+{
+  "name": "soteria-member-number",
+  "version": "1.0.0",
+  "description": "Generate and retrieve member numbers for Soteria premium users",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0"
+  }
+}
+

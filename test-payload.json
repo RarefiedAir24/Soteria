@@ -1,0 +1,5 @@
+{
+  "httpMethod": "POST",
+  "body": "{\"full-name\":\"Test User\",\"work-email\":\"test@example.com\",\"company-name\":\"Test Co\",\"role-title\":\"CTO\",\"aws-environment-type\":\"Early-stage / small production environment\",\"monthly-aws-spend\":\"Under $1,000\",\"audit-concerns\":[\"Security or access risk\"],\"audit-tier\":\"Essential Audit - $1,250\",\"audit-confirmations\":[\"I understand this is a read-only, no-meeting AWS audit\",\"I am not requesting CI/CD, DevOps pipelines, or ongoing infrastructure management\",\"I understand implementation support is optional and separate\"],\"delivery-acknowledgment\":\"I understand this audit is performed asynchronously and delivered within 5-7 business days after access is granted\"}"
+}
+

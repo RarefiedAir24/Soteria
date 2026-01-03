@@ -21,6 +21,7 @@
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
 const crypto = require('crypto');
+const { validateUserAccess, getCorsHeaders } = require('../auth-utils');
 
 const BUCKET_NAME = process.env.GOAL_PHOTO_BUCKET_NAME || 'soteria-avatars-516141816050'; // Reuse avatar bucket
 const REGION = process.env.AWS_REGION || 'us-east-1';
@@ -29,13 +30,8 @@ exports.handler = async (event) => {
     console.log('🔍 [Lambda] Goal photo upload request received');
     console.log('📥 [Lambda] Event:', JSON.stringify(event, null, 2));
     
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-    };
+    // CORS headers with restricted origin
+    const headers = getCorsHeaders(event);
     
     // Handle OPTIONS request (CORS preflight)
     if (event.httpMethod === 'OPTIONS') {
@@ -48,10 +44,10 @@ exports.handler = async (event) => {
     
     try {
         // Parse query parameters
-        const userId = event.queryStringParameters?.user_id;
+        const requestedUserId = event.queryStringParameters?.user_id;
         const goalId = event.queryStringParameters?.goal_id;
         
-        if (!userId || !goalId) {
+        if (!requestedUserId || !goalId) {
             return {
                 statusCode: 400,
                 headers,
@@ -61,6 +57,11 @@ exports.handler = async (event) => {
                 })
             };
         }
+        
+        // SECURITY: Validate that authenticated user matches requested user_id
+        const authenticatedUserId = await validateUserAccess(event, requestedUserId);
+        // Use authenticated user ID instead of request parameter
+        const validatedUserId = authenticatedUserId;
         
         // Parse request body
         let body;
@@ -120,7 +121,7 @@ exports.handler = async (event) => {
         }
         
         // Generate S3 key (path) for goal photo
-        const s3Key = `goal-photos/${userId}/${goalId}.jpg`;
+        const s3Key = `goal-photos/${validatedUserId}/${goalId}.jpg`;
         
         // Upload to S3
         const uploadParams = {
@@ -130,7 +131,7 @@ exports.handler = async (event) => {
             ContentType: contentType,
             CacheControl: 'public, max-age=3600', // Cache for 1 hour
             Metadata: {
-                'user_id': userId,
+                'user_id': validatedUserId,
                 'goal_id': goalId,
                 'uploaded_at': new Date().toISOString()
             }
@@ -155,13 +156,29 @@ exports.handler = async (event) => {
         };
         
     } catch (error) {
-        console.error('❌ [Lambda] Goal photo upload error:', error);
+        console.error('❌ [Lambda] Error uploading goal photo:', error);
+        
+        // Return appropriate status code based on error type
+        let statusCode = 500;
+        let errorMessage = 'An error occurred while uploading the goal photo';
+        
+        if (error.message === 'Missing Authorization header' || 
+            error.message.includes('Invalid Authorization') ||
+            error.message.includes('Empty token')) {
+            statusCode = 401;
+            errorMessage = 'Unauthorized';
+        } else if (error.message.includes('Forbidden') || 
+                   error.message.includes('Cannot access')) {
+            statusCode = 403;
+            errorMessage = 'Forbidden';
+        }
+        
         return {
-            statusCode: 500,
-            headers,
+            statusCode: statusCode,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
-                error: error.message || 'Failed to upload goal photo'
+                error: errorMessage
             })
         };
     }

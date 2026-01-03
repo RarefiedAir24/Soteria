@@ -16,18 +16,16 @@ class UnitService {
     /// Unit API base URL
     private let baseURL = "https://api.s.unit.sh" // Sandbox URL
     
-    /// API Token (stored securely)
+    /// API Token (stored securely in Keychain)
     private var apiToken: String? {
         get {
-            // For sandbox: Store in UserDefaults (acceptable for development)
-            // For production: Move to Keychain
-            return UserDefaults.standard.string(forKey: "unit_api_token")
+            return KeychainHelper.get(key: "unit_api_token")
         }
         set {
             if let token = newValue {
-                UserDefaults.standard.set(token, forKey: "unit_api_token")
+                KeychainHelper.set(key: "unit_api_token", value: token)
             } else {
-                UserDefaults.standard.removeObject(forKey: "unit_api_token")
+                KeychainHelper.delete(key: "unit_api_token")
             }
         }
     }

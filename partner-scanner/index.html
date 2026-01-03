@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soteria Partner Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .scanner-section {
+            margin-bottom: 30px;
+        }
+        
+        #video {
+            width: 100%;
+            border-radius: 12px;
+            background: #000;
+            display: none;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        .scan-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .scan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .scan-button:active {
+            transform: translateY(0);
+        }
+        
+        .scan-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+        }
+        
+        .result-section.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result-section.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .result-section h3 {
+            margin-bottom: 10px;
+        }
+        
+        .member-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .member-info p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .member-info strong {
+            color: #333;
+        }
+        
+        .partner-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        .partner-info p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .manual-input {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .manual-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .manual-input button {
+            width: 100%;
+            padding: 12px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .partner-select {
+            margin-bottom: 20px;
+        }
+        
+        .partner-select select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Soteria Partner Scanner</h1>
+            <p>Scan QR codes to validate member loyalty benefits</p>
+        </div>
+        
+        <div class="partner-select">
+            <label for="partnerSelect">Select Partner:</label>
+            <select id="partnerSelect">
+                <option value="">Loading partners...</option>
+            </select>
+        </div>
+        
+        <div class="scanner-section">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+            <button id="scanButton" class="scan-button">Start QR Scanner</button>
+        </div>
+        
+        <div class="manual-input">
+            <h3 style="margin-bottom: 10px; color: #333; font-size: 14px;">Manual Entry</h3>
+            <input type="text" id="manualQRInput" placeholder="Paste QR code data (JSON)">
+            <button onclick="validateManualQR()">Validate QR Code</button>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                <input type="text" id="manualMemberNumber" placeholder="Or enter Member Number (e.g., SOT-123456)" style="margin-bottom: 10px;">
+                <button onclick="validateMemberNumber()">Validate Member Number</button>
+            </div>
+        </div>
+        
+        <div id="resultSection" class="result-section">
+            <h3 id="resultTitle"></h3>
+            <div id="resultContent"></div>
+        </div>
+        
+        <div id="loadingSection" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Validating member...</p>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        const API_BASE_URL = 'https://ue1psw3mt3.execute-api.us-east-1.amazonaws.com/prod';
+        let stream = null;
+        let scanning = false;
+        
+        // Load partners on page load
+        async function loadPartners() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/soteria/partner/list`);
+                const data = await response.json();
+                
+                const select = document.getElementById('partnerSelect');
+                select.innerHTML = '<option value="">Select a partner...</option>';
+                
+                if (data.success && data.partners) {
+                    data.partners.forEach(partner => {
+                        const option = document.createElement('option');
+                        option.value = partner.partner_id;
+                        option.textContent = `${partner.name} (${partner.discount_percentage}% loyalty benefit)`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading partners:', error);
+                document.getElementById('partnerSelect').innerHTML = '<option value="">Error loading partners</option>';
+            }
+        }
+        
+        // Start QR scanner
+        async function startScanner() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const scanButton = document.getElementById('scanButton');
+            
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                
+                video.srcObject = stream;
+                video.style.display = 'block';
+                scanButton.textContent = 'Stop Scanner';
+                scanButton.onclick = stopScanner;
+                scanning = true;
+                
+                scanQRCode();
+            } catch (error) {
+                alert('Error accessing camera: ' + error.message);
+                console.error('Camera error:', error);
+            }
+        }
+        
+        // Stop QR scanner
+        function stopScanner() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            const video = document.getElementById('video');
+            const scanButton = document.getElementById('scanButton');
+            
+            video.style.display = 'none';
+            scanButton.textContent = 'Start QR Scanner';
+            scanButton.onclick = startScanner;
+            scanning = false;
+        }
+        
+        // Scan QR code from video stream
+        function scanQRCode() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            
+            if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) {
+                if (scanning) {
+                    requestAnimationFrame(scanQRCode);
+                }
+                return;
+            }
+            
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                stopScanner();
+                validateQRCode(code.data);
+            } else if (scanning) {
+                requestAnimationFrame(scanQRCode);
+            }
+        }
+        
+        // Validate QR code
+        async function validateQRCode(qrData) {
+            const partnerId = document.getElementById('partnerSelect').value;
+            
+            if (!partnerId) {
+                showResult('error', 'Please select a partner first');
+                return;
+            }
+            
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('resultSection').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/soteria/partner/validate-member`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        qr_data: qrData,
+                        partner_id: partnerId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loadingSection').style.display = 'none';
+                
+                if (data.success && data.valid) {
+                    showResult('success', 'Member Valid!', data);
+                } else {
+                    showResult('error', data.error || 'Invalid member', data);
+                }
+            } catch (error) {
+                document.getElementById('loadingSection').style.display = 'none';
+                showResult('error', 'Error validating QR code: ' + error.message);
+            }
+        }
+        
+        // Validate manual QR input
+        function validateManualQR() {
+            const qrData = document.getElementById('manualQRInput').value.trim();
+            if (!qrData) {
+                alert('Please enter QR code data');
+                return;
+            }
+            validateQRCode(qrData);
+        }
+        
+        // Validate member number
+        async function validateMemberNumber() {
+            const memberNumber = document.getElementById('manualMemberNumber').value.trim();
+            const partnerId = document.getElementById('partnerSelect').value;
+            
+            if (!memberNumber) {
+                alert('Please enter a member number');
+                return;
+            }
+            
+            if (!partnerId) {
+                showResult('error', 'Please select a partner first');
+                return;
+            }
+            
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('resultSection').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/soteria/partner/validate-member`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        member_number: memberNumber,
+                        partner_id: partnerId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loadingSection').style.display = 'none';
+                
+                if (data.success && data.valid) {
+                    showResult('success', 'Member Valid!', data);
+                } else {
+                    showResult('error', data.error || 'Invalid member', data);
+                }
+            } catch (error) {
+                document.getElementById('loadingSection').style.display = 'none';
+                showResult('error', 'Error validating member number: ' + error.message);
+            }
+        }
+        
+        // Show result
+        function showResult(type, message, data) {
+            const resultSection = document.getElementById('resultSection');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultContent = document.getElementById('resultContent');
+            
+            resultSection.className = `result-section ${type}`;
+            resultTitle.textContent = message;
+            resultSection.style.display = 'block';
+            
+            if (data && data.member) {
+                let html = '<div class="member-info">';
+                html += '<h4>Member Information:</h4>';
+                html += `<p><strong>User ID:</strong> ${data.member.user_id}</p>`;
+                html += `<p><strong>Card Type:</strong> ${data.member.card_type.toUpperCase()}</p>`;
+                html += `<p><strong>Member Since:</strong> ${new Date(data.member.member_since).toLocaleDateString()}</p>`;
+                html += `<p><strong>Premium Status:</strong> ${data.member.is_premium ? '✅ Active' : '❌ Inactive'}</p>`;
+                html += '</div>';
+                
+                if (data.partner) {
+                    html += '<div class="partner-info">';
+                    html += '<h4>Loyalty Benefit Information:</h4>';
+                    html += `<p><strong>Partner:</strong> ${data.partner.name}</p>`;
+                    if (data.partner.discount_percentage) {
+                        html += `<p><strong>Loyalty Benefit:</strong> ${data.partner.discount_percentage}% off</p>`;
+                    }
+                    if (data.partner.terms) {
+                        html += `<p><strong>Terms:</strong> ${data.partner.terms}</p>`;
+                    }
+                    html += '</div>';
+                }
+                
+                resultContent.innerHTML = html;
+            } else {
+                resultContent.innerHTML = '';
+            }
+        }
+        
+        // Initialize
+        document.getElementById('scanButton').onclick = startScanner;
+        loadPartners();
+    </script>
+</body>
+</html>
+

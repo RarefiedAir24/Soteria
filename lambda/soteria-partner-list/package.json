@@ -1,0 +1,15 @@
+{
+  "name": "soteria-partner-list",
+  "version": "1.0.0",
+  "description": "Lambda function to list available partner discounts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  },
+  "author": "Soteria",
+  "license": "ISC"
+}
+

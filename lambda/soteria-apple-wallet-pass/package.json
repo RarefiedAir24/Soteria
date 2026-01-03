@@ -1,0 +1,16 @@
+{
+  "name": "soteria-apple-wallet-pass",
+  "version": "1.0.0",
+  "description": "Lambda function to generate Apple Wallet passes for premium members",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "archiver": "^6.0.1"
+  },
+  "author": "Soteria",
+  "license": "ISC"
+}
+
