@@ -70,7 +70,7 @@ router.post('/exchange-public-token', async (req, res, next) => {
     });
     
     const accounts = accountsResponse.data.accounts.map(account => ({
-      id: account.account_id,
+      account_id: account.account_id, // Match Lambda format
       name: account.name,
       mask: account.mask,
       type: account.type,

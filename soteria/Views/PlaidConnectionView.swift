@@ -20,82 +20,201 @@ struct PlaidConnectionView: View {
     @State private var linkToken: String? = nil
     @State private var showPlaidLink = false
     
+    private var modeDescription: String {
+        switch plaidService.savingsMode {
+        case .automatic:
+            return "Transfers available. You can initiate transfers to your savings account when you choose to save."
+        case .virtual:
+            return "Virtual savings mode. We'll track your savings, but transfers require a savings account."
+        case .manual:
+            return "Manual mode. Connect a savings account to enable transfers."
+        }
+    }
+    
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 12) {
-                    Image(systemName: "building.columns.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(Color.softGraphite)
-                    
-                    Text("Connect Your Accounts")
-                        .font(.title.bold())
-                    
-                    Text("Enable automatic savings transfers when you choose protection")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-                .padding(.top, 40)
-                
-                // Benefits
-                VStack(alignment: .leading, spacing: 16) {
-                    BenefitRow(
-                        icon: "arrow.right.circle.fill",
-                        title: "Automatic Transfers",
-                        description: "Money moves to savings when you unblock"
-                    )
-                    
-                    BenefitRow(
-                        icon: "eye.fill",
-                        title: "See Your Progress",
-                        description: "Track your savings balance in real-time"
-                    )
-                    
-                    BenefitRow(
-                        icon: "lock.shield.fill",
-                        title: "Secure & Private",
-                        description: "We never hold your money - it stays in your bank"
-                    )
-                }
-                .padding(.horizontal)
-                
-                Spacer()
-                
-                // Connect Button
-                Button(action: {
-                    Task {
-                        await connectAccounts()
-                    }
-                }) {
-                    HStack {
-                        if isConnecting {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Text("Connect Accounts")
-                                .fontWeight(.semibold)
+            Group {
+                if !plaidService.connectedAccounts.isEmpty {
+                    // Show connected accounts
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            // Success Header
+                            VStack(spacing: 12) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.green)
+                                
+                                Text("Accounts Connected")
+                                    .font(.title.bold())
+                                
+                                Text("\(plaidService.connectedAccounts.count) account\(plaidService.connectedAccounts.count == 1 ? "" : "s") successfully connected")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                            }
+                            .padding(.top, 40)
+                            
+                            // Connected Accounts List
+                            VStack(spacing: 12) {
+                                ForEach(plaidService.connectedAccounts) { account in
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(account.name)
+                                                .font(.headline)
+                                                .foregroundColor(.midnightSlate)
+                                            
+                                            Text("\(account.subtype.capitalized) ••••\(account.mask)")
+                                                .font(.subheadline)
+                                                .foregroundColor(.softGraphite)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                    }
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.mistGray.opacity(0.3))
+                                    )
+                                }
+                            }
+                            .padding(.horizontal)
+                            
+                            // Mode Info
+                            VStack(spacing: 8) {
+                                Text("Savings Mode")
+                                    .font(.headline)
+                                    .foregroundColor(.midnightSlate)
+                                
+                                Text(modeDescription)
+                                    .font(.subheadline)
+                                    .foregroundColor(.softGraphite)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.softGraphite.opacity(0.1))
+                            )
+                            .padding(.horizontal)
+                            
+                            Spacer()
+                            
+                            // Add More Accounts Button
+                            Button(action: {
+                                Task {
+                                    await connectAccounts()
+                                }
+                            }) {
+                                HStack {
+                                    if isConnecting {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Image(systemName: "plus.circle.fill")
+                                        Text("Add More Accounts")
+                                            .fontWeight(.semibold)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.softGraphite)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            .disabled(isConnecting)
+                            .padding(.horizontal)
+                            .padding(.bottom, 20)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.softGraphite)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                } else {
+                    // Show tutorial/connect screen
+                    VStack(spacing: 24) {
+                        // Header
+                        VStack(spacing: 12) {
+                            Image(systemName: "building.columns.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(Color.softGraphite)
+                            
+                            Text("Connect Your Accounts")
+                                .font(.title.bold())
+                            
+                            Text("Connect accounts to initiate transfers when you choose to save")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .padding(.top, 40)
+                        
+                        // Benefits
+                        VStack(alignment: .leading, spacing: 16) {
+                            BenefitRow(
+                                icon: "arrow.right.circle.fill",
+                                title: "User-Initiated Transfers",
+                                description: "Initiate transfers to savings when you choose to save"
+                            )
+                            
+                            BenefitRow(
+                                icon: "eye.fill",
+                                title: "See Your Progress",
+                                description: "Track your savings balance in real-time"
+                            )
+                            
+                            BenefitRow(
+                                icon: "lock.shield.fill",
+                                title: "Secure & Private",
+                                description: "We never hold your money - it stays in your bank"
+                            )
+                        }
+                        .padding(.horizontal)
+                        
+                        Spacer()
+                        
+                        // Connect Button
+                        Button(action: {
+                            Task {
+                                await connectAccounts()
+                            }
+                        }) {
+                            HStack {
+                                if isConnecting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Text("Connect Accounts")
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.softGraphite)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isConnecting)
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
+                    }
                 }
-                .disabled(isConnecting)
-                .padding(.horizontal)
-                .padding(.bottom, 20)
             }
-            .navigationTitle("Bank Connection")
+            .navigationTitle(plaidService.connectedAccounts.isEmpty ? "Bank Connection" : "Connected Accounts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("Done") {
                         dismiss()
                     }
+                }
+            }
+            .onAppear {
+                // Load accounts when view appears
+                Task {
+                    await loadConnectedAccounts()
                 }
             }
             .alert("Connection Error", isPresented: $showError) {
@@ -158,10 +277,13 @@ struct PlaidConnectionView: View {
     private func exchangeToken(_ publicToken: String) async {
         do {
             try await plaidService.exchangePublicToken(publicToken)
+            // Reload accounts after successful exchange
+            await loadConnectedAccounts()
             await MainActor.run {
                 isConnecting = false
                 showPlaidLink = false
-                dismiss()
+                // Don't dismiss immediately - let user see the success screen
+                // dismiss() will be called when they tap "Done"
             }
         } catch {
             await MainActor.run {
@@ -170,7 +292,14 @@ struct PlaidConnectionView: View {
                 errorMessage = error.localizedDescription
                 showError = true
             }
+            print("❌ [PlaidConnectionView] Exchange token error: \(error)")
         }
+    }
+    
+    private func loadConnectedAccounts() async {
+        // Fetch accounts from backend/DynamoDB
+        await plaidService.fetchConnectedAccounts()
+        print("🔍 [PlaidConnectionView] Connected accounts after fetch: \(plaidService.connectedAccounts.count)")
     }
 }
 

@@ -22,34 +22,43 @@ struct AdminPartnerManagementView: View {
     @State private var isDeleting = false
     
     private var userEmail: String {
-        authService.currentUser?.email ?? ""
+        let email = authService.currentUser?.email ?? ""
+        print("🔵 [AdminPartnerManagementView] Current email: '\(email)'")
+        return email
     }
     
     private var isAdmin: Bool {
         // Only supergeek@me.com can access admin features
-        return userEmail.lowercased() == "supergeek@me.com"
+        let email = userEmail.lowercased()
+        let isAdminUser = email == "supergeek@me.com"
+        print("🔵 [AdminPartnerManagementView] isAdmin check: email='\(email)', isAdmin=\(isAdminUser)")
+        return isAdminUser
     }
     
     var body: some View {
-        if !isAdmin {
-            // Non-admin users see access denied
-            VStack(spacing: 20) {
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.softGraphite.opacity(0.5))
-                
-                Text("Access Denied")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.midnightSlate)
-                
-                Text("This feature is only available to administrators.")
-                    .font(.system(size: 16))
-                    .foregroundColor(.softGraphite)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
-        } else {
-            NavigationView {
+        Group {
+            if !isAdmin {
+                // Non-admin users see access denied
+                VStack(spacing: 20) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.softGraphite.opacity(0.5))
+                    
+                    Text("Access Denied")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.midnightSlate)
+                    
+                    Text("This feature is only available to administrators.")
+                        .font(.system(size: 16))
+                        .foregroundColor(.softGraphite)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+                .onAppear {
+                    print("🔵 [AdminPartnerManagementView] Access denied view appeared")
+                }
+            } else {
+                NavigationView {
                 ZStack {
                     Color.cloudWhite
                         .ignoresSafeArea()
@@ -158,7 +167,11 @@ struct AdminPartnerManagementView: View {
                     }
                 }
                 .task {
+                    print("🔵 [AdminPartnerManagementView] Loading partners...")
                     await loadPartners()
+                }
+                .onAppear {
+                    print("🔵 [AdminPartnerManagementView] NavigationView appeared, isAdmin: \(isAdmin), email: \(userEmail)")
                 }
                 .photosPicker(isPresented: $showLogoPicker, selection: $selectedPhoto, matching: .images)
                 .onChange(of: selectedPhoto) { oldValue, newItem in
@@ -182,6 +195,7 @@ struct AdminPartnerManagementView: View {
                     if let error = errorMessage {
                         Text(error)
                     }
+                }
                 }
             }
         }
@@ -252,6 +266,12 @@ struct AdminPartnerCard: View {
     let onDelete: (() -> Void)?
     
     @State private var offset: CGFloat = 0
+    @State private var checkoutCode: String = ""
+    @State private var isEditingCode: Bool = false
+    @State private var isSavingCode: Bool = false
+    @State private var showCodeSaved: Bool = false
+    @ObservedObject private var partnerService = PartnerLoyaltyService.shared
+    
     private let deleteThreshold: CGFloat = -100
     
     private var isInactiveOrExpired: Bool {
@@ -259,6 +279,37 @@ struct AdminPartnerCard: View {
             return !partner.isActive
         }
         return !partner.isActive || validUntil < Date()
+    }
+    
+    private func saveCheckoutCode() async {
+        isSavingCode = true
+        showCodeSaved = false
+        
+        // Normalize code (uppercase, trim)
+        let normalizedCode = checkoutCode.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let codeToSave = normalizedCode.isEmpty ? nil : normalizedCode
+        
+        do {
+            _ = try await partnerService.updatePartner(
+                partnerId: partner.partnerId,
+                checkoutCode: codeToSave
+            )
+            
+            await MainActor.run {
+                isSavingCode = false
+                showCodeSaved = true
+                
+                // Hide success message after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    showCodeSaved = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                isSavingCode = false
+                print("❌ [AdminPartnerCard] Error saving checkout code: \(error.localizedDescription)")
+            }
+        }
     }
     
     var body: some View {
@@ -347,6 +398,59 @@ struct AdminPartnerCard: View {
                     Spacer()
                 }
                 
+                // Checkout Code Section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Checkout Code")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.midnightSlate)
+                    
+                    HStack(spacing: 12) {
+                        TextField("Enter code (e.g., SAVE10)", text: $checkoutCode)
+                            .font(.system(size: 16, weight: .medium, design: .monospaced))
+                            .foregroundColor(.midnightSlate)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.softGraphite.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.softGraphite.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                            .disabled(isSavingCode)
+                        
+                        if isSavingCode {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .softGraphite))
+                        } else if showCodeSaved {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color(red: 72.0/255.0, green: 187.0/255.0, blue: 120.0/255.0))
+                        } else {
+                            Button(action: {
+                                Task {
+                                    await saveCheckoutCode()
+                                }
+                            }) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 20))
+                            }
+                            .foregroundColor(checkoutCode == (partner.checkoutCode ?? "") ? Color.softGraphite.opacity(0.3) : Color.softGraphite)
+                            .disabled(checkoutCode == (partner.checkoutCode ?? "") || checkoutCode.isEmpty)
+                        }
+                    }
+                    
+                    if showCodeSaved {
+                        Text("Code saved! All cards will update.")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(red: 72.0/255.0, green: 187.0/255.0, blue: 120.0/255.0))
+                    }
+                }
+                .padding(.top, 8)
+                
                 // Edit logo button (admin only)
                 Button(action: onEditLogo) {
                     HStack {
@@ -363,6 +467,7 @@ struct AdminPartnerCard: View {
                             .fill(Color.softGraphite)
                     )
                 }
+                .padding(.top, 8)
             }
             .padding(20)
             .background(
@@ -372,6 +477,14 @@ struct AdminPartnerCard: View {
             )
         }
         .offset(x: offset)
+        .onAppear {
+            // Initialize checkout code from partner
+            checkoutCode = partner.checkoutCode ?? ""
+        }
+        .onChange(of: partner.checkoutCode) { oldValue, newValue in
+            // Update if partner changes externally
+            checkoutCode = newValue ?? ""
+        }
         .gesture(
             DragGesture()
                 .onChanged { value in

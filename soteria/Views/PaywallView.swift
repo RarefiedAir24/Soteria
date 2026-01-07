@@ -28,7 +28,7 @@ struct PaywallView: View {
                 
                 ScrollView {
                     VStack(spacing: 30) {
-                        // Header with gradient crown
+                        // Header with Soteria logo
                         VStack(spacing: 16) {
                             ZStack {
                                 Circle()
@@ -42,9 +42,10 @@ struct PaywallView: View {
                                     .frame(width: 100, height: 100)
                                     .shadow(color: Color(red: 1.0, green: 0.84, blue: 0.0).opacity(0.3), radius: 10, x: 0, y: 5)
                                 
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.white)
+                                Image("AppLogo")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 60, height: 60)
                             }
                             
                             if subscriptionService.isPremium {
@@ -92,7 +93,7 @@ struct PaywallView: View {
                                     HStack(spacing: 12) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.system(size: 16))
-                                            .foregroundColor(.reverBlue)
+                                            .foregroundColor(.softGraphite)
                                         Text("See how each save moves you closer to your goals")
                                             .font(.system(size: 14))
                                             .foregroundColor(.midnightSlate)
@@ -102,7 +103,7 @@ struct PaywallView: View {
                                     HStack(spacing: 12) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.system(size: 16))
-                                            .foregroundColor(.reverBlue)
+                                            .foregroundColor(.softGraphite)
                                         Text("Get AI-powered insights to optimize your savings")
                                             .font(.system(size: 14))
                                             .foregroundColor(.midnightSlate)
@@ -112,7 +113,7 @@ struct PaywallView: View {
                                     HStack(spacing: 12) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.system(size: 16))
-                                            .foregroundColor(.reverBlue)
+                                            .foregroundColor(.softGraphite)
                                         Text("Track your progress with advanced analytics")
                                             .font(.system(size: 14))
                                             .foregroundColor(.midnightSlate)
@@ -160,83 +161,137 @@ struct PaywallView: View {
                             )
                             .padding(.horizontal, 24)
                         } else {
-                            // Premium member info
+                            // Premium member info - show current subscription and upgrade option
                             VStack(spacing: 20) {
-                                VStack(spacing: 12) {
-                                    Text("You have access to all premium features")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.midnightSlate)
+                                // Current Subscription Card
+                                VStack(spacing: 16) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Current Plan")
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundColor(.softGraphite)
+                                            
+                                            if let subscriptionType = subscriptionService.currentSubscriptionType {
+                                                Text("Soteria Plus \(subscriptionType)")
+                                                    .font(.system(size: 20, weight: .bold))
+                                                    .foregroundColor(.midnightSlate)
+                                            } else {
+                                                Text("Soteria Plus")
+                                                    .font(.system(size: 20, weight: .bold))
+                                                    .foregroundColor(.midnightSlate)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        // Active badge
+                                        HStack(spacing: 4) {
+                                            Circle()
+                                                .fill(Color.green)
+                                                .frame(width: 8, height: 8)
+                                            Text("Active")
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundColor(.green)
+                                        }
+                                    }
                                     
-                                    Text("Manage or cancel your subscription anytime")
+                                    Divider()
+                                    
+                                    Text("You have access to all premium features")
                                         .font(.system(size: 14))
                                         .foregroundColor(.softGraphite)
                                         .multilineTextAlignment(.center)
                                 }
-                                .padding(24)
+                                .padding(20)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 20)
+                                    RoundedRectangle(cornerRadius: 16)
                                         .fill(Color.white)
-                                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                                        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                                 )
                                 
+                                // Upgrade to Annual (if user has monthly)
+                                if subscriptionService.canUpgradeToAnnual, let annualProduct = subscriptionService.yearlyProduct {
+                                    VStack(spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "arrow.up.circle.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.softGraphite)
+                                            Text("Upgrade to Annual")
+                                                .font(.system(size: 18, weight: .semibold))
+                                                .foregroundColor(.midnightSlate)
+                                            Spacer()
+                                        }
+                                        
+                                        Text("Save 33% and get all premium features for a full year")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.softGraphite)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        
+                                        Button(action: {
+                                            purchaseProduct(annualProduct)
+                                        }) {
+                                            HStack {
+                                                if isPurchasing {
+                                                    ProgressView()
+                                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                                } else {
+                                                    Text("Upgrade to Annual - \(annualProduct.displayPrice)")
+                                                        .font(.system(size: 16, weight: .semibold))
+                                                }
+                                            }
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 14)
+                                            .background(
+                                                LinearGradient(
+                                                    colors: [Color.softGraphite, Color.midnightSlate],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .cornerRadius(12)
+                                        }
+                                        .disabled(isPurchasing)
+                                    }
+                                    .padding(20)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color.softGraphite.opacity(0.05), Color.midnightSlate.opacity(0.05)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(Color.softGraphite.opacity(0.2), lineWidth: 1.5)
+                                            )
+                                    )
+                                }
+                                
+                                // Manage Subscription Button
                                 Button(action: {
                                     showManageSubscriptions = true
                                 }) {
                                     HStack {
                                         Image(systemName: "gearshape.fill")
                                             .font(.system(size: 16, weight: .medium))
-                                        Text("Manage or Cancel Subscription")
+                                        Text("Manage Subscription")
                                             .font(.system(size: 16, weight: .semibold))
                                     }
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.reverBlue)
+                                        LinearGradient(
+                                            colors: [Color.softGraphite, Color.midnightSlate],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
                                     )
+                                    .cornerRadius(12)
                                 }
-                                
-                                // Additional instructions for cancellation
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("How to cancel:")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.midnightSlate)
-                                    
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack(alignment: .top, spacing: 8) {
-                                            Text("1.")
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundColor(.reverBlue)
-                                            Text("Tap 'Manage or Cancel Subscription' above")
-                                                .font(.system(size: 13))
-                                                .foregroundColor(.softGraphite)
-                                        }
-                                        
-                                        HStack(alignment: .top, spacing: 8) {
-                                            Text("2.")
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundColor(.reverBlue)
-                                            Text("Select your Soteria Plus subscription")
-                                                .font(.system(size: 13))
-                                                .foregroundColor(.softGraphite)
-                                        }
-                                        
-                                        HStack(alignment: .top, spacing: 8) {
-                                            Text("3.")
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundColor(.reverBlue)
-                                            Text("Tap 'Cancel Subscription'")
-                                                .font(.system(size: 13))
-                                                .foregroundColor(.softGraphite)
-                                        }
-                                    }
-                                }
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.reverBlue.opacity(0.05))
-                                )
                             }
                             .padding(.horizontal, 24)
                         }
@@ -283,9 +338,13 @@ struct PaywallView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.reverBlue)
+                                        LinearGradient(
+                                            colors: [Color.softGraphite, Color.midnightSlate],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
                                     )
+                                    .cornerRadius(12)
                                     .foregroundColor(.white)
                                 }
                                 .disabled(isPurchasing)
@@ -325,9 +384,13 @@ struct PaywallView: View {
                                         .padding(.horizontal, 24)
                                         .padding(.vertical, 12)
                                         .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.reverBlue)
+                                            LinearGradient(
+                                                colors: [Color.softGraphite, Color.midnightSlate],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
                                         )
+                                        .cornerRadius(8)
                                 }
                             }
                             .padding()
@@ -348,15 +411,15 @@ struct PaywallView: View {
                                 Text("Restore Purchases")
                                     .font(.system(size: 15, weight: .semibold))
                             }
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.reverBlue.opacity(0.1))
+                                    .fill(Color.softGraphite.opacity(0.1))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.reverBlue.opacity(0.3), lineWidth: 1)
+                                            .stroke(Color.softGraphite.opacity(0.3), lineWidth: 1)
                                     )
                             )
                         }
@@ -383,7 +446,7 @@ struct PaywallView: View {
                         }) {
                             Text("Cancel")
                                 .font(.system(size: 14))
-                                .foregroundColor(.reverBlue)
+                                .foregroundColor(.softGraphite)
                         }
                     }
                 }
@@ -401,7 +464,10 @@ struct PaywallView: View {
             do {
                 let success = try await subscriptionService.purchase(product)
                 if success {
+                    // Wait a moment for subscription status to update
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                     dismiss()
+                    // Celebration will be shown automatically by SubscriptionService
                 }
             } catch {
                 print("❌ [PaywallView] Purchase failed: \(error)")
@@ -422,7 +488,7 @@ struct FeatureRow: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.reverBlue.opacity(0.15), Color.deepReverBlue.opacity(0.15)],
+                            colors: [Color.softGraphite.opacity(0.15), Color.midnightSlate.opacity(0.15)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -433,7 +499,7 @@ struct FeatureRow: View {
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color.reverBlue, Color.deepReverBlue],
+                            colors: [Color.softGraphite, Color.midnightSlate],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -473,12 +539,17 @@ struct PricingCard: View {
                     Text(product.displayPrice)
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(Color.reverBlue)
+                        .foregroundColor(Color.softGraphite)
                     
                     if product.id.contains("yearly") {
-                        Text("Best Value")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                        HStack(spacing: 4) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                            Text("Best Value")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.orange)
                     }
                 }
                 
@@ -486,18 +557,30 @@ struct PricingCard: View {
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(Color.reverBlue)
+                        .foregroundColor(Color.softGraphite)
                         .font(.system(size: 24))
                 }
             }
             .padding(20)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color(red: 0.95, green: 0.98, blue: 0.95) : Color.mistGray)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color.reverBlue : Color.clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? 
+                        LinearGradient(
+                            colors: [Color.softGraphite.opacity(0.1), Color.midnightSlate.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ) : 
+                        LinearGradient(
+                            colors: [Color.white, Color.mistGray.opacity(0.5)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isSelected ? Color.softGraphite : Color.clear, lineWidth: 2)
+                    )
+                    .shadow(color: isSelected ? Color.softGraphite.opacity(0.2) : Color.black.opacity(0.05), radius: isSelected ? 8 : 4, x: 0, y: isSelected ? 4 : 2)
             )
         }
         .disabled(isPurchasing)

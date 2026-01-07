@@ -64,38 +64,39 @@ struct WelcomeBackView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            if let goal = oldestGoal {
-                VStack(spacing: 24) {
-                    // Header with icon
-                    VStack(spacing: 12) {
-                        // Welcome icon
-                        ZStack {
-                            Circle()
-                                .fill(Color.softGraphite.opacity(0.2))
-                                .frame(width: 80, height: 80)
+        ScrollView {
+            VStack(spacing: 0) {
+                if let goal = oldestGoal {
+                    VStack(spacing: 24) {
+                        // Header with icon
+                        VStack(spacing: 12) {
+                            // Welcome icon
+                            ZStack {
+                                Circle()
+                                    .fill(Color.softGraphite.opacity(0.2))
+                                    .frame(width: 80, height: 80)
+                                
+                                Image(systemName: "hand.wave.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundColor(.softGraphite)
+                            }
                             
-                            Image(systemName: "hand.wave.fill")
-                                .font(.system(size: 36))
-                                .foregroundColor(.softGraphite)
+                            VStack(spacing: 6) {
+                                Text("Hi \(username)!")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.midnightSlate)
+                                
+                                Text("Welcome Back")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.softGraphite)
+                                
+                                Text("Would you like to make a deposit?")
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.softGraphite)
+                                    .padding(.top, 4)
+                            }
                         }
-                        
-                        VStack(spacing: 6) {
-                            Text("Hi \(username)! 👋")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.midnightSlate)
-                            
-                            Text("Welcome Back")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.softGraphite)
-                            
-                            Text("Would you like to make a deposit?")
-                                .font(.system(size: 15, weight: .regular))
-                                .foregroundColor(.softGraphite)
-                                .padding(.top, 4)
-                        }
-                    }
-                    .padding(.top, 32)
+                        .padding(.top, 20) // Reduced padding since we're in a scrollable view
                     
                     // Goal Progress Card - Enhanced styling
                     VStack(alignment: .leading, spacing: 18) {
@@ -192,110 +193,119 @@ struct WelcomeBackView: View {
                     )
                     .padding(.horizontal, 20)
                     
-                    // Action Buttons - Enhanced styling
-                    VStack(spacing: 14) {
-                        Button(action: onMakeDeposit) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 18))
-                                Text("Make Deposit")
-                                    .font(.system(size: 17, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.softGraphite)
-                                    .shadow(color: Color.softGraphite.opacity(0.3), radius: 8, x: 0, y: 4)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        Button(action: onDismiss) {
-                            Text("Maybe Later")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.softGraphite)
+                        // Action Buttons - Enhanced styling
+                        VStack(spacing: 14) {
+                            Button(action: onMakeDeposit) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 18))
+                                    Text("Make Deposit")
+                                        .font(.system(size: 17, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
+                                .padding(.vertical, 16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 14)
-                                        .fill(Color.dreamMist)
+                                        .fill(Color.softGraphite)
+                                        .shadow(color: Color.softGraphite.opacity(0.3), radius: 8, x: 0, y: 4)
                                 )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 32)
-                }
-            } else {
-                // No active goals - simpler message with enhanced styling
-                VStack(spacing: 24) {
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.softGraphite.opacity(0.2))
-                                .frame(width: 80, height: 80)
-                            
-                            Image(systemName: "hand.wave.fill")
-                                .font(.system(size: 36))
-                                .foregroundColor(.softGraphite)
-                        }
-                        
-                        VStack(spacing: 6) {
-                            Text("Hi \(username)! 👋")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.midnightSlate)
-                            
-                            Text("Welcome Back")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.softGraphite)
-                            
-                            Text("Would you like to make a deposit?")
-                                .font(.system(size: 15, weight: .regular))
-                                .foregroundColor(.softGraphite)
-                                .multilineTextAlignment(.center)
-                                .padding(.top, 4)
-                        }
-                    }
-                    .padding(.top, 32)
-                    
-                    VStack(spacing: 14) {
-                        Button(action: onMakeDeposit) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 18))
-                                Text("Make Deposit")
-                                    .font(.system(size: 17, weight: .semibold))
                             }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.softGraphite)
-                                    .shadow(color: Color.softGraphite.opacity(0.3), radius: 8, x: 0, y: 4)
-                            )
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Button(action: onDismiss) {
+                                Text("Maybe Later")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.softGraphite)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(Color.dreamMist)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    }
+                } else {
+                    // No active goals - simpler message with enhanced styling
+                    VStack(spacing: 24) {
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.softGraphite.opacity(0.2))
+                                    .frame(width: 80, height: 80)
+                                
+                                Image(systemName: "hand.wave.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundColor(.softGraphite)
+                            }
+                            
+                            VStack(spacing: 6) {
+                                Text("Hi \(username)!")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.midnightSlate)
+                                
+                                Text("Welcome Back")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.softGraphite)
+                                
+                                Text("Would you like to make a deposit?")
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.softGraphite)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        .padding(.top, 20) // Reduced padding since we're in a scrollable view
                         
-                        Button(action: onDismiss) {
-                            Text("Maybe Later")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.softGraphite)
+                        VStack(spacing: 14) {
+                            Button(action: onMakeDeposit) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 18))
+                                    Text("Make Deposit")
+                                        .font(.system(size: 17, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
+                                .padding(.vertical, 16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 14)
-                                        .fill(Color.dreamMist)
+                                        .fill(Color.softGraphite)
+                                        .shadow(color: Color.softGraphite.opacity(0.3), radius: 8, x: 0, y: 4)
                                 )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Button(action: onDismiss) {
+                                Text("Maybe Later")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.softGraphite)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(Color.dreamMist)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 32)
                 }
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            // Reserve space for sheet drag indicator in compact view
+            Color.clear.frame(height: 8)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Reserve space for bottom safe area
+            Color.clear.frame(height: 20)
         }
         .background(
             LinearGradient(

@@ -20,7 +20,7 @@ struct SoteriaApp: App {
         // AuthService will be created only when user tries to sign in
         
         // Initialize Unit API token (safe to do here - just setting a string)
-        UnitService.shared.setAPIToken("v2.public.eyJyb2xlIjoiYWRtaW4iLCJyb2xlcyI6WyJhZG1pbiJdLCJ1c2VySWQiOiI0Njk0MiIsInN1YiI6InN1cGVyZ2Vla0BtZS5jb20iLCJleHAiOiIyMDI2LTEyLTI1VDIwOjIwOjI4LjE0OFoiLCJqdGkiOiI1NjIzMjEiLCJvcmdJZCI6Ijg1OTkiLCJzY29wZSI6ImFwcGxpY2F0aW9ucyBhcHBsaWNhdGlvbnMtd3JpdGUgY3VzdG9tZXJzIGN1c3RvbWVycy13cml0ZSBjdXN0b21lci10YWdzLXdyaXRlIGN1c3RvbWVyLXRva2VuLXdyaXRlIGFjY291bnRzIGFjY291bnRzLXdyaXRlIGNhcmRzIGNhcmRzLXNlbnNpdGl2ZSB0cmFuc2FjdGlvbnMgYXV0aG9yaXphdGlvbnMgc3RhdGVtZW50cyBwYXltZW50cyBwYXltZW50cy13cml0ZSBwYXltZW50cy13cml0ZS1jb3VudGVycGFydHkgcGF5bWVudHMtd3JpdGUtbGlua2VkLWFjY291bnQgYWNoLXBheW1lbnRzLXdyaXRlIHdpcmUtcGF5bWVudHMtd3JpdGUgcmVwYXltZW50cyBwYXltZW50cy13cml0ZS1hY2gtZGViaXQgY291bnRlcnBhcnRpZXMgYmF0Y2gtcmVsZWFzZXMgYmF0Y2gtcmVsZWFzZXMtd3JpdGUgbGlua2VkLWFjY291bnRzIHdlYmhvb2tzIHdlYmhvb2tzLXdyaXRlIGV2ZW50cyBldmVudHMtd3JpdGUgYXV0aG9yaXphdGlvbi1yZXF1ZXN0cyBhdXRob3JpemF0aW9uLXJlcXVlc3RzLXdyaXRlIGNhc2gtZGVwb3NpdHMgY2FzaC1kZXBvc2l0cy13cml0ZSBjaGVjay1kZXBvc2l0cyBjaGVjay1kZXBvc2l0cy13cml0ZSByZWNlaXZlZC1wYXltZW50cyBkaXNwdXRlcyBjaGFyZ2ViYWNrcyByZXdhcmRzIGNoZWNrLXBheW1lbnRzIGNyZWRpdC1kZWNpc2lvbnMgbGVuZGluZy1wcm9ncmFtcyBjYXJkLWZyYXVkLWNhc2VzIGNyZWRpdC1hcHBsaWNhdGlvbnMgdGF4IHRheC13cml0ZSBmb3JtcyBmb3Jtcy1zZW5zaXRpdmUgd2lyZS1kcmF3ZG93bnMiLCJvcmciOiJTb3RlcmlhIiwic291cmNlSXAiOiIiLCJ1c2VyVHlwZSI6Im9yZyIsImlzVW5pdFBpbG90IjpmYWxzZSwiaXNQYXJlbnRPcmciOmZhbHNlfWTAKjltvgvOm3Yubjuzj8ubIjo7jYvMnEPCxDaYRzb9uh-05JLBxvU0rsPFHp8ee51Cnk-me54S0jAfh2HpggM")
+        UnitService.shared.setAPIToken("v2.public.eyJyb2xlIjoiYWRtaW4iLCJyb2xlcyI6WyJhZG1pbiJdLCJ1c2VySWQiOiI0Njk0MiIsInN1YiI6InN1cGVyZ2Vla0BtZS5jb20iLCJleHAiOiIyMDI3LTAxLTA2VDE3OjIzOjUwLjQ0MloiLCJqdGkiOiI1NjcxODMiLCJvcmdJZCI6Ijg1OTkiLCJzY29wZSI6ImFwcGxpY2F0aW9ucyBhcHBsaWNhdGlvbnMtd3JpdGUgY3VzdG9tZXJzIGN1c3RvbWVycy13cml0ZSBjdXN0b21lci10YWdzLXdyaXRlIGN1c3RvbWVyLXRva2VuLXdyaXRlIGFjY291bnRzIGFjY291bnRzLXdyaXRlIGFjY291bnQtaG9sZHMgYWNjb3VudC1ob2xkcy13cml0ZSBjYXJkcyBjYXJkcy13cml0ZSBjYXJkcy1zZW5zaXRpdmUgY2FyZHMtc2Vuc2l0aXZlLXdyaXRlIHRyYW5zYWN0aW9ucyB0cmFuc2FjdGlvbnMtd3JpdGUgYXV0aG9yaXphdGlvbnMgc3RhdGVtZW50cyBwYXltZW50cyBwYXltZW50cy13cml0ZSBwYXltZW50cy13cml0ZS1jb3VudGVycGFydHkgcGF5bWVudHMtd3JpdGUtbGlua2VkLWFjY291bnQgYWNoLXBheW1lbnRzLXdyaXRlIHdpcmUtcGF5bWVudHMtd3JpdGUgcmVwYXltZW50cyByZXBheW1lbnRzLXdyaXRlIHBheW1lbnRzLXdyaXRlLWFjaC1kZWJpdCBjb3VudGVycGFydGllcyBjb3VudGVycGFydGllcy13cml0ZSBiYXRjaC1yZWxlYXNlcyBiYXRjaC1yZWxlYXNlcy13cml0ZSBsaW5rZWQtYWNjb3VudHMgbGlua2VkLWFjY291bnRzLXdyaXRlIHdlYmhvb2tzIHdlYmhvb2tzLXdyaXRlIGV2ZW50cyBldmVudHMtd3JpdGUgYXV0aG9yaXphdGlvbi1yZXF1ZXN0cyBhdXRob3JpemF0aW9uLXJlcXVlc3RzLXdyaXRlIGNhc2gtZGVwb3NpdHMgY2FzaC1kZXBvc2l0cy13cml0ZSBjaGVjay1kZXBvc2l0cyBjaGVjay1kZXBvc2l0cy13cml0ZSByZWNlaXZlZC1wYXltZW50cyByZWNlaXZlZC1wYXltZW50cy13cml0ZSBkaXNwdXRlcyBjaGFyZ2ViYWNrcyBjaGFyZ2ViYWNrcy13cml0ZSByZXdhcmRzIHJld2FyZHMtd3JpdGUgY2hlY2stcGF5bWVudHMgY2hlY2stcGF5bWVudHMtd3JpdGUgY3JlZGl0LWRlY2lzaW9ucyBjcmVkaXQtZGVjaXNpb25zLXdyaXRlIGxlbmRpbmctcHJvZ3JhbXMgbGVuZGluZy1wcm9ncmFtcy13cml0ZSBjYXJkLWZyYXVkLWNhc2VzIGNhcmQtZnJhdWQtY2FzZXMtd3JpdGUgY3JlZGl0LWFwcGxpY2F0aW9ucyBjcmVkaXQtYXBwbGljYXRpb25zLXdyaXRlIG1pZ3JhdGlvbnMgbWlncmF0aW9ucy13cml0ZSB0YXggdGF4LXdyaXRlIGZvcm1zIGZvcm1zLXdyaXRlIGZvcm1zLXNlbnNpdGl2ZSB3aXJlLWRyYXdkb3ducyB3aXJlLWRyYXdkb3ducy13cml0ZSIsIm9yZyI6IlNvdGVyaWEiLCJzb3VyY2VJcCI6IiIsInVzZXJUeXBlIjoib3JnIiwiaXNVbml0UGlsb3QiOmZhbHNlLCJpc1BhcmVudE9yZyI6ZmFsc2V9KurhcRkXRSKsNBnncHsn2Bxft_PFM2ZGM1iH6hiTEHfVq-s6Xe_ImVdk9xwVg0sEepM-ryjkVqC8_gBvbAn9CQ")
     }
     
     private func getAuthService() -> AuthService {
@@ -445,7 +445,6 @@ struct RootView: View {
     @State private var isAppReady = false // Start as false to show splash screen
     @State private var authService: AuthService? = nil // Lazy: Only create when needed
     @State private var isAuthenticated = false // Track auth state locally
-    @State private var authCheckTimer: Timer? = nil // Timer for periodic auth checks
     @State private var showGoalInvitation = false
     @State private var pendingInvitationGoalId: String? = nil
     @State private var pendingInvitationId: String? = nil
@@ -459,13 +458,17 @@ struct RootView: View {
 
     var body: some View {
         // Show splash screen first, then auth or main app
-        Group {
+        ZStack {
             if !isAppReady {
                 SplashScreenView()
+                    .transition(.opacity)
+                    .zIndex(1)
                     .onAppear {
                         // Set ready after a delay to show splash (1.5 seconds to see the logo)
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            isAppReady = true
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isAppReady = true
+                            }
                         }
                     }
             } else {
@@ -474,9 +477,15 @@ struct RootView: View {
                     // User is authenticated - show main app (onboarding or main tabs)
                     OnboardingSurveyWrapper()
                         .environmentObject(authService)
+                        .id("onboarding-wrapper-\(isAuthenticated)")
+                        .transition(.opacity)
+                        .zIndex(2)
                 } else {
                     // User is not authenticated - show sign-in
                     AuthView_Simplified(getAuthService: getAuthService)
+                        .id("auth-view-\(isAuthenticated)")
+                        .transition(.opacity)
+                        .zIndex(2)
                         .onAppear {
                             // Check for pending goal invitation
                             if UserDefaults.standard.bool(forKey: "has_pending_goal_invitation") {
@@ -492,26 +501,18 @@ struct RootView: View {
                                 showGoalInvitation = true
                             }
                         }
-                        .onAppear {
+                        .task {
                             // Check auth state when view appears (non-blocking)
                             checkAuthState()
                             
-                            // Also check periodically in case auth state changes
-                            // Store timer in state so we can invalidate it later
-                            authCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
-                                // Stop checking once authenticated
+                            // Check periodically but less frequently to prevent view recreation
+                            while !isAuthenticated {
+                                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second instead of 0.5
                                 if isAuthenticated {
-                                    timer.invalidate()
-                                    authCheckTimer = nil
-                                    return
+                                    break
                                 }
                                 checkAuthState()
                             }
-                        }
-                        .onDisappear {
-                            // Clean up timer when view disappears
-                            authCheckTimer?.invalidate()
-                            authCheckTimer = nil
                         }
                         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("UserDidSignIn"))) { _ in
                             // Listen for sign-in success notification - check immediately
@@ -529,6 +530,7 @@ struct RootView: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: isAppReady)
         .onAppear {
             // Initialize notification badge manager on app launch
             NotificationBadgeManager.shared.startObserving()
@@ -749,10 +751,8 @@ struct OnboardingSurveyWrapper: View {
                         })
                         .environmentObject(authService)
                     }
-                    .onAppear {
-                        // Show Unit account banner if needed (after onboarding completes)
-                        checkForUnitAccountPrompt()
-                    }
+                    // Don't check immediately - let the user see the app first
+                    // The banner will be triggered from HomeView when appropriate
             }
         }
     }

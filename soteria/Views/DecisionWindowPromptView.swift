@@ -536,8 +536,12 @@ struct DecisionWindowPromptView: View {
             // Track window opened
             aiService.recordWindowOpened(windowId: window.id)
             
-            // Get AI amount suggestion
-            amountSuggestion = aiService.generateAmountSuggestion(for: window.id)
+            // Get AI amount suggestion (Premium only)
+            if subscriptionService.isPremium {
+                amountSuggestion = aiService.generateAmountSuggestion(for: window.id)
+            } else {
+                amountSuggestion = nil // Explicitly set to nil for free users
+            }
             
             // Load Smart Savings Suggestions (Premium + Active Goal)
             if subscriptionService.isPremium, let activeGoal = goalsService.activeGoal {
@@ -550,7 +554,7 @@ struct DecisionWindowPromptView: View {
                     // Pre-fill with top smart suggestion
                     microSaveAmount = String(format: "%.2f", topSuggestion.amount)
                 } else if let suggestion = amountSuggestion {
-                    // Fall back to AI suggestion
+                    // Fall back to AI suggestion (premium only)
                     microSaveAmount = String(format: "%.2f", suggestion.defaultAmount)
                 } else if let defaultAmount = window.defaultMicroSaveAmount {
                     // Fall back to window default

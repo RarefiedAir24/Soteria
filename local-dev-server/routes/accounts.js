@@ -48,7 +48,7 @@ router.post('/get-accounts', async (req, res, next) => {
     });
     
     const accounts = response.data.accounts.map(account => ({
-      id: account.account_id,
+      account_id: account.account_id, // Match Lambda format
       name: account.name,
       mask: account.mask,
       type: account.type,
@@ -58,14 +58,20 @@ router.post('/get-accounts', async (req, res, next) => {
     }));
     
     console.log(`✅ [Local Dev] Retrieved ${accounts.length} accounts`);
+    console.log(`📋 [Local Dev] Account format check - first account keys:`, Object.keys(accounts[0] || {}));
+    console.log(`📋 [Local Dev] First account sample:`, accounts[0]);
     
-    res.json({
+    const responseData = {
       accounts: accounts,
-      item: {
+      items: [{
         item_id: response.data.item.item_id,
         institution_id: response.data.item.institution_id,
-      },
-    });
+        account_count: accounts.length,
+      }],
+    };
+    
+    console.log(`📤 [Local Dev] Sending response with ${accounts.length} accounts`);
+    res.json(responseData);
   } catch (error) {
     console.error('❌ [Local Dev] Error getting accounts:', error);
     next(error);

@@ -494,7 +494,7 @@ struct PauseView: View {
                 
                 await MainActor.run {
                     let virtualSavings = String(format: "%.2f", plaidService.virtualSavings)
-                    showConfirmation = "✅ Protected $\(Int(plaidService.protectionAmount))!\nVirtual savings: $\(virtualSavings)\n\nConnect a savings account to enable automatic transfers.\n\nApps unblocked for 15 minutes."
+                    showConfirmation = "✅ Protected $\(Int(plaidService.protectionAmount))!\nVirtual savings: $\(virtualSavings)\n\nConnect a savings account to enable transfers.\n\nApps unblocked for 15 minutes."
                 }
             }
             

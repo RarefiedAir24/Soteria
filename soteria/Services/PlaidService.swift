@@ -11,7 +11,7 @@ import Combine
 // MARK: - Models
 
 enum SavingsMode {
-    case automatic  // Real transfers via Plaid (user has savings account)
+    case automatic  // Transfers available via Plaid (user has savings account) - user-initiated
     case virtual    // Track amounts, no transfers (user has only checking)
     case manual     // No accounts connected, just tracking
 }
@@ -184,8 +184,34 @@ class PlaidService: ObservableObject {
         }
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+            let errorString = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ [PlaidService] Server error (\(httpResponse.statusCode)): \(errorString)")
+            
+            // Try to parse JSON error response for better error messages
+            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let errorMessage = errorJson["error"] as? String ?? errorJson["message"] as? String ?? errorString
+                let errorCode = errorJson["error_code"] as? String ?? ""
+                let errorType = errorJson["error_type"] as? String ?? ""
+                
+                // Check for invalid credentials error
+                if errorCode == "INVALID_CLIENT_ID" || errorCode == "INVALID_SECRET" ||
+                   errorMessage.lowercased().contains("invalid client") ||
+                   errorMessage.lowercased().contains("invalid secret") {
+                    throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [
+                        NSLocalizedDescriptionKey: "Invalid Plaid credentials. Please verify your Client ID and Secret in the Plaid Dashboard.",
+                        "error_code": errorCode,
+                        "error_type": errorType
+                    ])
+                }
+                
+                throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [
+                    NSLocalizedDescriptionKey: errorMessage,
+                    "error_code": errorCode,
+                    "error_type": errorType
+                ])
+            }
+            
+            throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorString])
         }
         
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -236,15 +262,30 @@ class PlaidService: ObservableObject {
             throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
         }
         
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let accounts = json["accounts"] as? [[String: Any]] else {
-            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse accounts"])
+        // Parse response
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode"
+            print("❌ [PlaidService] Failed to parse JSON response: \(responseString)")
+            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response: \(responseString)"])
         }
+        
+        print("✅ [PlaidService] Exchange token response: \(json)")
+        
+        guard let accounts = json["accounts"] as? [[String: Any]] else {
+            print("❌ [PlaidService] No 'accounts' key in response. Response keys: \(json.keys)")
+            throw NSError(domain: "PlaidService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to parse accounts - response: \(json)"])
+        }
+        
+        print("✅ [PlaidService] Found \(accounts.count) accounts in response")
         
         // Parse accounts
         var connectedAccounts: [ConnectedAccount] = []
         for accountData in accounts {
-            if let accountId = accountData["account_id"] as? String,
+            print("🔍 [PlaidService] Parsing account: \(accountData)")
+            // Handle both "account_id" and "id" for compatibility
+            let accountId = (accountData["account_id"] as? String) ?? (accountData["id"] as? String)
+            
+            if let accountId = accountId,
                let name = accountData["name"] as? String,
                let mask = accountData["mask"] as? String,
                let type = accountData["type"] as? String,
@@ -257,6 +298,9 @@ class PlaidService: ObservableObject {
                     subtype: subtype,
                     balance: nil
                 ))
+                print("✅ [PlaidService] Parsed account: \(name) (\(subtype))")
+            } else {
+                print("⚠️ [PlaidService] Failed to parse account data - missing fields. accountId: \(accountId ?? "nil"), name: \(accountData["name"] ?? "nil"), mask: \(accountData["mask"] ?? "nil"), type: \(accountData["type"] ?? "nil"), subtype: \(accountData["subtype"] ?? "nil")")
             }
         }
         
@@ -284,6 +328,115 @@ class PlaidService: ObservableObject {
         print("✅ [PlaidService] Accounts connected: \(connectedAccounts.count) accounts, mode: \(savingsMode)")
     }
     
+    /// Fetch connected accounts from backend/DynamoDB
+    func fetchConnectedAccounts() async {
+        guard let userId = cognitoService.getUserId() else {
+            print("⚠️ [PlaidService] Cannot fetch accounts - user not authenticated")
+            return
+        }
+        
+        guard let url = URL(string: "\(apiGatewayURL)/soteria/plaid/get-accounts") else {
+            print("❌ [PlaidService] Invalid URL for fetching accounts")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 10.0
+        
+        // Get Cognito ID token for authentication
+        if let idToken = try? await cognitoService.getIDToken() {
+            request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let requestBody: [String: Any] = [
+            "user_id": userId
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ [PlaidService] Invalid response when fetching accounts")
+                return
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("❌ [PlaidService] Server error (\(httpResponse.statusCode)) when fetching accounts: \(errorMessage)")
+                return
+            }
+            
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let accounts = json["accounts"] as? [[String: Any]] else {
+                print("⚠️ [PlaidService] No accounts found or invalid response format")
+                // If no accounts, that's okay - user just hasn't connected any yet
+                await MainActor.run {
+                    self.connectedAccounts = []
+                    self.checkingAccount = nil
+                    self.savingsAccount = nil
+                    self.savingsMode = .manual
+                    self.saveState()
+                }
+                return
+            }
+            
+            print("✅ [PlaidService] Fetched \(accounts.count) accounts from backend")
+            
+            // Parse accounts
+            var connectedAccounts: [ConnectedAccount] = []
+            for accountData in accounts {
+                print("🔍 [PlaidService] Parsing account from fetch: \(accountData)")
+                // Handle both "account_id" and "id" for compatibility
+                let accountId = (accountData["account_id"] as? String) ?? (accountData["id"] as? String)
+                
+                if let accountId = accountId,
+                   let name = accountData["name"] as? String,
+                   let mask = accountData["mask"] as? String,
+                   let type = accountData["type"] as? String,
+                   let subtype = accountData["subtype"] as? String {
+                    connectedAccounts.append(ConnectedAccount(
+                        id: accountId,
+                        name: name,
+                        mask: mask,
+                        type: type,
+                        subtype: subtype,
+                        balance: nil
+                    ))
+                    print("✅ [PlaidService] Successfully parsed account: \(name) (\(subtype))")
+                } else {
+                    print("⚠️ [PlaidService] Failed to parse account - missing fields. accountId: \(accountId ?? "nil"), name: \(accountData["name"] ?? "nil"), mask: \(accountData["mask"] ?? "nil"), type: \(accountData["type"] ?? "nil"), subtype: \(accountData["subtype"] ?? "nil")")
+                }
+            }
+            
+            // Update state
+            await MainActor.run {
+                self.connectedAccounts = connectedAccounts
+                self.checkingAccount = connectedAccounts.first { $0.subtype == "checking" }
+                self.savingsAccount = connectedAccounts.first { $0.subtype == "savings" }
+                
+                // Determine savings mode
+                if self.savingsAccount != nil {
+                    self.savingsMode = .automatic
+                } else if self.checkingAccount != nil {
+                    self.savingsMode = .virtual
+                } else {
+                    self.savingsMode = .manual
+                }
+                
+                self.saveState()
+            }
+            
+            print("✅ [PlaidService] Loaded \(connectedAccounts.count) accounts, mode: \(savingsMode)")
+            
+        } catch {
+            print("❌ [PlaidService] Error fetching accounts: \(error)")
+        }
+    }
+    
     // MARK: - Balance Reading
     
     /// Refresh account balances (read-only)
@@ -299,7 +452,11 @@ class PlaidService: ObservableObject {
                 }
             }
         } catch {
-            print("⚠️ [PlaidService] Failed to refresh checking balance: \(error)")
+            // Silently fail for demo - balance endpoint may not be configured yet
+            // Only log if it's not a 404 (endpoint not found)
+            if let error = error as NSError?, error.code != 404 {
+                print("⚠️ [PlaidService] Failed to refresh checking balance: \(error.localizedDescription)")
+            }
         }
         
         if let savingsAccount = savingsAccount {
@@ -313,7 +470,11 @@ class PlaidService: ObservableObject {
                     }
                 }
             } catch {
-                print("⚠️ [PlaidService] Failed to refresh savings balance: \(error)")
+                // Silently fail for demo - balance endpoint may not be configured yet
+                // Only log if it's not a 404 (endpoint not found)
+                if let error = error as NSError?, error.code != 404 {
+                    print("⚠️ [PlaidService] Failed to refresh savings balance: \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -353,6 +514,13 @@ class PlaidService: ObservableObject {
         
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            // For 404, provide a more specific error message
+            if httpResponse.statusCode == 404 {
+                throw NSError(domain: "PlaidService", code: 404, userInfo: [
+                    NSLocalizedDescriptionKey: errorMessage,
+                    "path": "/soteria/plaid/balance"
+                ])
+            }
             throw NSError(domain: "PlaidService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
         }
         
@@ -366,10 +534,10 @@ class PlaidService: ObservableObject {
     
     // MARK: - Transfers
     
-    /// Initiate transfer from checking to savings (automatic mode only)
+    /// Initiate transfer from checking to savings (user-initiated, requires savings account)
     func initiateTransfer(amount: Double) async throws -> Transfer {
         guard savingsMode == .automatic else {
-            throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Automatic transfers require a savings account"])
+            throw NSError(domain: "PlaidService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Transfers require a savings account"])
         }
         
         guard let checkingAccount = checkingAccount,

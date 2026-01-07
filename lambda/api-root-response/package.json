@@ -1,0 +1,7 @@
+{
+  "name": "api-root-response",
+  "version": "1.0.0",
+  "description": "Root path handler for api.soteria.zone",
+  "main": "index.js"
+}
+

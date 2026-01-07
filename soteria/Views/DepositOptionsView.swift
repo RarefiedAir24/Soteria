@@ -110,7 +110,7 @@ struct DepositOptionsView: View {
                                         Image(systemName: "info.circle")
                                             .font(.system(size: 16))
                                             .foregroundColor(.softGraphite)
-                                        Text("Connect your bank account in Settings to enable automatic transfers")
+                                        Text("Connect your bank account in Settings to enable transfers")
                                             .font(.system(size: 14, weight: .regular))
                                             .foregroundColor(.softGraphite)
                                     }

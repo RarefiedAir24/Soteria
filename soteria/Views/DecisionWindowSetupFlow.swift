@@ -19,6 +19,7 @@ struct DecisionWindowSetupFlow: View {
     @State private var currentStep: Int = 1
     @State private var limitError: String? = nil
     // Single window creation - simplified flow
+    @State private var windowName: String = "" // User-entered name for the decision window
     @State private var windowTime: Date = Date()
     @State private var windowActions: Set<WindowAction> = []
     @State private var windowSaveAmount: Double = 3.0
@@ -26,6 +27,12 @@ struct DecisionWindowSetupFlow: View {
     @State private var windowPauseIntention: String? = nil // Custom pause intention (premium)
     @State private var windowCondition: WindowCondition? = nil
     @State private var skipSetup = false
+    
+    // Celebration state
+    @State private var showConfetti = false
+    @State private var showBalloons = false
+    @State private var balloonOffsets: [CGSize] = []
+    @State private var confettiPieces: [DecisionConfettiPiece] = []
     
     enum WindowAction: String, Identifiable {
         case saveFirst
@@ -102,8 +109,8 @@ struct DecisionWindowSetupFlow: View {
                 
                 VStack(spacing: 0) {
                     // Progress indicator
-                    if currentStep <= 5 {
-                        ProgressView(value: Double(currentStep), total: 5.0)
+                    if currentStep <= 6 {
+                        ProgressView(value: Double(currentStep), total: 6.0)
                             .progressViewStyle(LinearProgressViewStyle(tint: .softGraphite))
                             .padding(.horizontal, 20)
                             .padding(.top, 20)
@@ -115,14 +122,16 @@ struct DecisionWindowSetupFlow: View {
                         case 1:
                             conceptScreen
                         case 2:
-                            timeSelectionScreen
+                            nameEntryScreen
                         case 3:
-                            whatHappensScreen
+                            timeSelectionScreen
                         case 4:
-                            optionalConditionsScreen
+                            whatHappensScreen
                         case 5:
-                            reviewScreen
+                            howNotificationsWorkScreen
                         case 6:
+                            reviewScreen
+                        case 7:
                             confirmationScreen
                         default:
                             EmptyView()
@@ -202,9 +211,9 @@ struct DecisionWindowSetupFlow: View {
             Spacer()
             
             VStack(spacing: 12) {
-                Button(action: {
-                    currentStep = 2 // Go directly to time selection
-                }) {
+            Button(action: {
+                currentStep = 2 // Go to name entry screen
+            }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
@@ -228,22 +237,121 @@ struct DecisionWindowSetupFlow: View {
         }
     }
     
-    // MARK: - Screen 2: Time Selection (removed "How Many Windows" step)
+    // MARK: - Screen 2: Name Entry
+    
+    private var nameEntryScreen: some View {
+        VStack(spacing: 32) {
+            Spacer()
+            
+            VStack(spacing: ResponsiveSize.spacing(large: 24, medium: 20, small: 16)) {
+                Text("Name your notification")
+                    .font(.system(size: ResponsiveSize.font(large: 28, medium: 26, small: 24), weight: .bold))
+                    .foregroundColor(.midnightSlate)
+                    .multilineTextAlignment(.center)
+                
+                Text("Give it a name that helps you remember what it's for")
+                    .font(.system(size: ResponsiveSize.font(large: 16, medium: 15, small: 14)))
+                    .foregroundColor(.softGraphite)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    TextField("e.g., Morning Planning, Afternoon Pause", text: $windowName)
+                        .font(.system(size: 16))
+                        .foregroundColor(.midnightSlate)
+                        .padding(16)
+                        .background(Color.dreamMist)
+                        .cornerRadius(12)
+                        .autocapitalization(.words)
+                        .disableAutocorrection(false)
+                }
+                .padding(.horizontal, 40)
+                
+                // Quick suggestions
+                VStack(spacing: 12) {
+                    Text("Quick suggestions")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.softGraphite)
+                    
+                    VStack(spacing: 8) {
+                        Button(action: {
+                            windowName = "Morning Planning"
+                        }) {
+                            Text("Morning Planning")
+                                .font(.system(size: 15))
+                                .foregroundColor(.midnightSlate)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.dreamMist.opacity(0.5))
+                                .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            windowName = "Afternoon Pause"
+                        }) {
+                            Text("Afternoon Pause")
+                                .font(.system(size: 15))
+                                .foregroundColor(.midnightSlate)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.dreamMist.opacity(0.5))
+                                .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            windowName = "Evening Reflection"
+                        }) {
+                            Text("Evening Reflection")
+                                .font(.system(size: 15))
+                                .foregroundColor(.midnightSlate)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.dreamMist.opacity(0.5))
+                                .cornerRadius(8)
+                        }
+                    }
+                }
+                .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                // Use default name if empty
+                if windowName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    windowName = "My Decision Notification"
+                }
+                currentStep = 3 // Go to time selection
+            }) {
+                Text("Continue")
+                    .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16), weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, ResponsiveSize.padding(large: 16, medium: 14, small: 12))
+                    .background(Color.softGraphite)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            .padding(.bottom, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+        }
+    }
+    
+    // MARK: - Screen 3: Time Selection (removed "How Many Windows" step)
     
     private var timeSelectionScreen: some View {
         VStack(spacing: 32) {
             Spacer()
             
-            VStack(spacing: 24) {
+            VStack(spacing: ResponsiveSize.spacing(large: 24, medium: 20, small: 16)) {
                 Text("Pick a time")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: ResponsiveSize.font(large: 28, medium: 26, small: 24), weight: .bold))
                     .foregroundColor(.midnightSlate)
                 
                 Text("When should Soteria help you pause and save?")
-                    .font(.system(size: 16))
+                    .font(.system(size: ResponsiveSize.font(large: 16, medium: 15, small: 14)))
                     .foregroundColor(.softGraphite)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                 
                 DatePicker("", selection: $windowTime, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel)
@@ -260,41 +368,44 @@ struct DecisionWindowSetupFlow: View {
                             let calendar = Calendar.current
                             if let date = calendar.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) {
                                 windowTime = date
+                                windowName = "Morning Planning" // Set name to match selection
                             }
                         }
                         SuggestionButton(title: "Afternoon pause", time: "3:00 PM") {
                             let calendar = Calendar.current
                             if let date = calendar.date(bySettingHour: 15, minute: 0, second: 0, of: Date()) {
                                 windowTime = date
+                                windowName = "Afternoon Pause" // Set name to match selection
                             }
                         }
                         SuggestionButton(title: "Evening reflection", time: "9:00 PM") {
                             let calendar = Calendar.current
                             if let date = calendar.date(bySettingHour: 21, minute: 0, second: 0, of: Date()) {
                                 windowTime = date
+                                windowName = "Evening Reflection" // Set name to match selection
                             }
                         }
                     }
                 }
                 .padding(.top, 20)
             }
-            .padding(.horizontal, 40)
+            .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
             
             Spacer()
             
             Button(action: {
-                currentStep = 3 // Go to "What Happens" screen
+                currentStep = 4 // Go to "What Happens" screen
             }) {
                 Text("Continue")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16), weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, ResponsiveSize.padding(large: 16, medium: 14, small: 12))
                     .background(Color.softGraphite)
                     .cornerRadius(12)
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
+            .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            .padding(.bottom, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
         }
     }
     
@@ -308,13 +419,13 @@ struct DecisionWindowSetupFlow: View {
     private var whatHappensScreen: some View {
         VStack(spacing: 32) {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: ResponsiveSize.spacing(large: 24, medium: 20, small: 16)) {
                     Text("What should Soteria help you do?")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: ResponsiveSize.font(large: 28, medium: 26, small: 24), weight: .bold))
                         .foregroundColor(.midnightSlate)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                        .padding(.top, 40)
+                        .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                        .padding(.top, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                     
                     VStack(spacing: 16) {
                         // Show only available actions based on Plaid connection
@@ -398,7 +509,7 @@ struct DecisionWindowSetupFlow: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                 }
             }
             
@@ -420,13 +531,13 @@ struct DecisionWindowSetupFlow: View {
                     windowPauseIntention = nil
                 }
                 
-                currentStep = 4 // Go to optional conditions screen
+                currentStep = 5 // Go to how notifications work screen
             }) {
                 Text("Continue")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16), weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, ResponsiveSize.padding(large: 16, medium: 14, small: 12))
                     .background(!selectedActions.isEmpty ? Color.softGraphite : Color.gray.opacity(0.5))
                     .cornerRadius(12)
             }
@@ -453,109 +564,149 @@ struct DecisionWindowSetupFlow: View {
                     }
                 }
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
+            .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            .padding(.bottom, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
         }
     }
     
-    // MARK: - Screen 5: Optional Conditions
-    @State private var wantsConditions = false
-    @State private var conditionType: WindowCondition.ConditionType = .ifSpendToday
-    @State private var conditionAmount: Double = 5.0
-    @State private var conditionTime: Int = 21 // 9 PM
-    
-    private var optionalConditionsScreen: some View {
+    // MARK: - Screen 4: How Notifications Work
+    private var howNotificationsWorkScreen: some View {
         VStack(spacing: 32) {
             ScrollView {
-                VStack(spacing: 24) {
-                    Text("Want Soteria to react later today?")
-                        .font(.system(size: 28, weight: .bold))
+                VStack(spacing: ResponsiveSize.spacing(large: 24, medium: 20, small: 16)) {
+                    Text("How you'll see your notifications")
+                        .font(.system(size: ResponsiveSize.font(large: 28, medium: 26, small: 24), weight: .bold))
                         .foregroundColor(.midnightSlate)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                        .padding(.top, 40)
+                        .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                        .padding(.top, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                     
                     VStack(spacing: 20) {
-                        Toggle(isOn: $wantsConditions) {
-                            Text("Yes, add a condition")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.midnightSlate)
-                        }
-                        .toggleStyle(SwitchToggleStyle(tint: .softGraphite))
-                        
-                        if wantsConditions {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Picker("Condition", selection: $conditionType) {
-                                    Text("If I make an impulse decision today").tag(WindowCondition.ConditionType.ifSpendToday)
-                                    Text("If I make an impulse decision after 9 PM").tag(WindowCondition.ConditionType.ifSpendAfterTime)
-                                    Text("If I exceed my daily limit").tag(WindowCondition.ConditionType.ifOverspendDailyGoal)
-                                }
-                                .pickerStyle(.menu)
+                        // Notification Center
+                        HStack(alignment: .top, spacing: 16) {
+                            Image(systemName: "bell.badge.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.softGraphite)
+                                .frame(width: 32)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Notification Center")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.midnightSlate)
                                 
-                                if conditionType == .ifSpendAfterTime {
-                                    Picker("Time", selection: $conditionTime) {
-                                        ForEach(18...23, id: \.self) { hour in
-                                            Text("\(hour):00").tag(hour)
-                                        }
-                                    }
-                                    .pickerStyle(.menu)
-                                }
-                                
-                                HStack {
-                                    Text("Deposit $")
-                                    TextField("0.00", value: $conditionAmount, format: .number)
-                                        .keyboardType(.decimalPad)
-                                }
-                                .padding(12)
-                                .background(Color.dreamMist)
-                                .cornerRadius(10)
-                                
-                                Text("This deposit helps you save when you make an impulse decision. Works for spending, eating, or any behavior you want to change.")
-                                    .font(.system(size: 12))
+                                Text("Swipe down from the top of your screen to see all notifications")
+                                    .font(.system(size: 14))
                                     .foregroundColor(.softGraphite)
-                                    .italic()
                             }
-                            .padding(20)
-                            .background(Color.dreamMist.opacity(0.5))
-                            .cornerRadius(12)
+                            
+                            Spacer()
                         }
+                        .padding(20)
+                        .background(Color.dreamMist.opacity(0.3))
+                        .cornerRadius(12)
                         
-                        Toggle(isOn: Binding(
-                            get: { !wantsConditions },
-                            set: { wantsConditions = !$0 }
-                        )) {
-                            Text("No, keep it simple")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.midnightSlate)
+                        // Lock Screen
+                        HStack(alignment: .top, spacing: 16) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.softGraphite)
+                                .frame(width: 32)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Lock Screen")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.midnightSlate)
+                                
+                                Text("Notifications appear on your lock screen when your phone is locked")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.softGraphite)
+                            }
+                            
+                            Spacer()
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: .softGraphite))
+                        .padding(20)
+                        .background(Color.dreamMist.opacity(0.3))
+                        .cornerRadius(12)
+                        
+                        // Banner
+                        HStack(alignment: .top, spacing: 16) {
+                            Image(systemName: "rectangle.topthird.inset.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.softGraphite)
+                                .frame(width: 32)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Banner Notification")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.midnightSlate)
+                                
+                                Text("A brief notification appears at the top of your screen when active")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.softGraphite)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(20)
+                        .background(Color.dreamMist.opacity(0.3))
+                        .cornerRadius(12)
+                        
+                        // App Badge
+                        HStack(alignment: .top, spacing: 16) {
+                            Image(systemName: "app.badge.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.softGraphite)
+                                .frame(width: 32)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("App Badge")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.midnightSlate)
+                                
+                                Text("The Soteria app icon shows a badge count when you have notifications")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.softGraphite)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(20)
+                        .background(Color.dreamMist.opacity(0.3))
+                        .cornerRadius(12)
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                    
+                    VStack(spacing: ResponsiveSize.spacing(large: 12, medium: 10, small: 8)) {
+                        Text("💡 Tip")
+                            .font(.system(size: ResponsiveSize.font(large: 15, medium: 14, small: 13), weight: .semibold))
+                            .foregroundColor(.midnightSlate)
+                        
+                        Text("Make sure notifications are enabled in Settings → Notifications → Soteria")
+                            .font(.system(size: ResponsiveSize.font(large: 14, medium: 13, small: 12)))
+                            .foregroundColor(.softGraphite)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(ResponsiveSize.padding(large: 20, medium: 16, small: 12))
+                    .background(Color.softGraphite.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                 }
             }
             
             Button(action: {
-                if wantsConditions {
-                    windowCondition = WindowCondition(
-                        type: conditionType,
-                        amount: conditionAmount,
-                        time: conditionType == .ifSpendAfterTime ? conditionTime : nil
-                    )
-                } else {
-                    windowCondition = nil
-                }
-                currentStep = 5 // Go to review screen
+                windowCondition = nil // No conditions - feature removed
+                currentStep = 6 // Go to review screen
             }) {
                 Text("Continue")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16), weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, ResponsiveSize.padding(large: 16, medium: 14, small: 12))
                     .background(Color.softGraphite)
                     .cornerRadius(12)
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
+            .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            .padding(.bottom, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
         }
     }
     
@@ -563,17 +714,18 @@ struct DecisionWindowSetupFlow: View {
     private var reviewScreen: some View {
         VStack(spacing: 32) {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: ResponsiveSize.spacing(large: 24, medium: 20, small: 16)) {
                     Text("Here's what will happen")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: ResponsiveSize.font(large: 28, medium: 26, small: 24), weight: .bold))
                         .foregroundColor(.midnightSlate)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                        .padding(.top, 40)
+                        .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                        .padding(.top, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                     
                     VStack(alignment: .leading, spacing: 16) {
                         WindowReviewCard(
                             index: 0,
+                            name: windowName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "My Decision Notification" : windowName,
                             time: windowTime,
                             actions: Array(windowActions),
                             saveAmount: windowSaveAmount,
@@ -581,77 +733,175 @@ struct DecisionWindowSetupFlow: View {
                             pauseIntention: windowPauseIntention
                         )
                     }
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
                     
-                    VStack(spacing: 12) {
+                    VStack(spacing: ResponsiveSize.spacing(large: 12, medium: 10, small: 8)) {
                         Text("You're always in control.")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: ResponsiveSize.font(large: 15, medium: 14, small: 13), weight: .medium))
                             .foregroundColor(.midnightSlate)
                         
                         Text("You can change or pause this anytime.")
-                            .font(.system(size: 14))
+                            .font(.system(size: ResponsiveSize.font(large: 14, medium: 13, small: 12)))
                             .foregroundColor(.softGraphite)
                     }
-                    .padding(.horizontal, 40)
-                    .padding(.top, 20)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                    .padding(.top, ResponsiveSize.padding(large: 20, medium: 16, small: 12))
                 }
             }
             
             Button(action: {
                 createDecisionWindow()
-                currentStep = 6 // Go to confirmation screen
+                currentStep = 7 // Go to confirmation screen
             }) {
                 Text("Turn On Decision Window")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16), weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, ResponsiveSize.padding(large: 16, medium: 14, small: 12))
                     .background(Color.softGraphite)
                     .cornerRadius(12)
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
+            .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            .padding(.bottom, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
         }
     }
     
     // MARK: - Screen 7: Confirmation
     private var confirmationScreen: some View {
-        VStack(spacing: 32) {
-            Spacer()
-            
-            VStack(spacing: 24) {
-                Text("You've Protected Today")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.midnightSlate)
-                    .multilineTextAlignment(.center)
-                
-                Text("You just gave Future You a head start.")
-                    .font(.system(size: 18))
-                    .foregroundColor(.softGraphite)
-                    .multilineTextAlignment(.center)
-                
-                Text("No rules. No guilt. Just intention.")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.midnightSlate)
-                    .multilineTextAlignment(.center)
+        ZStack {
+            // Confetti background
+            if showConfetti {
+                GeometryReader { geometry in
+                    ForEach(confettiPieces) { piece in
+                        DecisionConfettiPieceView(
+                            piece: piece,
+                            screenHeight: geometry.size.height,
+                            screenWidth: geometry.size.width
+                        )
+                    }
+                }
             }
-            .padding(.horizontal, 40)
             
-            Spacer()
-            
-            Button(action: {
-                dismiss()
-            }) {
-                Text("Done")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.softGraphite)
-                    .cornerRadius(12)
+            // Balloons
+            if showBalloons {
+                HStack(spacing: 30) {
+                    ForEach(0..<5, id: \.self) { index in
+                        DecisionBalloonView(color: decisionBalloonColors[index % decisionBalloonColors.count])
+                            .offset(balloonOffsets[safe: index] ?? .zero)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 40)
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
+            
+            // Main content
+            VStack(spacing: 32) {
+                Spacer()
+                
+                VStack(spacing: 24) {
+                    // Celebration icon
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.softGraphite, Color.midnightSlate],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 80, height: 80)
+                            .shadow(color: Color.softGraphite.opacity(0.4), radius: 15, x: 0, y: 5)
+                        
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.white)
+                    }
+                    .scaleEffect(showConfetti ? 1.0 : 0.3)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.6), value: showConfetti)
+                    
+                    VStack(spacing: ResponsiveSize.spacing(large: 16, medium: 14, small: 12)) {
+                        Text("You've Protected Today")
+                            .font(.system(size: ResponsiveSize.font(large: 32, medium: 28, small: 24), weight: .bold))
+                            .foregroundColor(.midnightSlate)
+                            .multilineTextAlignment(.center)
+                        
+                        Text("You just gave Future You a head start.")
+                            .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16)))
+                            .foregroundColor(.softGraphite)
+                            .multilineTextAlignment(.center)
+                        
+                        Text("No rules. No guilt. Just intention.")
+                            .font(.system(size: ResponsiveSize.font(large: 16, medium: 15, small: 14), weight: .medium))
+                            .foregroundColor(.midnightSlate)
+                            .multilineTextAlignment(.center)
+                    }
+                    .opacity(showConfetti ? 1.0 : 0.0)
+                    .offset(y: showConfetti ? 0 : 20)
+                    .animation(.easeOut(duration: 0.5).delay(0.3), value: showConfetti)
+                }
+                .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("Done")
+                        .font(.system(size: ResponsiveSize.font(large: 18, medium: 17, small: 16), weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, ResponsiveSize.padding(large: 16, medium: 14, small: 12))
+                        .background(Color.softGraphite)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+                .padding(.bottom, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            }
+        }
+        .onAppear {
+            startCelebration()
+        }
+    }
+    
+    private func startCelebration() {
+        // Initialize balloon offsets (start from bottom)
+        balloonOffsets = (0..<5).map { _ in
+            CGSize(width: CGFloat.random(in: -50...50), height: 400)
+        }
+        
+        // Create confetti pieces
+        let colors: [Color] = [.red, .blue, .green, .yellow, .orange, .purple, .pink, .softGraphite, .midnightSlate]
+        let shapes: [DecisionConfettiShape] = [.circle, .square, .triangle]
+        let screenWidth = UIScreen.main.bounds.width
+        
+        confettiPieces = (0..<60).map { _ in
+            DecisionConfettiPiece(
+                id: UUID(),
+                color: colors.randomElement()!,
+                shape: shapes.randomElement()!,
+                startX: CGFloat.random(in: 0...screenWidth),
+                velocityX: CGFloat.random(in: -100...100),
+                duration: Double.random(in: 2.0...4.0),
+                rotationSpeed: Double.random(in: -360...360)
+            )
+        }
+        
+        // Animate balloons rising
+        withAnimation(.spring(response: 1.5, dampingFraction: 0.6)) {
+            showBalloons = true
+            balloonOffsets = (0..<5).map { index in
+                CGSize(
+                    width: CGFloat.random(in: -30...30),
+                    height: CGFloat.random(in: -20...20)
+                )
+            }
+        }
+        
+        // Show confetti and content
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation {
+                showConfetti = true
+            }
         }
     }
     
@@ -707,12 +957,30 @@ struct DecisionWindowSetupFlow: View {
         //     )
         // }
         
+        // Use user-entered name, or default if empty
+        let finalName = windowName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+            ? "My Decision Notification" 
+            : windowName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Determine the prompt message:
+        // - For "Just Remind" windows, use the custom pause intention if provided, otherwise use default
+        // - For other windows, use a default message
+        let finalPromptMessage: String?
+        if windowActions.contains(.justRemind) {
+            // For "Just Remind" windows, the message is in defaultPauseIntention
+            // But we also set promptMessage for display purposes
+            finalPromptMessage = defaultPauseIntention
+        } else {
+            // For other windows, use a default message
+            finalPromptMessage = "Before today continues — do you want to protect anything?"
+        }
+        
         let window = DecisionWindow(
-            name: "My Decision Notification",
+            name: finalName,
             time: timeComponents,
             daysOfWeek: daysOfWeek,
             isEnabled: true,
-            promptMessage: "Before today continues — do you want to protect anything?",
+            promptMessage: finalPromptMessage,
             defaultMicroSaveAmount: defaultMicroSave,
             defaultSpendGate: defaultSpendGate,
             defaultPauseIntention: defaultPauseIntention
@@ -862,6 +1130,7 @@ struct ActionCard<Content: View>: View {
 
 struct WindowReviewCard: View {
     let index: Int
+    let name: String
     let time: Date
     let actions: [DecisionWindowSetupFlow.WindowAction]
     let saveAmount: Double
@@ -876,9 +1145,14 @@ struct WindowReviewCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Text(name)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.midnightSlate)
+                .padding(.bottom, 4)
+            
             Text("At \(timeString)")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.midnightSlate)
+                .foregroundColor(.softGraphite)
             
             if actions.contains(.saveFirst) {
                 Text("• Soteria will save $\(String(format: "%.2f", saveAmount))")
@@ -971,6 +1245,96 @@ struct AmountPicker: View {
                             )
                     }
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Decision Window Celebration Components
+
+private let decisionBalloonColors: [Color] = [
+    .red, .blue, .green, .orange, .purple
+]
+
+struct DecisionBalloonView: View {
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Balloon
+            Ellipse()
+                .fill(
+                    LinearGradient(
+                        colors: [color, color.opacity(0.7)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 50, height: 65)
+                .overlay(
+                    Ellipse()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                )
+            
+            // String
+            Rectangle()
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 1, height: 40)
+        }
+    }
+}
+
+struct DecisionConfettiPiece: Identifiable {
+    let id: UUID
+    let color: Color
+    let shape: DecisionConfettiShape
+    let startX: CGFloat
+    let velocityX: CGFloat
+    let duration: Double
+    let rotationSpeed: Double
+}
+
+enum DecisionConfettiShape {
+    case circle, square, triangle
+}
+
+struct DecisionConfettiPieceView: View {
+    let piece: DecisionConfettiPiece
+    let screenHeight: CGFloat
+    let screenWidth: CGFloat
+    
+    @State private var yOffset: CGFloat = -50
+    @State private var xOffset: CGFloat = 0
+    @State private var rotation: Double = 0
+    
+    var body: some View {
+        Group {
+            switch piece.shape {
+            case .circle:
+                Circle()
+                    .fill(piece.color)
+                    .frame(width: 8, height: 8)
+            case .square:
+                Rectangle()
+                    .fill(piece.color)
+                    .frame(width: 8, height: 8)
+            case .triangle:
+                Triangle()
+                    .fill(piece.color)
+                    .frame(width: 8, height: 8)
+            }
+        }
+        .rotationEffect(.degrees(rotation))
+        .position(
+            x: piece.startX + xOffset,
+            y: yOffset
+        )
+        .onAppear {
+            // Animate falling
+            withAnimation(.linear(duration: piece.duration).repeatForever(autoreverses: false)) {
+                yOffset = screenHeight + 100
+                xOffset = piece.velocityX
+                rotation = piece.rotationSpeed * piece.duration
             }
         }
     }

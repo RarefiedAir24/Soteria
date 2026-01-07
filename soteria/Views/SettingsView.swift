@@ -98,9 +98,9 @@ struct SettingsView: View {
         if isRoseGold {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.88, green: 0.65, blue: 0.55).opacity(0.4),
-                    Color(red: 0.82, green: 0.58, blue: 0.48).opacity(0.35),
-                    Color(red: 0.78, green: 0.52, blue: 0.42).opacity(0.3)
+                    Color(red: 0.95, green: 0.75, blue: 0.65).opacity(0.4),  // Light rose gold - matches card
+                    Color(red: 0.90, green: 0.65, blue: 0.55).opacity(0.35), // Medium rose gold - matches card
+                    Color(red: 0.85, green: 0.55, blue: 0.45).opacity(0.3)  // Deeper rose gold - matches card (darkest)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -108,9 +108,9 @@ struct SettingsView: View {
         } else if isBeta {
             return LinearGradient(
                 colors: [
-                    Color(red: 1.0, green: 0.92, blue: 0.65).opacity(0.5),
-                    Color(red: 1.0, green: 0.88, blue: 0.55).opacity(0.45),
-                    Color(red: 0.98, green: 0.84, blue: 0.45).opacity(0.4)
+                    Color(red: 1.0, green: 0.95, blue: 0.4).opacity(0.5),  // Bright yellow - matches card
+                    Color(red: 0.98, green: 0.90, blue: 0.35).opacity(0.45), // Medium yellow - matches card
+                    Color(red: 0.95, green: 0.85, blue: 0.30).opacity(0.4)  // Deeper yellow - matches card (darkest)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -160,7 +160,7 @@ struct SettingsView: View {
         let isBlack = (isBeta || isRoseGold) ? false : isBlackCardEligible()
         
         if isRoseGold {
-            return Color(red: 0.75, green: 0.55, blue: 0.45)
+            return Color(red: 0.85, green: 0.55, blue: 0.45)  // Matches card darkest color
         } else if isBeta {
             return Color(red: 0.9, green: 0.8, blue: 0.5)
         } else if isBlack {
@@ -254,9 +254,9 @@ struct SettingsView: View {
         if isRoseGold {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.88, green: 0.65, blue: 0.55),
-                    Color(red: 0.82, green: 0.58, blue: 0.48),
-                    Color(red: 0.78, green: 0.52, blue: 0.42)
+                    Color(red: 0.95, green: 0.75, blue: 0.65),  // Light rose gold - matches card
+                    Color(red: 0.90, green: 0.65, blue: 0.55), // Medium rose gold - matches card
+                    Color(red: 0.85, green: 0.55, blue: 0.45)  // Deeper rose gold - matches card (darkest)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -668,17 +668,18 @@ struct SettingsView: View {
                             Divider()
                                 .padding(.vertical, 8)
                             
-                            Button(action: {
+                            SettingsRow(
+                                icon: "gearshape.2.fill",
+                                title: "Admin: Manage Partners",
+                                subtitle: "Edit partner logos and information",
+                                color: Color.orange
+                            ) {
+                                print("🔵 [SettingsView] Admin Partner Management button tapped")
+                                print("🔵 [SettingsView] Current email: \(userEmail)")
+                                print("🔵 [SettingsView] showAdminPartnerManagement before: \(showAdminPartnerManagement)")
                                 showAdminPartnerManagement = true
-                            }) {
-                                SettingsRow(
-                                    icon: "gearshape.2.fill",
-                                    title: "Admin: Manage Partners",
-                                    subtitle: "Edit partner logos and information",
-                                    color: Color.orange
-                                ) {}
+                                print("🔵 [SettingsView] showAdminPartnerManagement after: \(showAdminPartnerManagement)")
                             }
-                            .buttonStyle(.plain)
                         }
                         
                         // Redemption History
@@ -938,14 +939,14 @@ struct SettingsView: View {
             RedemptionHistoryView()
         }
         .sheet(isPresented: $showAdminPartnerManagement) {
-            NavigationView {
-                AdminPartnerManagementView()
-                    .environmentObject(authService)
-            }
-        }
-        .sheet(isPresented: $showAdminPartnerManagement) {
             AdminPartnerManagementView()
                 .environmentObject(authService)
+                .onAppear {
+                    print("🔵 [SettingsView] AdminPartnerManagementView sheet appeared")
+                }
+        }
+        .onChange(of: showAdminPartnerManagement) { oldValue, newValue in
+            print("🔵 [SettingsView] showAdminPartnerManagement changed from \(oldValue) to \(newValue)")
         }
         .onChange(of: showProfileView) { oldValue, newValue in
             print("🔵 [SettingsView] showProfileView changed from \(oldValue) to \(newValue)")

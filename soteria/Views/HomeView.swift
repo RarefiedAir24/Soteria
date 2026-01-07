@@ -621,7 +621,10 @@ struct HomeView: View {
                 isSupergeek: isSupergeek,
                 streakMonths: streakMonths,
                 userName: userName,
-                showFounder: isSupergeek
+                showFounder: isSupergeek,
+                userId: fullUID,
+                cardType: cardType,
+                memberSince: memberSince
             )
             .rotation3DEffect(.degrees(isCardFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
             .opacity(isCardFlipped ? 0 : 1)
@@ -642,7 +645,8 @@ struct HomeView: View {
             .opacity(isCardFlipped ? 1 : 0)
             .zIndex(isCardFlipped ? 1 : 0)
         }
-        .frame(height: 220)
+        .aspectRatio(1.712, contentMode: .fit) // Credit card aspect ratio (85.60mm x 50mm)
+        .frame(maxWidth: .infinity) // Full width of device
         .onTapGesture {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                 isCardFlipped.toggle()
@@ -652,18 +656,69 @@ struct HomeView: View {
     
     @ViewBuilder
     private var storeCTACard: some View {
+        // CRITICAL: Strict subscription enforcement - verify status before showing premium card
+        // This ensures users who cancel/stop paying immediately lose premium card access
         if SubscriptionService.shared.isPremium {
-            // Premium User - Awe-Inspiring Premium Card (Gold or Platinum)
-            let _ = SubscriptionStreakService.shared.ensureDataLoaded()
-            let rawStreakMonths = SubscriptionStreakService.shared.currentStreak
-            let streakMonths = rawStreakMonths > 0 ? rawStreakMonths : 1
-            let tierName = SubscriptionStreakService.shared.tierName
+            // Double-check subscription status is still valid
+            let subscriptionStatus = SubscriptionService.shared.isPremium
             
-            premiumMemberCard(streakMonths: streakMonths, tierName: tierName)
+            if subscriptionStatus {
+                // Premium User - Awe-Inspiring Premium Card (Gold or Platinum)
+                let _ = SubscriptionStreakService.shared.ensureDataLoaded()
+                let rawStreakMonths = SubscriptionStreakService.shared.currentStreak
+                let streakMonths = rawStreakMonths > 0 ? rawStreakMonths : 1
+                let tierName = SubscriptionStreakService.shared.tierName
+                
+                VStack(spacing: 12) {
+                    premiumMemberCard(streakMonths: streakMonths, tierName: tierName)
+                    
+                    // Manage Subscription Button for Premium Users
+                    Button(action: {
+                        showPaywall = true
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Manage Subscription")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundColor(.softGraphite)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.softGraphite.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.softGraphite.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                    }
+                }
                 .padding(.horizontal, .spacingCard)
+                .padding(.top, 4)
+                .onAppear {
+                    // Verify subscription status when card appears
+                    Task {
+                        await SubscriptionService.shared.updateSubscriptionStatus()
+                        if !SubscriptionService.shared.isPremium {
+                            print("🔒 [HomeView] Premium card displayed but subscription expired - will hide on next refresh")
+                        }
+                    }
+                }
+            } else {
+                // Subscription expired - show free user CTA
+                freeUserStoreCTA
+            }
         } else {
-            // Free User - Store CTA
-            ReverCard {
+            freeUserStoreCTA
+        }
+    }
+    
+    @ViewBuilder
+    private var freeUserStoreCTA: some View {
+        // Free User - Store CTA
+        ReverCard {
                 VStack(spacing: 16) {
                     HStack(spacing: 16) {
                         ZStack {
@@ -729,7 +784,6 @@ struct HomeView: View {
             }
             .padding(.horizontal, .spacingCard)
         }
-    }
     
     // MARK: - Lifecycle Methods (defined before body to help compiler)
     
@@ -738,12 +792,31 @@ struct HomeView: View {
         goalsService.ensureDataLoaded()
         SubscriptionStreakService.shared.ensureDataLoaded()
         
+        // CRITICAL: Always verify subscription status when HomeView appears
+        // This ensures expired subscriptions are immediately detected
+        Task {
+            await SubscriptionService.shared.updateSubscriptionStatus()
+            let wasPremium = SubscriptionService.shared.isPremium
+            
+            // If subscription status changed, log it
+            if !wasPremium {
+                print("🔒 [HomeView] Subscription check: User is NOT premium - premium features disabled")
+            } else {
+                print("✅ [HomeView] Subscription check: User has active premium subscription")
+            }
+        }
+        
         // If user is premium but streak is 0, try to initialize it
         if SubscriptionService.shared.isPremium && SubscriptionStreakService.shared.currentStreak == 0 {
             print("⚠️ [HomeView] Premium user with 0 streak - attempting to initialize")
             // First try to get transaction from StoreKit
             Task {
                 await SubscriptionService.shared.updateSubscriptionStatus()
+                // Double-check premium status after update
+                guard SubscriptionService.shared.isPremium else {
+                    print("🔒 [HomeView] Subscription expired during initialization - aborting streak init")
+                    return
+                }
                 // If still 0 after update, initialize as premium user
                 if SubscriptionStreakService.shared.currentStreak == 0 {
                     SubscriptionStreakService.shared.initializeForPremiumUser()
@@ -1046,7 +1119,7 @@ struct HomeView: View {
     private var baseContentView: some View {
         ZStack(alignment: .top) {
             // Background
-            Color.cloudWhite
+            Color.mistGray
                 .ignoresSafeArea()
             
             ScrollView {
@@ -1143,6 +1216,19 @@ struct HomeView: View {
             }
             
             // Header removed - no rose gold strip on home page
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionService)
+        }
+        .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
+        .fullScreenCover(isPresented: $subscriptionService.showCelebration) {
+            if let subscriptionType = subscriptionService.celebrationSubscriptionType {
+                SubscriptionCelebrationView(
+                    isPresented: $subscriptionService.showCelebration,
+                    subscriptionType: subscriptionType
+                )
+            }
         }
     }
     
@@ -1467,7 +1553,7 @@ struct HomeView: View {
             let isBlack = (isBeta || isRoseGold) ? false : isBlackCardEligible()
             
             if isRoseGold {
-                return Color(red: 0.88, green: 0.65, blue: 0.55).opacity(0.15)
+                return Color(red: 0.95, green: 0.75, blue: 0.65).opacity(0.15)  // Matches card lightest color
             } else if isBeta {
                 return Color(red: 1.0, green: 0.92, blue: 0.65).opacity(0.15)
             } else if isBlack {
@@ -1502,9 +1588,9 @@ struct HomeView: View {
         if isRoseGold {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.88, green: 0.65, blue: 0.55).opacity(0.25),
-                    Color(red: 0.82, green: 0.58, blue: 0.48).opacity(0.22),
-                    Color(red: 0.78, green: 0.52, blue: 0.42).opacity(0.20)
+                    Color(red: 0.95, green: 0.75, blue: 0.65).opacity(0.25),  // Light rose gold - matches card
+                    Color(red: 0.90, green: 0.65, blue: 0.55).opacity(0.22), // Medium rose gold - matches card
+                    Color(red: 0.85, green: 0.55, blue: 0.45).opacity(0.20)  // Deeper rose gold - matches card (darkest)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -1852,11 +1938,13 @@ struct HomeView: View {
         // 2. Haven't created a Unit account yet
         // 3. Haven't dismissed the prompt in this session
         // 4. Haven't shown the prompt today
+        // 5. User is on the home tab (not navigating to settings)
         
         guard authService.isAuthenticated else { return }
         
         let hasUnitAccount = UserDefaults.standard.bool(forKey: "unit_account_created")
         let dismissUntilDate = UserDefaults.standard.object(forKey: "unit_account_prompt_dismiss_until") as? Date
+        let hasShownPrompt = UserDefaults.standard.bool(forKey: "unit_account_creation_prompt_shown")
         
         // Check if still within 3-day dismissal period
         let shouldShow: Bool
@@ -1868,17 +1956,18 @@ struct HomeView: View {
             shouldShow = true
         }
         
-        if !hasUnitAccount && shouldShow {
-            // Small delay to ensure HomeView is fully loaded
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        // Only show for new signups who haven't seen it before, or if user dismissed and 3 days passed
+        let isNewSignUp = UserDefaults.standard.bool(forKey: "is_new_signup")
+        let shouldShowForNewUser = isNewSignUp && !hasShownPrompt
+        
+        if !hasUnitAccount && shouldShow && (shouldShowForNewUser || !isNewSignUp) {
+            // Longer delay to ensure user has time to see the home screen first
+            // Only show after user has been on home screen for a few seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                 showUnitAccountPrompt = true
             }
         }
     }
-    
-    // MARK: - Progressive Card Views (Independent Components)
-    
-    // These cards load their own data independently to prevent blocking
 }
 
 // MARK: - Independent Card Components

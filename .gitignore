@@ -47,3 +47,10 @@ unit_api_token.txt
 .env
 .env.local
 
+# Apple Wallet Certificate Password (SENSITIVE - DO NOT COMMIT)
+APPLE_WALLET_CERTIFICATE_PASSWORD.md
+*.p12
+*.pem
+cert.p12
+wwdr.pem
+

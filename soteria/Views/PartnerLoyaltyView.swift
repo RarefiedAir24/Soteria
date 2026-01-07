@@ -519,6 +519,8 @@ struct CardBack: View {
     let hasBrickAndMortar: Bool
     let isActive: Bool
     
+    @State private var codeCopied: Bool = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Header
@@ -534,6 +536,72 @@ struct CardBack: View {
             
             Divider()
             
+            // Checkout Code Section (if partner provided a code)
+            if let checkoutCode = partner.checkoutCode, !checkoutCode.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Checkout Code")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.midnightSlate)
+                    
+                    Text("Use this code at checkout to redeem your benefit")
+                        .font(.system(size: 13))
+                        .foregroundColor(.softGraphite)
+                    
+                    // Code display with copy button
+                    HStack(spacing: 12) {
+                        Text(checkoutCode)
+                            .font(.system(size: 24, weight: .bold, design: .monospaced))
+                            .foregroundColor(.midnightSlate)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.softGraphite.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.softGraphite.opacity(0.3), lineWidth: 2)
+                                    )
+                            )
+                        
+                        Button(action: {
+                            UIPasteboard.general.string = checkoutCode
+                            withAnimation {
+                                codeCopied = true
+                            }
+                            // Reset after 2 seconds
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                withAnimation {
+                                    codeCopied = false
+                                }
+                            }
+                        }) {
+                            Image(systemName: codeCopied ? "checkmark.circle.fill" : "doc.on.doc.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: 50, height: 50)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(codeCopied ? Color(red: 72.0/255.0, green: 187.0/255.0, blue: 120.0/255.0) : Color.softGraphite)
+                        )
+                    }
+                    
+                    if codeCopied {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12))
+                            Text("Code copied to clipboard")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(Color(red: 72.0/255.0, green: 187.0/255.0, blue: 120.0/255.0))
+                        .padding(.top, 4)
+                    }
+                }
+                
+                Divider()
+            }
+            
             // Fine print / Terms
             if let terms = partner.terms, !terms.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
@@ -548,7 +616,7 @@ struct CardBack: View {
                             .lineSpacing(6)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 150)
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
@@ -767,6 +835,7 @@ struct CardBack: View {
             UIApplication.shared.open(url)
         }
     }
+    
 }
 
 #Preview {

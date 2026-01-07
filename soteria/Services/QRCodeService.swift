@@ -59,8 +59,9 @@ class QRCodeService {
     ///   - userId: The user's unique ID
     ///   - cardType: The card type (gold, platinum, black)
     ///   - memberSince: The sign-up date
+    ///   - size: Optional custom size (default: 120x120)
     /// - Returns: A UIImage of the QR code
-    func generateMemberCardQRCode(userId: String, cardType: String, memberSince: Date) -> UIImage? {
+    func generateMemberCardQRCode(userId: String, cardType: String, memberSince: Date, size: CGSize = CGSize(width: 120, height: 120)) -> UIImage? {
         // Create a JSON payload with member info
         let payload: [String: Any] = [
             "user_id": userId,
@@ -76,8 +77,8 @@ class QRCodeService {
             return nil
         }
         
-        // Generate QR code with appropriate size for card display
-        return generateQRCode(from: jsonString, size: CGSize(width: 120, height: 120))
+        // Generate QR code with specified size
+        return generateQRCode(from: jsonString, size: size)
     }
     
     /// Generates a verification token for the QR code

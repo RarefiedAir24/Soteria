@@ -340,6 +340,12 @@ struct DecisionWindowsView: View {
     }
     
     private func generateTimingRecommendations() {
+        // Only generate timing recommendations for premium users
+        guard subscriptionService.isPremium else {
+            // Free users don't get timing recommendations
+            return
+        }
+        
         // Check each window for timing recommendations
         for window in decisionWindowsService.windows {
             if let recommendation = aiService.generateTimingRecommendation(for: window.id) {
@@ -457,7 +463,25 @@ struct DecisionWindowCard: View {
                 }
             }
             
-            if let message = window.promptMessage, !message.isEmpty {
+            // Display custom message: prefer defaultPauseIntention for "Just Remind" windows,
+            // otherwise use promptMessage, with a fallback to default
+            let displayMessage: String? = {
+                // Check if it's a "Just Remind" window (has defaultPauseIntention but no other actions)
+                let isJustRemindWindow = window.defaultPauseIntention != nil && 
+                                       window.defaultMicroSaveAmount == nil && 
+                                       window.defaultSpendGate == nil
+                
+                if isJustRemindWindow, let pauseIntention = window.defaultPauseIntention, !pauseIntention.isEmpty {
+                    return pauseIntention
+                } else if let promptMsg = window.promptMessage, !promptMsg.isEmpty {
+                    return promptMsg
+                } else {
+                    // Fallback to default message
+                    return "Before today continues — choose how you want to save."
+                }
+            }()
+            
+            if let message = displayMessage {
                 Text(message)
                     .font(.system(size: 13))
                     .foregroundColor(.softGraphite)
@@ -654,7 +678,13 @@ struct CreateDecisionWindowView: View {
                     selectedMinute = editing.time.minute ?? 0
                     selectedDays = editing.daysOfWeek
                     isEnabled = editing.isEnabled
-                    promptMessage = editing.promptMessage ?? ""
+                    // For "Just Remind" windows, the message is stored in defaultPauseIntention
+                    // For other windows, it's in promptMessage
+                    if let pauseIntention = editing.defaultPauseIntention, !pauseIntention.isEmpty {
+                        promptMessage = pauseIntention
+                    } else {
+                        promptMessage = editing.promptMessage ?? ""
+                    }
                 }
             }
         }
@@ -664,13 +694,28 @@ struct CreateDecisionWindowView: View {
         let time = DateComponents(hour: selectedHour, minute: selectedMinute)
         let message = promptMessage.isEmpty ? nil : promptMessage
         
+        // Preserve existing fields from the original window
+        let existingWindow = editingWindow
+        let isJustRemindWindow = existingWindow?.defaultPauseIntention != nil && 
+                                 existingWindow?.defaultMicroSaveAmount == nil && 
+                                 existingWindow?.defaultSpendGate == nil
+        
+        // For "Just Remind" windows, save message to defaultPauseIntention
+        // For other windows, save to promptMessage
+        let defaultPauseIntention = isJustRemindWindow ? message : existingWindow?.defaultPauseIntention
+        let promptMsg = isJustRemindWindow ? existingWindow?.promptMessage : message
+        
         let window = DecisionWindow(
             id: editingWindow?.id ?? UUID().uuidString,
             name: name,
             time: time,
             daysOfWeek: selectedDays,
             isEnabled: isEnabled,
-            promptMessage: message
+            promptMessage: promptMsg,
+            defaultMicroSaveAmount: existingWindow?.defaultMicroSaveAmount,
+            defaultSpendGate: existingWindow?.defaultSpendGate,
+            defaultPauseIntention: defaultPauseIntention,
+            createdDate: existingWindow?.createdDate ?? Date()
         )
         
         onSave(window)

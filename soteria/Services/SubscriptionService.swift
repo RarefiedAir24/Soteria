@@ -34,6 +34,9 @@ class SubscriptionService: ObservableObject {
     }
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var currentSubscriptionProductID: String? = nil // Track which subscription user has (monthly or yearly)
+    @Published var showCelebration: Bool = false // Show celebration when subscription is activated
+    @Published var celebrationSubscriptionType: String? = nil // Type of subscription to celebrate
     
     // Product IDs - Must match Products.storekit configuration
     // Format: com.soteria.premium.monthly and com.soteria.premium.yearly
@@ -172,10 +175,19 @@ class SubscriptionService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
+        let wasPremiumBefore = isPremium
+        
         do {
             try await AppStore.sync()
             await updateSubscriptionStatus()
             print("✅ [SubscriptionService] Purchases restored")
+            
+            // Show celebration if user just restored a subscription (wasn't premium before)
+            if !wasPremiumBefore && isPremium, let productID = currentSubscriptionProductID {
+                let subscriptionType = productID.contains("yearly") ? "Annual" : "Monthly"
+                celebrationSubscriptionType = subscriptionType
+                showCelebration = true
+            }
         } catch {
             print("❌ [SubscriptionService] Failed to restore: \(error)")
             errorMessage = "Failed to restore purchases"
@@ -204,22 +216,27 @@ class SubscriptionService: ObservableObject {
                 let transaction = try checkVerified(result)
                 
                 if transaction.productID == monthlyProductID || transaction.productID == yearlyProductID {
-                    // Check if subscription is still valid
+                    // CRITICAL: Strict expiration check - subscription must be active NOW
                     if let expirationDate = transaction.expirationDate {
-                        if expirationDate > Date() {
+                        let now = Date()
+                        if expirationDate > now {
                             isCurrentlyPremium = true
                             // Track the latest transaction for streak calculation
                             if latestTransaction == nil || transaction.purchaseDate > latestTransaction!.purchaseDate {
                                 latestTransaction = (transaction.productID, transaction.purchaseDate)
                             }
-                            print("✅ [SubscriptionService] Active premium subscription found: \(transaction.productID)")
+                            print("✅ [SubscriptionService] Active premium subscription found: \(transaction.productID), expires: \(expirationDate)")
+                        } else {
+                            // Subscription has expired
+                            print("🔒 [SubscriptionService] Subscription EXPIRED: \(transaction.productID), expired: \(expirationDate), now: \(now)")
                         }
                     } else {
-                        // Non-consumable or lifetime subscription
+                        // Non-consumable or lifetime subscription (shouldn't happen for subscriptions, but handle it)
                         isCurrentlyPremium = true
                         if latestTransaction == nil || transaction.purchaseDate > latestTransaction!.purchaseDate {
                             latestTransaction = (transaction.productID, transaction.purchaseDate)
                         }
+                        print("✅ [SubscriptionService] Non-expiring subscription found: \(transaction.productID)")
                     }
                 }
             } catch {
@@ -227,8 +244,37 @@ class SubscriptionService: ObservableObject {
             }
         }
         
+        // CRITICAL: Strict enforcement - update status immediately
+        let previousStatus = isPremium
         subscriptionTier = isCurrentlyPremium ? .premium : .free
         isPremium = isCurrentlyPremium
+        
+        // Track current subscription product ID
+        if isCurrentlyPremium, let transaction = latestTransaction {
+            currentSubscriptionProductID = transaction.productID
+        } else {
+            currentSubscriptionProductID = nil
+        }
+        
+        // Log status changes for monitoring
+        if previousStatus != isCurrentlyPremium {
+            if isCurrentlyPremium {
+                print("✅ [SubscriptionService] SUBSCRIPTION ACTIVATED - User upgraded to premium")
+                // Show celebration for new subscription activation (only if wasn't premium before)
+                // This prevents showing celebration on app launch for existing subscribers
+                if !previousStatus, let transaction = latestTransaction {
+                    let subscriptionType = transaction.productID.contains("yearly") ? "Annual" : "Monthly"
+                    celebrationSubscriptionType = subscriptionType
+                    // Small delay to ensure UI is ready
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        self?.showCelebration = true
+                    }
+                }
+            } else {
+                print("🔒 [SubscriptionService] SUBSCRIPTION EXPIRED - User downgraded to free")
+                print("🔒 [SubscriptionService] Premium features and card access REVOKED")
+            }
+        }
         
         // Save status
         UserDefaults.standard.set(isPremium, forKey: "isPremium")
@@ -244,9 +290,10 @@ class SubscriptionService: ObservableObject {
         } else if !isCurrentlyPremium {
             // No longer premium - streak stays but doesn't increment
             print("📊 [SubscriptionService] User is not premium - streak remains at \(SubscriptionStreakService.shared.currentStreak)")
+            print("🔒 [SubscriptionService] Premium card and features are DISABLED")
         }
         
-        print("📊 [SubscriptionService] Subscription status: \(subscriptionTier.displayName)")
+        print("📊 [SubscriptionService] Subscription status: \(subscriptionTier.displayName) (verified: \(isCurrentlyPremium))")
     }
     
     // MARK: - Transaction Verification
@@ -297,6 +344,23 @@ class SubscriptionService: ObservableObject {
     
     var allProducts: [Product] {
         products
+    }
+    
+    // Check if user can upgrade (has monthly, can upgrade to annual)
+    var canUpgradeToAnnual: Bool {
+        guard isPremium, let currentID = currentSubscriptionProductID else { return false }
+        return currentID == monthlyProductID
+    }
+    
+    // Get current subscription type
+    var currentSubscriptionType: String? {
+        guard let productID = currentSubscriptionProductID else { return nil }
+        if productID == monthlyProductID {
+            return "Monthly"
+        } else if productID == yearlyProductID {
+            return "Annual"
+        }
+        return nil
     }
     
     // MARK: - Testing/Development

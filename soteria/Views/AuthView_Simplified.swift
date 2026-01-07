@@ -25,6 +25,7 @@ struct AuthView_Simplified: View {
     @State private var isAuthenticatingWithBiometric = false
     @State private var isBiometricAvailable = false
     @State private var biometricType = "Face ID"
+    @State private var isSignUp = false // Toggle between sign-in and sign-up
     
     var body: some View {
         ZStack {
@@ -33,22 +34,59 @@ struct AuthView_Simplified: View {
                 .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 40) {
+                VStack(spacing: ResponsiveSize.spacing(large: 40, medium: 32, small: 24)) {
                     // Logo/Title - Premium styling
                     VStack(spacing: 8) {
                         Text("SOTERIA")
-                            .font(.system(size: 42, weight: .bold, design: .default))
+                            .font(.system(size: ResponsiveSize.font(large: 42, medium: 38, small: 34), weight: .bold, design: .default))
                             .foregroundColor(.softGraphite) // Using darkest gradient color (mistGray was too light, using softGraphite for better contrast)
                             .tracking(4) // Letter spacing for prestige
                             .shadow(color: Color.softGraphite.opacity(0.2), radius: 8, x: 0, y: 2)
                         
                         Text("Secure Your Financial Future")
-                            .font(.system(size: 14, weight: .light, design: .default))
+                            .font(.system(size: ResponsiveSize.font(large: 14, medium: 13, small: 12), weight: .light, design: .default))
                             .foregroundColor(.softGraphite)
                             .tracking(1.5)
                             .padding(.top, 4)
                     }
-                    .padding(.top, 80)
+                    .padding(.top, ResponsiveSize.padding(large: 80, medium: 60, small: 40))
+                    
+                    // Sign In / Sign Up Toggle
+                    HStack(spacing: 0) {
+                        Button(action: {
+                            withAnimation {
+                                isSignUp = false
+                                errorMessage = nil
+                            }
+                        }) {
+                            Text("Sign In")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(isSignUp ? .softGraphite : .white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(isSignUp ? Color.clear : Color.softGraphite)
+                                .cornerRadius(10)
+                        }
+                        
+                        Button(action: {
+                            withAnimation {
+                                isSignUp = true
+                                errorMessage = nil
+                            }
+                        }) {
+                            Text("Sign Up")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(isSignUp ? .white : .softGraphite)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(isSignUp ? Color.softGraphite : Color.clear)
+                                .cornerRadius(10)
+                        }
+                    }
+                    .background(Color.dreamMist)
+                    .cornerRadius(12)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
+                    .padding(.top, ResponsiveSize.padding(large: 20, medium: 16, small: 12))
                     
                     // Email field - Luxury styling
                     VStack(alignment: .leading, spacing: 12) {
@@ -90,7 +128,7 @@ struct AuthView_Simplified: View {
                                 )
                         )
                     }
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
                 
                     // Password field - Luxury styling
                     VStack(alignment: .leading, spacing: 12) {
@@ -172,7 +210,7 @@ struct AuthView_Simplified: View {
                                 )
                         )
                     }
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
                 
                     // Error message - Refined styling
                     if let errorMessage = errorMessage {
@@ -193,8 +231,8 @@ struct AuthView_Simplified: View {
                         .multilineTextAlignment(.center)
                     }
                 
-                    // Biometric authentication button - Premium styling
-                    if isBiometricAvailable && biometricService.hasSavedCredentials {
+                    // Biometric authentication button - Premium styling (only show for sign-in)
+                    if !isSignUp && isBiometricAvailable && biometricService.hasSavedCredentials {
                         Button(action: {
                             Task {
                                 await performBiometricAuth()
@@ -260,7 +298,7 @@ struct AuthView_Simplified: View {
                         .padding(.vertical, 16)
                     }
                     
-                    // Sign In button - Premium gradient styling
+                    // Sign In / Sign Up button - Premium gradient styling
                     Button(action: {
                         Task {
                             await performAuth()
@@ -272,9 +310,9 @@ struct AuthView_Simplified: View {
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     .scaleEffect(0.9)
                             } else {
-                                Image(systemName: "arrow.right.circle.fill")
+                                Image(systemName: isSignUp ? "person.badge.plus.fill" : "arrow.right.circle.fill")
                                     .font(.system(size: 20, weight: .medium))
-                                Text("SIGN IN")
+                                Text(isSignUp ? "SIGN UP" : "SIGN IN")
                                     .font(.system(size: 16, weight: .semibold, design: .default))
                                     .tracking(1.5)
                                     .textCase(.uppercase)
@@ -299,9 +337,20 @@ struct AuthView_Simplified: View {
                                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
                         )
                     }
-                    .disabled(isLoading || email.isEmpty || password.isEmpty)
+                    .disabled(isLoading || email.isEmpty || password.isEmpty || (isSignUp && password.count < 8))
                     .padding(.horizontal, 32)
                     .padding(.top, 8)
+                    
+                    // Password requirements for sign-up
+                    if isSignUp {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Password must be at least 8 characters")
+                                .font(.system(size: 12))
+                                .foregroundColor(.softGraphite)
+                        }
+                        .padding(.horizontal, 32)
+                        .padding(.top, 8)
+                    }
                 
                     Spacer(minLength: 40)
                 }
@@ -335,20 +384,41 @@ struct AuthView_Simplified: View {
         isLoading = true
         errorMessage = nil
         
-        // CRITICAL: Only create AuthService when user actually tries to sign in
+        // Validate password for sign-up
+        if isSignUp && password.count < 8 {
+            errorMessage = "Password must be at least 8 characters"
+            isLoading = false
+            return
+        }
+        
+        // CRITICAL: Only create AuthService when user actually tries to sign in/sign up
         // This prevents blocking during view creation
         let authService = getAuthService()
         
         do {
-            try await authService.signIn(email: email, password: password)
+            if isSignUp {
+                try await authService.signUp(email: email, password: password)
+                // After successful sign-up, automatically sign in
+                try await authService.signIn(email: email, password: password)
+                
+                // Save credentials for biometric auth
+                biometricService.saveCredentials(email: email, password: password)
+                
+                // Record sign-in timestamp
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sign_in_timestamp")
+                UserDefaults.standard.set(false, forKey: "welcome_back_shown_for_session")
+            } else {
+                try await authService.signIn(email: email, password: password)
+                
+                // Save credentials for biometric auth (only if user successfully signed in)
+                biometricService.saveCredentials(email: email, password: password)
+                
+                // Record sign-in timestamp for welcome back message
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sign_in_timestamp")
+                UserDefaults.standard.set(false, forKey: "welcome_back_shown_for_session")
+            }
             
-            // Save credentials for biometric auth (only if user successfully signed in)
-            biometricService.saveCredentials(email: email, password: password)
-            
-            // Record sign-in timestamp for welcome back message
-            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sign_in_timestamp")
-            UserDefaults.standard.set(false, forKey: "welcome_back_shown_for_session")
-            // Post notification when sign-in succeeds so RootView can update
+            // Post notification when sign-in/sign-up succeeds so RootView can update
             NotificationCenter.default.post(name: NSNotification.Name("UserDidSignIn"), object: nil)
         } catch {
             errorMessage = error.localizedDescription

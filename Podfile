@@ -8,12 +8,11 @@ target 'soteria' do
   # Firebase (already added via SPM, but keeping for reference)
   # Firebase is managed via Swift Package Manager
   
-  # TEMPORARILY DISABLED: Plaid SDK - causing dyld crash on new builds
   # Plaid Link SDK for bank account connection
   # Upgraded to v4.1+ (v3.1.1 is not supported on modern iOS/Xcode)
   # Added NSCameraUsageDescription to Info.plist (required by Plaid)
   # Let CocoaPods manage all framework embedding - do NOT manually embed in Xcode
-  # pod 'Plaid', '~> 4.1'
+  pod 'Plaid', '~> 4.1'
 
   # REMOVED: SoteriaMonitor target - no longer needed after removing Quiet Hours/app monitoring
 end

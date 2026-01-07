@@ -1,0 +1,10 @@
+{
+  "name": "soteria-partner-analytics",
+  "version": "1.0.0",
+  "description": "Lambda function to get partner analytics",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  }
+}
+

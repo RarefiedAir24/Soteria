@@ -84,9 +84,9 @@ struct PremiumHeaderView: View {
         if isRoseGold {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.88, green: 0.65, blue: 0.55),
-                    Color(red: 0.82, green: 0.58, blue: 0.48),
-                    Color(red: 0.78, green: 0.52, blue: 0.42)
+                    Color(red: 0.95, green: 0.75, blue: 0.65),  // Light rose gold - matches card
+                    Color(red: 0.90, green: 0.65, blue: 0.55), // Medium rose gold - matches card
+                    Color(red: 0.85, green: 0.55, blue: 0.45)  // Deeper rose gold - matches card (darkest)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

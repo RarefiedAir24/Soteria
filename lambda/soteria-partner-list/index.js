@@ -160,6 +160,7 @@ exports.handler = async (event) => {
                         is_active: partner.is_active !== false,
                         website: partner.website || null,
                         has_brick_and_mortar: partner.has_brick_and_mortar || null,
+                        checkout_code: partner.checkout_code || null,
                         user_redemption_count: redemptionCount,
                         can_redeem: canRedeem
                     };
@@ -184,7 +185,8 @@ exports.handler = async (event) => {
                 valid_until: partner.valid_until || null,
                 is_active: partner.is_active !== false,
                 website: partner.website || null,
-                has_brick_and_mortar: partner.has_brick_and_mortar || null
+                has_brick_and_mortar: partner.has_brick_and_mortar || null,
+                checkout_code: partner.checkout_code || null
             }));
         }
         

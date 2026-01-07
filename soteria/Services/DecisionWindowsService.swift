@@ -44,6 +44,12 @@ struct DecisionWindow: Identifiable, Codable {
     var defaultSpendGate: SpendGate? // Suggested spend gate for Option B
     var defaultPauseIntention: String? // Suggested pause intention for Option C
     
+    // Custom coding keys for DateComponents encoding
+    enum CodingKeys: String, CodingKey {
+        case id, name, timeHour, timeMinute, daysOfWeek, isEnabled, promptMessage, createdDate
+        case defaultMicroSaveAmount, defaultSpendGate, defaultPauseIntention
+    }
+    
     init(id: String = UUID().uuidString,
          name: String,
          time: DateComponents,
@@ -64,6 +70,39 @@ struct DecisionWindow: Identifiable, Codable {
         self.defaultSpendGate = defaultSpendGate
         self.defaultPauseIntention = defaultPauseIntention
         self.createdDate = createdDate
+    }
+    
+    // Custom encoding to handle DateComponents
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(time.hour ?? 0, forKey: .timeHour)
+        try container.encode(time.minute ?? 0, forKey: .timeMinute)
+        try container.encode(daysOfWeek, forKey: .daysOfWeek)
+        try container.encode(isEnabled, forKey: .isEnabled)
+        try container.encodeIfPresent(promptMessage, forKey: .promptMessage)
+        try container.encode(createdDate, forKey: .createdDate)
+        try container.encodeIfPresent(defaultMicroSaveAmount, forKey: .defaultMicroSaveAmount)
+        try container.encodeIfPresent(defaultSpendGate, forKey: .defaultSpendGate)
+        try container.encodeIfPresent(defaultPauseIntention, forKey: .defaultPauseIntention)
+    }
+    
+    // Custom decoding to handle DateComponents
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        let hour = try container.decode(Int.self, forKey: .timeHour)
+        let minute = try container.decode(Int.self, forKey: .timeMinute)
+        time = DateComponents(hour: hour, minute: minute)
+        daysOfWeek = try container.decode(Set<Int>.self, forKey: .daysOfWeek)
+        isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
+        promptMessage = try container.decodeIfPresent(String.self, forKey: .promptMessage)
+        createdDate = try container.decode(Date.self, forKey: .createdDate)
+        defaultMicroSaveAmount = try container.decodeIfPresent(Double.self, forKey: .defaultMicroSaveAmount)
+        defaultSpendGate = try container.decodeIfPresent(SpendGate.self, forKey: .defaultSpendGate)
+        defaultPauseIntention = try container.decodeIfPresent(String.self, forKey: .defaultPauseIntention)
     }
     
     // Check if this window is currently active
@@ -122,19 +161,45 @@ class DecisionWindowsService: ObservableObject {
     // MARK: - Persistence
     
     func loadWindows() {
-        guard let data = UserDefaults.standard.data(forKey: windowsKey),
-              let decoded = try? JSONDecoder().decode([DecisionWindow].self, from: data) else {
-            // Create default windows
+        guard let data = UserDefaults.standard.data(forKey: windowsKey) else {
+            print("📋 [DecisionWindowsService] No saved windows found, creating defaults")
             createDefaultWindows()
             return
         }
-        windows = decoded
-        print("📋 [DecisionWindowsService] Loaded \(windows.count) windows from UserDefaults")
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        
+        do {
+            let decoded = try decoder.decode([DecisionWindow].self, from: data)
+            windows = decoded
+            print("📋 [DecisionWindowsService] Loaded \(windows.count) windows from UserDefaults")
+            for window in windows {
+                print("📋 [DecisionWindowsService] Window '\(window.name)' (id: \(window.id)) - promptMessage: \(window.promptMessage ?? "nil"), defaultPauseIntention: \(window.defaultPauseIntention ?? "nil"), time: \(window.time.hour ?? 0):\(String(format: "%02d", window.time.minute ?? 0))")
+            }
+        } catch {
+            print("❌ [DecisionWindowsService] Failed to decode windows: \(error)")
+            print("❌ [DecisionWindowsService] Error details: \(error.localizedDescription)")
+            // Create default windows if decoding fails
+            createDefaultWindows()
+        }
     }
     
     func saveWindows() {
-        if let encoded = try? JSONEncoder().encode(windows) {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        
+        do {
+            let encoded = try encoder.encode(windows)
             UserDefaults.standard.set(encoded, forKey: windowsKey)
+            UserDefaults.standard.synchronize() // Ensure immediate persistence
+            print("💾 [DecisionWindowsService] Saved \(windows.count) windows to UserDefaults")
+            for window in windows {
+                print("💾 [DecisionWindowsService] Window '\(window.name)' (id: \(window.id)) - promptMessage: \(window.promptMessage ?? "nil"), defaultPauseIntention: \(window.defaultPauseIntention ?? "nil"), time: \(window.time.hour ?? 0):\(String(format: "%02d", window.time.minute ?? 0))")
+            }
+        } catch {
+            print("❌ [DecisionWindowsService] Failed to encode windows for saving: \(error)")
+            print("❌ [DecisionWindowsService] Error details: \(error.localizedDescription)")
         }
     }
     

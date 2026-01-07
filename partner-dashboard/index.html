@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soteria Partner Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --text: #2d3748;
+            --text-light: #718096;
+            --bg: #f7fafc;
+            --white: #ffffff;
+            --border: #e2e8f0;
+            --success: #48bb78;
+            --error: #f56565;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-lg: rgba(0, 0, 0, 0.15);
+            --soft-graphite: #5a5d6a;
+            --cloud-white: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--cloud-white);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Login Section - Matching App Design */
+        .login-section {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 60px 50px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            max-width: 480px;
+            margin: 80px auto;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .login-logo h1 {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--soft-graphite);
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 8px rgba(74, 85, 104, 0.2);
+        }
+
+        .login-logo p {
+            color: var(--soft-graphite);
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 1.5px;
+            margin-top: 8px;
+        }
+
+        .login-section h2 {
+            margin-bottom: 30px;
+            color: var(--text);
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--soft-graphite);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 1px solid rgba(74, 85, 104, 0.2);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: var(--white);
+            color: var(--text);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--soft-graphite);
+            box-shadow: 0 0 0 4px rgba(74, 85, 104, 0.1);
+            transform: translateY(-1px);
+        }
+
+        input::placeholder {
+            color: var(--text-light);
+        }
+
+        button {
+            padding: 16px 32px;
+            background: var(--soft-graphite);
+            color: var(--white);
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(74, 85, 104, 0.3);
+            width: 100%;
+            margin-top: 8px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 85, 104, 0.4);
+            background: #3d4554;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary {
+            width: 100%;
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .header h1 {
+            color: var(--text);
+            margin-bottom: 8px;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow-lg);
+        }
+
+        .stat-card h3 {
+            color: var(--text-light);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            color: var(--text);
+            font-size: 40px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-card .change {
+            color: var(--success);
+            font-size: 13px;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .chart-section, .insights-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .chart-section h2, .insights-section h2 {
+            color: var(--text);
+            margin-bottom: 25px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-left: 4px solid var(--primary);
+            padding: 24px;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .insight-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .insight-card h4 {
+            color: var(--text);
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .insight-card p {
+            color: var(--text-light);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fed7d7, #feb2b2);
+            color: #c53030;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--error);
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-light);
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .date-filter {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .date-filter input {
+            flex: 1;
+            min-width: 150px;
+            margin: 0;
+        }
+
+        .date-filter button {
+            min-width: 120px;
+            margin: 0;
+        }
+
+        .time-period-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .time-period-btn {
+            padding: 10px 20px;
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .time-period-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .time-period-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: transparent;
+        }
+
+        .custom-date-section {
+            display: none;
+            width: 100%;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .custom-date-section.active {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        th {
+            color: var(--text);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            background: var(--bg);
+            user-select: none;
+            cursor: pointer;
+            position: relative;
+            padding-right: 32px;
+        }
+
+        th.sortable:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        th.sortable::after {
+            content: '↕';
+            position: absolute;
+            right: 12px;
+            opacity: 0.3;
+            font-size: 14px;
+        }
+
+        th.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+            color: var(--primary);
+        }
+
+        th.sort-desc::after {
+            content: '↓';
+            opacity: 1;
+            color: var(--primary);
+        }
+
+        th .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            z-index: 10;
+        }
+
+        th .resize-handle:hover {
+            background: var(--primary);
+        }
+
+        th .resize-handle.resizing {
+            background: var(--primary);
+        }
+
+        td {
+            color: var(--text);
+        }
+
+        tr:hover {
+            background: var(--bg);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: visible;
+            position: relative;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: transparent;
+            color: var(--text);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .report-section {
+            display: none;
+        }
+
+        .report-section.active {
+            display: block;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            width: auto;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #c53030, #9b2c2c);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            color: var(--text-light);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 24px;
+            opacity: 0.4;
+            color: var(--primary);
+        }
+
+        .empty-state h3 {
+            color: var(--text);
+            margin-bottom: 12px;
+            font-size: 24px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-success {
+            background: rgba(72, 187, 120, 0.2);
+            color: #22543d;
+        }
+
+        .badge-info {
+            background: rgba(102, 126, 234, 0.2);
+            color: #2c5282;
+        }
+
+        .login-error {
+            background: linear-gradient(135deg, #fed7d7, #feb2b2);
+            color: #c53030;
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--error);
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .login-section {
+                padding: 40px 30px;
+                margin: 40px 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="loginSection" class="login-section">
+            <div class="login-logo">
+                <h1>SOTERIA</h1>
+                <p>Partner Analytics Dashboard</p>
+            </div>
+            <div id="loginError" class="login-error"></div>
+            <form id="loginForm">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <button type="button" onclick="loadExampleReports()" style="background: rgba(74, 85, 104, 0.1); color: var(--soft-graphite); border: 2px solid var(--soft-graphite); width: 100%; text-transform: uppercase; letter-spacing: 1.5px;">
+                        View Example Reports
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label for="partnerId">Partner ID</label>
+                    <input 
+                        type="text" 
+                        id="partnerId" 
+                        required 
+                        placeholder="Enter your Partner ID"
+                        autocomplete="username"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input 
+                        type="password" 
+                        id="apiKey" 
+                        required 
+                        placeholder="Enter your API Key"
+                        autocomplete="current-password"
+                    >
+                </div>
+                <button type="submit" class="btn-primary">
+                    <span id="loginButtonText">Access Dashboard</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="dashboard">
+            <div class="header">
+                <div>
+                    <h1>Analytics Dashboard</h1>
+                    <p id="partnerName">Loading partner information...</p>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <div id="date-filter" class="date-filter">
+                <div class="time-period-buttons">
+                    <button class="time-period-btn" onclick="setTimePeriod('WTD')" id="btnWTD">Week to Date</button>
+                    <button class="time-period-btn" onclick="setTimePeriod('MTD')" id="btnMTD">Month to Date</button>
+                    <button class="time-period-btn" onclick="setTimePeriod('YTD')" id="btnYTD">Year to Date</button>
+                    <button class="time-period-btn" onclick="setTimePeriod('CUSTOM')" id="btnCUSTOM">Custom Range</button>
+                </div>
+                <div class="custom-date-section" id="customDateSection">
+                    <input type="date" id="startDate" aria-label="Start Date">
+                    <input type="date" id="endDate" aria-label="End Date">
+                    <button onclick="loadAnalytics()">Apply Filter</button>
+                    <button onclick="resetDateRange()" style="background: var(--text-light);">Reset</button>
+                </div>
+            </div>
+
+            <div id="errorMessage" class="error" style="display: none;"></div>
+
+            <div id="loading" class="loading" style="display: none;">
+                <p>Loading your analytics...</p>
+            </div>
+
+            <div id="analyticsContent" style="display: none;">
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <button class="nav-tab active" onclick="showReportSection('overview')">Overview</button>
+                    <button class="nav-tab" onclick="showReportSection('redemptions')">Redemptions</button>
+                    <button class="nav-tab" onclick="showReportSection('members')">Members</button>
+                    <button class="nav-tab" onclick="showReportSection('analytics')">Analytics</button>
+                </div>
+
+                <!-- Overview Section -->
+                <div id="report-overview" class="report-section active">
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Redemptions</h3>
+                        <div class="value" id="totalRedemptions">0</div>
+                        <div class="change" id="redemptionsChange"></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Discount Amount</h3>
+                        <div class="value" id="totalDiscount">$0.00</div>
+                        <div class="change" id="discountChange"></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Unique Members</h3>
+                        <div class="value" id="uniqueMembers">0</div>
+                        <div class="change" id="membersChange"></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg Discount per Redemption</h3>
+                        <div class="value" id="avgDiscount">$0.00</div>
+                        <div class="change" id="avgChange"></div>
+                    </div>
+                </div>
+
+                <!-- Insights -->
+                <div class="insights-section">
+                    <h2>Key Insights</h2>
+                    <div class="insights-grid" id="insightsGrid">
+                        <!-- Insights will be populated here -->
+                    </div>
+                </div>
+
+                </div>
+
+                <!-- Redemptions Section -->
+                <div id="report-redemptions" class="report-section">
+                    <!-- Redemptions Chart -->
+                    <div class="chart-section">
+                        <h2>Redemptions Over Time</h2>
+                        <div class="chart-container">
+                            <canvas id="redemptionsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Redemptions by Category -->
+                    <div class="chart-section">
+                        <h2>Redemptions by Category</h2>
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Redemptions by Day of Week -->
+                    <div class="chart-section">
+                        <h2>Redemptions by Day of Week</h2>
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="dayOfWeekChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Discount Distribution -->
+                    <div class="chart-section">
+                        <h2>Discount Distribution</h2>
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="discountChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members Section -->
+                <div id="report-members" class="report-section">
+                    <!-- Member Growth -->
+                    <div class="chart-section">
+                        <h2>Member Growth Over Time</h2>
+                        <div class="chart-container" style="height: 350px;">
+                            <canvas id="growthChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Top Members -->
+                    <div class="chart-section">
+                        <h2>Top Members <span class="badge badge-info" id="topMembersCount">0</span></h2>
+                        <div id="topMembersContent" class="table-wrapper">
+                            <table id="topMembersTable">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-column="rank" onclick="sortTable('topMembersTable', 0)">Rank<span class="resize-handle"></span></th>
+                                        <th class="sortable" data-column="member" onclick="sortTable('topMembersTable', 1)">Member ID<span class="resize-handle"></span></th>
+                                        <th class="sortable" data-column="redemptions" onclick="sortTable('topMembersTable', 2)">Redemptions<span class="resize-handle"></span></th>
+                                        <th class="sortable" data-column="value" onclick="sortTable('topMembersTable', 3)">Total Value<span class="resize-handle"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                <div id="report-analytics" class="report-section">
+                    <!-- Insights -->
+                    <div class="insights-section">
+                        <h2>Key Insights</h2>
+                        <div class="insights-grid" id="insightsGrid">
+                            <!-- Insights will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>
+                </svg>
+                <h3>No Data Available</h3>
+                <p>No redemptions found for the selected date range.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://api.soteria.zone';
+        let currentPartnerId = null;
+        let currentApiKey = null;
+        let redemptionsChart = null;
+        let categoryChart = null;
+        let dayOfWeekChart = null;
+        let discountChart = null;
+        let growthChart = null;
+        let previousAnalytics = null;
+        let isExampleMode = false;
+
+        // Color palettes for different categories
+        const categoryColors = {
+            'Food & Dining': ['#667eea', '#764ba2'],
+            'Retail': ['#f093fb', '#f5576c'],
+            'Services': ['#4facfe', '#00f2fe'],
+            'Entertainment': ['#43e97b', '#38f9d7'],
+            'Health & Wellness': ['#fa709a', '#fee140'],
+            'Travel': ['#30cfd0', '#330867'],
+            'Other': ['#a8edea', '#fed6e3']
+        };
+
+        const dayColors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#30cfd0'];
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const partnerId = document.getElementById('partnerId').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const button = e.target.querySelector('button[type="submit"]');
+            const buttonText = document.getElementById('loginButtonText');
+
+            if (!partnerId || !apiKey) {
+                showLoginError('Please enter both Partner ID and API Key');
+                return;
+            }
+
+            // Show loading state
+            button.disabled = true;
+            buttonText.textContent = 'Authenticating...';
+
+            try {
+                // Validate credentials by attempting to load analytics
+                const testUrl = `${API_BASE_URL}/soteria/partner/analytics?partner_id=${encodeURIComponent(partnerId)}`;
+                const testResponse = await fetch(testUrl);
+                const testData = await testResponse.json();
+
+                if (testResponse.ok && testData.success !== false) {
+                    // Credentials appear valid
+                    currentPartnerId = partnerId;
+                    currentApiKey = apiKey;
+                    
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('dashboard').classList.add('active');
+                    document.getElementById('partnerName').textContent = `Partner: ${partnerId}`;
+                    
+                    await loadAnalytics();
+                } else {
+                    showLoginError('Invalid Partner ID or API Key. Please check your credentials.');
+                }
+            } catch (error) {
+                showLoginError('Connection error. Please check your internet connection and try again.');
+            } finally {
+                button.disabled = false;
+                buttonText.textContent = 'Access Dashboard';
+            }
+        });
+
+        // Load analytics
+        async function loadAnalytics() {
+            if (!currentPartnerId) return;
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('analyticsContent').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            hideError('errorMessage');
+
+            try {
+                let url = `${API_BASE_URL}/soteria/partner/analytics?partner_id=${encodeURIComponent(currentPartnerId)}`;
+                if (startDate) url += `&start_date=${startDate}`;
+                if (endDate) url += `&end_date=${endDate}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.analytics.total_redemptions === 0) {
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.getElementById('loading').style.display = 'none';
+                    } else {
+                        displayAnalytics(data.analytics);
+                        previousAnalytics = data.analytics;
+                    }
+                } else {
+                    showError('errorMessage', data.error || 'Failed to load analytics');
+                }
+            } catch (error) {
+                showError('errorMessage', 'Error loading analytics: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Display analytics
+        function displayAnalytics(analytics) {
+            // Update stats
+            document.getElementById('totalRedemptions').textContent = analytics.total_redemptions || 0;
+            document.getElementById('totalDiscount').textContent = formatCurrency(analytics.total_discount_amount || 0);
+            document.getElementById('uniqueMembers').textContent = analytics.unique_members || 0;
+            document.getElementById('avgDiscount').textContent = formatCurrency(analytics.average_discount_per_redemption || 0);
+
+            // Calculate changes if previous data exists
+            if (previousAnalytics) {
+                updateChangeIndicators(analytics, previousAnalytics);
+            }
+
+            // Generate insights
+            generateInsights(analytics);
+
+            // Update all charts
+            updateChart(analytics.redemptions_by_day || []);
+            
+            // Only show additional charts if data exists (or in example mode)
+            if (analytics.redemptions_by_category || isExampleMode) {
+                updateCategoryChart(analytics.redemptions_by_category || []);
+            }
+            if (analytics.redemptions_by_day_of_week || isExampleMode) {
+                updateDayOfWeekChart(analytics.redemptions_by_day_of_week || []);
+            }
+            if (analytics.discount_distribution || isExampleMode) {
+                updateDiscountChart(analytics.discount_distribution || []);
+            }
+            if (analytics.member_growth || isExampleMode) {
+                updateGrowthChart(analytics.member_growth || []);
+            }
+
+            // Update top members table
+            updateTopMembers(analytics.top_members || []);
+
+            // Show content
+            document.getElementById('analyticsContent').style.display = 'block';
+        }
+
+        // Generate insights
+        function generateInsights(analytics) {
+            const insights = [];
+            const grid = document.getElementById('insightsGrid');
+            grid.innerHTML = '';
+
+            // Insight 1: Redemption rate
+            if (analytics.unique_members > 0) {
+                const avgRedemptions = (analytics.total_redemptions / analytics.unique_members).toFixed(1);
+                insights.push({
+                    title: 'Member Engagement',
+                    text: `On average, each member has redeemed ${avgRedemptions} time${avgRedemptions !== '1' ? 's' : ''}. ${avgRedemptions > 2 ? 'Excellent engagement!' : avgRedemptions > 1 ? 'Good engagement.' : 'Consider promoting your benefits more.'}`
+                });
+            }
+
+            // Insight 2: Average discount
+            if (analytics.average_discount_per_redemption > 0) {
+                const discountLevel = analytics.average_discount_per_redemption > 10 ? 'generous' : analytics.average_discount_per_redemption > 5 ? 'moderate' : 'conservative';
+                const effectiveness = analytics.total_redemptions > 50 ? 'appears to be working well' : 'may need adjustment';
+                insights.push({
+                    title: 'Discount Strategy',
+                    text: `Your average discount of ${formatCurrency(analytics.average_discount_per_redemption)} per redemption is ${discountLevel}, which ${effectiveness}.`
+                });
+            }
+
+            // Insight 3: Peak days
+            if (analytics.redemptions_by_day && analytics.redemptions_by_day.length > 0) {
+                const peakDay = analytics.redemptions_by_day.reduce((max, day) => 
+                    day.count > max.count ? day : max
+                );
+                const dayName = new Date(peakDay.date).toLocaleDateString('en-US', { weekday: 'long' });
+                insights.push({
+                    title: 'Peak Redemption Day',
+                    text: `${dayName} (${new Date(peakDay.date).toLocaleDateString()}) had the most redemptions with ${peakDay.count}. Consider promoting your benefits on this day for maximum impact.`
+                });
+            }
+
+            // Insight 4: Total value
+            if (analytics.total_discount_amount > 0) {
+                insights.push({
+                    title: 'Total Value Provided',
+                    text: `You've provided ${formatCurrency(analytics.total_discount_amount)} in total discounts to ${analytics.unique_members} unique members. This represents significant value to the Soteria community.`
+                });
+            }
+
+            // Insight 5: Redemption frequency
+            if (analytics.redemptions_by_day && analytics.redemptions_by_day.length > 0) {
+                const daysWithRedemptions = analytics.redemptions_by_day.filter(d => d.count > 0).length;
+                const totalDays = analytics.redemptions_by_day.length;
+                const frequency = ((daysWithRedemptions / totalDays) * 100).toFixed(0);
+                const consistency = frequency > 70 ? 'consistent' : frequency > 40 ? 'regular' : 'occasional';
+                insights.push({
+                    title: 'Redemption Frequency',
+                    text: `Redemptions occurred on ${frequency}% of days in this period, indicating ${consistency} member engagement. ${frequency > 70 ? 'Great consistency!' : 'Consider running promotions to increase frequency.'}`
+                });
+            }
+
+            // Render insights
+            insights.forEach(insight => {
+                const card = document.createElement('div');
+                card.className = 'insight-card';
+                card.innerHTML = `
+                    <h4>${insight.title}</h4>
+                    <p>${insight.text}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Update change indicators
+        function updateChangeIndicators(current, previous) {
+            // Future: Compare current period to previous period
+        }
+
+        // Update chart
+        function updateChart(data) {
+            const ctx = document.getElementById('redemptionsChart').getContext('2d');
+            
+            if (redemptionsChart) {
+                redemptionsChart.destroy();
+            }
+
+            if (data.length === 0) {
+                return;
+            }
+
+            redemptionsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                    datasets: [{
+                        label: 'Redemptions',
+                        data: data.map(d => d.count),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            padding: 14,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} redemption${context.parsed.y !== 1 ? 's' : ''}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update top members table
+        function updateTopMembers(members) {
+            const tbody = document.querySelector('#topMembersTable tbody');
+            tbody.innerHTML = '';
+            document.getElementById('topMembersCount').textContent = members.length;
+
+            if (members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-light); padding: 40px;">No member data available</td></tr>';
+                return;
+            }
+
+            members.forEach((member, index) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = `<strong>#${index + 1}</strong>`;
+                row.insertCell(1).textContent = member.user_id.substring(0, 12) + '...';
+                row.insertCell(2).textContent = member.redemption_count;
+                row.insertCell(3).textContent = formatCurrency((member.redemption_count * (previousAnalytics?.average_discount_per_redemption || 0)));
+            });
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // Error handling
+        function showError(elementId, message) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function showLoginError(message) {
+            const errorEl = document.getElementById('loginError');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function hideError(elementId) {
+            document.getElementById(elementId).style.display = 'none';
+        }
+
+        // Reset date range
+        function resetDateRange() {
+            setTimePeriod('MTD');
+        }
+
+        // Load example reports
+        function loadExampleReports() {
+            isExampleMode = true;
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            document.getElementById('partnerName').textContent = 'Example Partner Dashboard';
+            document.getElementById('date-filter').style.display = 'block';
+
+            // Set default to MTD for examples
+            setTimePeriod('MTD');
+
+            // Generate comprehensive example data
+            const exampleData = generateExampleData();
+            displayAnalytics(exampleData);
+        }
+
+        // Generate example data
+        function generateExampleData() {
+            const today = new Date();
+            const days = [];
+            const redemptionsByDay = [];
+            const redemptionsByCategory = [
+                { category: 'Food & Dining', count: 142, amount: 2840 },
+                { category: 'Retail', count: 98, amount: 1960 },
+                { category: 'Services', count: 67, amount: 1340 },
+                { category: 'Entertainment', count: 45, amount: 900 },
+                { category: 'Health & Wellness', count: 34, amount: 680 },
+                { category: 'Travel', count: 12, amount: 240 }
+            ];
+            const redemptionsByDayOfWeek = [
+                { day: 'Monday', count: 52 },
+                { day: 'Tuesday', count: 48 },
+                { day: 'Wednesday', count: 61 },
+                { day: 'Thursday', count: 55 },
+                { day: 'Friday', count: 78 },
+                { day: 'Saturday', count: 89 },
+                { day: 'Sunday', count: 67 }
+            ];
+            const discountDistribution = [
+                { range: '$0-$5', count: 45 },
+                { range: '$5-$10', count: 128 },
+                { range: '$10-$15', count: 156 },
+                { range: '$15-$20', count: 98 },
+                { range: '$20+', count: 33 }
+            ];
+            const memberGrowth = [];
+            const topMembers = [
+                { user_id: 'usr_7f3a9b2c1d4e', redemption_count: 23, total_value: 460 },
+                { user_id: 'usr_8a4b5c6d7e8f', redemption_count: 19, total_value: 380 },
+                { user_id: 'usr_9b5c6d7e8f9a', redemption_count: 17, total_value: 340 },
+                { user_id: 'usr_1c2d3e4f5a6b', redemption_count: 15, total_value: 300 },
+                { user_id: 'usr_2d3e4f5a6b7c', redemption_count: 14, total_value: 280 },
+                { user_id: 'usr_3e4f5a6b7c8d', redemption_count: 12, total_value: 240 },
+                { user_id: 'usr_4f5a6b7c8d9e', redemption_count: 11, total_value: 220 },
+                { user_id: 'usr_5a6b7c8d9e1f', redemption_count: 10, total_value: 200 }
+            ];
+
+            // Generate 30 days of data
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const count = Math.floor(Math.random() * 25) + 15;
+                redemptionsByDay.push({
+                    date: date.toISOString().split('T')[0],
+                    count: count
+                });
+            }
+
+            // Generate member growth (cumulative)
+            let cumulativeMembers = 120;
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                cumulativeMembers += Math.floor(Math.random() * 5);
+                memberGrowth.push({
+                    date: date.toISOString().split('T')[0],
+                    count: cumulativeMembers
+                });
+            }
+
+            const totalRedemptions = redemptionsByCategory.reduce((sum, cat) => sum + cat.count, 0);
+            const totalDiscount = redemptionsByCategory.reduce((sum, cat) => sum + cat.amount, 0);
+
+            return {
+                total_redemptions: totalRedemptions,
+                total_discount_amount: totalDiscount,
+                unique_members: 248,
+                average_discount_per_redemption: totalDiscount / totalRedemptions,
+                redemptions_by_day: redemptionsByDay,
+                redemptions_by_category: redemptionsByCategory,
+                redemptions_by_day_of_week: redemptionsByDayOfWeek,
+                discount_distribution: discountDistribution,
+                member_growth: memberGrowth,
+                top_members: topMembers
+            };
+        }
+
+        // Update category chart (Pie)
+        function updateCategoryChart(data) {
+            const ctx = document.getElementById('categoryChart');
+            if (!ctx) return;
+            
+            if (categoryChart) {
+                categoryChart.destroy();
+            }
+
+            if (!data || data.length === 0) {
+                // Hide chart section if no data
+                const section = ctx.closest('.chart-section');
+                if (section) section.style.display = 'none';
+                return;
+            }
+            
+            // Show chart section
+            const section = ctx.closest('.chart-section');
+            if (section) section.style.display = 'block';
+            
+            const chartCtx = ctx.getContext('2d');
+
+            const colors = data.map((item, index) => {
+                const category = item.category;
+                const colorSet = categoryColors[category] || categoryColors['Other'];
+                return {
+                    background: colorSet[0],
+                    border: colorSet[1] || colorSet[0]
+                };
+            });
+
+            categoryChart = new Chart(chartCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.category),
+                    datasets: [{
+                        data: data.map(d => d.count),
+                        backgroundColor: colors.map(c => c.background),
+                        borderColor: colors.map(c => c.border),
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 15,
+                                font: { size: 13, weight: '500' },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            padding: 14,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} redemptions (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update day of week chart (Bar)
+        function updateDayOfWeekChart(data) {
+            const ctx = document.getElementById('dayOfWeekChart');
+            if (!ctx) return;
+            
+            if (dayOfWeekChart) {
+                dayOfWeekChart.destroy();
+            }
+
+            if (!data || data.length === 0) {
+                const section = ctx.closest('.chart-section');
+                if (section) section.style.display = 'none';
+                return;
+            }
+            
+            const section = ctx.closest('.chart-section');
+            if (section) section.style.display = 'block';
+            
+            const chartCtx = ctx.getContext('2d');
+
+            dayOfWeekChart = new Chart(chartCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.day),
+                    datasets: [{
+                        label: 'Redemptions',
+                        data: data.map(d => d.count),
+                        backgroundColor: dayColors.map(c => c + 'CC'),
+                        borderColor: dayColors,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            padding: 14,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} redemptions`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 10 },
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update discount distribution chart (Area)
+        function updateDiscountChart(data) {
+            const ctx = document.getElementById('discountChart');
+            if (!ctx) return;
+            
+            if (discountChart) {
+                discountChart.destroy();
+            }
+
+            if (!data || data.length === 0) {
+                const section = ctx.closest('.chart-section');
+                if (section) section.style.display = 'none';
+                return;
+            }
+            
+            const section = ctx.closest('.chart-section');
+            if (section) section.style.display = 'block';
+            
+            const chartCtx = ctx.getContext('2d');
+            const gradient = chartCtx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(102, 126, 234, 0.3)');
+            gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
+
+            discountChart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.range),
+                    datasets: [{
+                        label: 'Redemptions',
+                        data: data.map(d => d.count),
+                        borderColor: '#667eea',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            padding: 14,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} redemptions in ${context.label} range`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update member growth chart (Line)
+        function updateGrowthChart(data) {
+            const ctx = document.getElementById('growthChart');
+            if (!ctx) return;
+            
+            if (growthChart) {
+                growthChart.destroy();
+            }
+
+            if (!data || data.length === 0) {
+                const section = ctx.closest('.chart-section');
+                if (section) section.style.display = 'none';
+                return;
+            }
+            
+            const section = ctx.closest('.chart-section');
+            if (section) section.style.display = 'block';
+            
+            const chartCtx = ctx.getContext('2d');
+            const gradient = chartCtx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(67, 233, 123, 0.3)');
+            gradient.addColorStop(1, 'rgba(67, 233, 123, 0.05)');
+
+            growthChart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                    datasets: [{
+                        label: 'Total Members',
+                        data: data.map(d => d.count),
+                        borderColor: '#43e97b',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#43e97b',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            padding: 14,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} total members`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Logout
+        function logout() {
+            currentPartnerId = null;
+            currentApiKey = null;
+            isExampleMode = false;
+            
+            // Destroy all charts
+            [redemptionsChart, categoryChart, dayOfWeekChart, discountChart, growthChart].forEach(chart => {
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+            });
+            
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('partnerId').value = '';
+            document.getElementById('apiKey').value = '';
+            document.getElementById('analyticsContent').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('date-filter').style.display = 'flex';
+            hideError('loginError');
+        }
+
+        // Set default date range (last 30 days)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+        document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+
+        // Set default to MTD
+        setTimePeriod('MTD');
+
+        // Time period functions
+        function setTimePeriod(period) {
+            // Update button states
+            document.querySelectorAll('.time-period-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn' + period).classList.add('active');
+
+            const today = new Date();
+            let start, end = today;
+
+            switch(period) {
+                case 'WTD':
+                    start = new Date(today);
+                    start.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'MTD':
+                    start = new Date(today.getFullYear(), today.getMonth(), 1);
+                    break;
+                case 'YTD':
+                    start = new Date(today.getFullYear(), 0, 1);
+                    break;
+                case 'CUSTOM':
+                    document.getElementById('customDateSection').classList.add('active');
+                    return;
+            }
+
+            document.getElementById('customDateSection').classList.remove('active');
+            document.getElementById('startDate').value = start.toISOString().split('T')[0];
+            document.getElementById('endDate').value = end.toISOString().split('T')[0];
+
+            if (currentPartnerId || isExampleMode) {
+                loadAnalytics();
+            }
+        }
+
+        // Table sorting
+        let sortState = {};
+
+        function sortTable(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const header = table.querySelectorAll('th')[columnIndex];
+
+            // Reset all headers
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            // Determine sort direction
+            const currentSort = sortState[tableId]?.[columnIndex] || 'none';
+            const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+
+            // Store sort state
+            if (!sortState[tableId]) sortState[tableId] = {};
+            sortState[tableId][columnIndex] = newSort;
+
+            // Add sort class
+            header.classList.add('sort-' + newSort);
+
+            // Sort rows
+            rows.sort((a, b) => {
+                const aText = a.cells[columnIndex].textContent.trim();
+                const bText = b.cells[columnIndex].textContent.trim();
+
+                // Try to parse as number
+                const aNum = parseFloat(aText.replace(/[^0-9.-]/g, ''));
+                const bNum = parseFloat(bText.replace(/[^0-9.-]/g, ''));
+
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return newSort === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+
+                // String comparison
+                return newSort === 'asc' 
+                    ? aText.localeCompare(bText)
+                    : bText.localeCompare(aText);
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Column resizing
+        function initColumnResize() {
+            document.querySelectorAll('.resize-handle').forEach(handle => {
+                let isResizing = false;
+                let startX, startWidth, th;
+
+                handle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    th = handle.parentElement;
+                    startX = e.pageX;
+                    startWidth = th.offsetWidth;
+                    handle.classList.add('resizing');
+                    document.body.style.cursor = 'col-resize';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    const width = startWidth + (e.pageX - startX);
+                    if (width > 50) { // Minimum width
+                        th.style.width = width + 'px';
+                        th.style.minWidth = width + 'px';
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isResizing) {
+                        isResizing = false;
+                        handle.classList.remove('resizing');
+                        document.body.style.cursor = '';
+                    }
+                });
+            });
+        }
+
+        // Initialize column resizing after table is populated
+        const originalUpdateTopMembers = updateTopMembers;
+        updateTopMembers = function(members) {
+            originalUpdateTopMembers(members);
+            setTimeout(initColumnResize, 100);
+        };
+
+        // Navigation between report sections
+        function showReportSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.report-section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById('report-' + section).classList.add('active');
+
+            // Update tab states
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Smooth scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

@@ -23,6 +23,9 @@ struct ProfileView: View {
     @State private var showChangePassword = false
     @State private var showPlaidConnection = false
     @State private var showSavingsSettings = false
+    @State private var showUnitAccountSetup = false
+    @State private var hasUnitAccount = false
+    @State private var isVerifyingUnitAccount = false
     @State private var showAvatarPicker = false
     @State private var showImagePicker = false
     @State private var showImageSourceActionSheet = false
@@ -52,6 +55,15 @@ struct ProfileView: View {
             }
         }
         return "User"
+    }
+    
+    // App version and build number
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+    }
+    
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
     
     var body: some View {
@@ -239,7 +251,7 @@ struct ProfileView: View {
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(Color.midnightSlate)
                                     
-                                    Text("Enable automatic savings transfers")
+                                    Text("Connect accounts to enable transfers")
                                         .font(.system(size: 13))
                                         .foregroundColor(Color.softGraphite)
                                 }
@@ -296,6 +308,90 @@ struct ProfileView: View {
                             .padding(.horizontal, 20)
                         }
                     }
+                    
+                    // Unit Account Setup or Status
+                    if !hasUnitAccount {
+                        Button(action: {
+                            showUnitAccountSetup = true
+                        }) {
+                            HStack {
+                                Image(systemName: "tree.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(Color.softGraphite)
+                                    .frame(width: 24)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Create Dedicated Savings Account")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(Color.midnightSlate)
+                                    
+                                    Text("FDIC-insured account for your goals")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color.softGraphite)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color.softGraphite)
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.mistGray)
+                            )
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                    } else {
+                        // Unit Account Connected - Show account details like Plaid
+                        Button(action: {
+                            showUnitAccountSetup = true
+                        }) {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.green)
+                                    .frame(width: 24)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Dedicated Savings Account")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(Color.midnightSlate)
+                                    
+                                    if let accountNumber = UserDefaults.standard.string(forKey: "unit_account_number"),
+                                       !accountNumber.isEmpty {
+                                        Text("Savings Account ••••\(String(accountNumber.suffix(4)))")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(Color.softGraphite)
+                                    } else if let accountId = UserDefaults.standard.string(forKey: "unit_account_id"),
+                                               !accountId.isEmpty {
+                                        Text("Account ID: \(String(accountId.prefix(8)))...")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(Color.softGraphite)
+                                    } else {
+                                        Text("Account active")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(Color.softGraphite)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color.softGraphite)
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.mistGray)
+                            )
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                    }
                 }
                 .padding(.top, 8)
                 
@@ -336,6 +432,40 @@ struct ProfileView: View {
                                 .fill(Color.mistGray)
                         )
                     }
+                    .padding(.horizontal, 20)
+                }
+                .padding(.top, 8)
+                
+                // App Version Section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("App Information")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color.midnightSlate)
+                        .padding(.horizontal, 20)
+                    
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color.softGraphite)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Version")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(Color.midnightSlate)
+                            
+                            Text("\(appVersion) (\(buildNumber))")
+                                .font(.system(size: 13))
+                                .foregroundColor(Color.softGraphite)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.mistGray)
+                    )
                     .padding(.horizontal, 20)
                 }
                 .padding(.top, 8)
@@ -424,8 +554,25 @@ struct ProfileView: View {
                     .environmentObject(plaid)
             }
         }
+        .sheet(isPresented: $showUnitAccountSetup) {
+            if hasUnitAccount {
+                // Show account details view when account exists
+                UnitAccountDetailsView(onDismiss: {
+                    showUnitAccountSetup = false
+                })
+                .environmentObject(authService)
+            } else {
+                // Show creation banner when no account exists
+                UnitAccountCreationBanner(onDismiss: {
+                    showUnitAccountSetup = false
+                })
+                .environmentObject(authService)
+            }
+        }
         .task {
             loadAvatar()
+            // Verify Unit account status
+            await verifyUnitAccount()
         }
     }
     
@@ -438,6 +585,41 @@ struct ProfileView: View {
             print("✅ [ProfileView] Avatar loaded from UserDefaults")
         } else {
             avatarImage = nil
+        }
+    }
+    
+    private func verifyUnitAccount() async {
+        // First check UserDefaults (fast)
+        hasUnitAccount = UserDefaults.standard.bool(forKey: "unit_account_created")
+        
+        // If we have an account ID stored, verify it with Unit API
+        if let accountId = UserDefaults.standard.string(forKey: "unit_account_id"),
+           !accountId.isEmpty {
+            isVerifyingUnitAccount = true
+            let exists = await UnitService.shared.verifyAccountExists()
+            await MainActor.run {
+                hasUnitAccount = exists
+                isVerifyingUnitAccount = false
+            }
+        } else {
+            // No account ID in UserDefaults - try to find existing account via API
+            guard let email = authService.currentUser?.email,
+                  let userId = authService.getUserId() else {
+                return
+            }
+            
+            isVerifyingUnitAccount = true
+            if let account = await UnitService.shared.findExistingAccount(email: email, userId: userId) {
+                await MainActor.run {
+                    hasUnitAccount = true
+                    isVerifyingUnitAccount = false
+                }
+            } else {
+                await MainActor.run {
+                    hasUnitAccount = false
+                    isVerifyingUnitAccount = false
+                }
+            }
         }
     }
     

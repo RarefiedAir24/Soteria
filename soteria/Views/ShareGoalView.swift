@@ -15,17 +15,39 @@ struct ShareGoalView: View {
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     @EnvironmentObject var authService: AuthService
     
-    @State private var phoneNumber: String = ""
+    @State private var phoneNumbers: [String] = [""]  // Array to support up to 5 phone numbers
     @State private var customMessage: String = ""
     @State private var showMessageComposer = false
     @State private var isCreatingSharedGoal = false
     @State private var errorMessage: String? = nil
     @State private var showMembers = false
+    @State private var createdInvitations: [GoalInvitation] = []  // Store created invitations for deep links
+    
+    private let maxTotalUsers = 5  // Maximum total users per shared goal (including owner)
     
     // This view should only be shown to premium users (gated in GoalDetailView)
     // But add a check here as well for safety
     private var isPremium: Bool {
         subscriptionService.isPremium
+    }
+    
+    // Calculate current member count (including owner)
+    private var currentMemberCount: Int {
+        if let members = sharedGoalService.sharedGoals[goal.id] {
+            return members.count
+        }
+        // If goal is not yet shared, owner is the only member
+        return 1
+    }
+    
+    // Calculate available spots for new invitations
+    private var availableSpots: Int {
+        max(0, maxTotalUsers - currentMemberCount)
+    }
+    
+    // Check if goal is at capacity
+    private var isAtCapacity: Bool {
+        currentMemberCount >= maxTotalUsers
     }
     
     var body: some View {
@@ -43,6 +65,11 @@ struct ShareGoalView: View {
                             shareSection
                         } else {
                             sharedGoalSection
+                            // Show invitation section if there are available spots
+                            if !isAtCapacity {
+                                shareSection
+                                    .padding(.top, 0)
+                            }
                         }
                         
                         // Members Section (if shared)
@@ -66,7 +93,7 @@ struct ShareGoalView: View {
             .sheet(isPresented: $showMessageComposer) {
                 if MFMessageComposeViewController.canSendText() {
                     MessageComposeView(
-                        recipients: [phoneNumber],
+                        recipients: validPhoneNumbers,
                         body: generateMessageBody()
                     )
                 }
@@ -102,7 +129,7 @@ struct ShareGoalView: View {
                     
                     Text("Progress: \(Int(goal.progress * 100))%")
                         .font(.system(size: 14))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 }
                 
                 Spacer()
@@ -128,18 +155,82 @@ struct ShareGoalView: View {
                 .foregroundColor(.softGraphite)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
+            if isAtCapacity {
+                HStack {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.softGraphite)
+                    Text("This goal has reached the maximum of \(maxTotalUsers) members.")
+                        .font(.system(size: 14))
+                        .foregroundColor(.softGraphite)
+                }
+                .padding(12)
+                .background(Color.softGraphite.opacity(0.1))
+                .cornerRadius(10)
+            } else {
+                HStack {
+                    Text("\(availableSpots) spot\(availableSpots == 1 ? "" : "s") available")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.softGraphite)
+                    Spacer()
+                    Text("\(currentMemberCount)/\(maxTotalUsers) members")
+                        .font(.system(size: 12))
+                        .foregroundColor(.softGraphite)
+                }
+            }
+            
             VStack(alignment: .leading, spacing: 12) {
-                Text("Phone Number")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.softGraphite)
+                HStack {
+                    Text("Phone Numbers")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.softGraphite)
+                    Spacer()
+                    if !isAtCapacity && phoneNumbers.count < availableSpots {
+                        Button(action: {
+                            if phoneNumbers.count < availableSpots {
+                                phoneNumbers.append("")
+                            }
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.softGraphite)
+                        }
+                    }
+                }
                 
-                TextField("(555) 123-4567", text: $phoneNumber)
-                    .font(.system(size: 16))
-                    .foregroundColor(.midnightSlate)
-                    .keyboardType(.phonePad)
-                    .padding(14)
-                    .background(Color.dreamMist)
-                    .cornerRadius(12)
+                ForEach(phoneNumbers.indices, id: \.self) { index in
+                    HStack(spacing: 8) {
+                        TextField("(555) 123-4567", text: Binding(
+                            get: { phoneNumbers[index] },
+                            set: { phoneNumbers[index] = $0 }
+                        ))
+                        .font(.system(size: 16))
+                        .foregroundColor(.midnightSlate)
+                        .keyboardType(.phonePad)
+                        .padding(14)
+                        .background(Color.dreamMist)
+                        .cornerRadius(12)
+                        
+                        if phoneNumbers.count > 1 {
+                            Button(action: {
+                                phoneNumbers.remove(at: index)
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.softGraphite)
+                            }
+                        }
+                    }
+                }
+                
+                if !isAtCapacity && phoneNumbers.count < availableSpots {
+                    Text("Add up to \(availableSpots) phone number\(availableSpots == 1 ? "" : "s")")
+                        .font(.system(size: 12))
+                        .foregroundColor(.softGraphite)
+                } else if isAtCapacity {
+                    Text("Maximum capacity reached")
+                        .font(.system(size: 12))
+                        .foregroundColor(.softGraphite)
+                }
             }
             
             VStack(alignment: .leading, spacing: 12) {
@@ -172,10 +263,10 @@ struct ShareGoalView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(isValidPhoneNumber ? Color.reverBlue : Color.gray)
+                .background(canSendInvitations ? Color.softGraphite : Color.gray)
                 .cornerRadius(12)
             }
-            .disabled(!isValidPhoneNumber || isCreatingSharedGoal)
+            .disabled(!canSendInvitations || isCreatingSharedGoal)
         }
         .padding(20)
         .background(Color.cloudWhite)
@@ -189,16 +280,22 @@ struct ShareGoalView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "person.2.fill")
-                    .foregroundColor(.reverBlue)
+                    .foregroundColor(.softGraphite)
                 Text("Shared Goal")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.midnightSlate)
                 Spacer()
             }
             
-            Text("This goal is shared with others. You can invite more people or manage members.")
-                .font(.system(size: 14))
-                .foregroundColor(.softGraphite)
+            if isAtCapacity {
+                Text("This goal is shared with others. Maximum capacity reached (\(currentMemberCount)/\(maxTotalUsers) members).")
+                    .font(.system(size: 14))
+                    .foregroundColor(.softGraphite)
+            } else {
+                Text("This goal is shared with others. You can invite \(availableSpots) more member\(availableSpots == 1 ? "" : "s") (\(currentMemberCount)/\(maxTotalUsers) members).")
+                    .font(.system(size: 14))
+                    .foregroundColor(.softGraphite)
+            }
             
             Button(action: {
                 showMembers = true
@@ -208,10 +305,10 @@ struct ShareGoalView: View {
                     Text("View Members")
                 }
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.reverBlue)
+                .foregroundColor(.softGraphite)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color.reverBlue.opacity(0.1))
+                .background(Color.softGraphite.opacity(0.1))
                 .cornerRadius(10)
             }
         }
@@ -244,12 +341,12 @@ struct ShareGoalView: View {
         HStack {
             // Avatar
             Circle()
-                .fill(Color.reverBlue.opacity(0.2))
+                .fill(Color.softGraphite.opacity(0.2))
                 .frame(width: 40, height: 40)
                 .overlay(
                     Text(String((member.displayName ?? member.email ?? "U").prefix(1)).uppercased())
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 )
             
             VStack(alignment: .leading, spacing: 4) {
@@ -260,7 +357,7 @@ struct ShareGoalView: View {
                 if member.role == .owner {
                     Text("Owner")
                         .font(.system(size: 12))
-                        .foregroundColor(.reverBlue)
+                        .foregroundColor(.softGraphite)
                 } else {
                     Text("Contributed: \(formatCurrency(member.contributionAmount))")
                         .font(.system(size: 12))
@@ -277,9 +374,30 @@ struct ShareGoalView: View {
     
     // MARK: - Helper Methods
     
-    private var isValidPhoneNumber: Bool {
+    private var hasValidPhoneNumbers: Bool {
+        // Check if at least one phone number is valid
+        return validPhoneNumbers.count > 0
+    }
+    
+    private var canSendInvitations: Bool {
+        // Check if we can send invitations (not at capacity and have valid phone numbers)
+        guard !isAtCapacity else { return false }
+        guard hasValidPhoneNumbers else { return false }
+        // Check that we're not trying to invite more than available spots
+        return validPhoneNumbers.count <= availableSpots
+    }
+    
+    private var validPhoneNumbers: [String] {
+        // Return array of valid phone numbers (cleaned)
+        return phoneNumbers.compactMap { phone in
+            let cleaned = phone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            return cleaned.count >= 10 ? cleaned : nil
+        }
+    }
+    
+    private func isValidPhoneNumber(_ phone: String) -> Bool {
         // Basic phone number validation
-        let cleaned = phoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        let cleaned = phone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
         return cleaned.count >= 10
     }
     
@@ -299,14 +417,27 @@ struct ShareGoalView: View {
     
     private func generateMessageBody() -> String {
         let baseMessage = "Hey! I'm saving for \(goal.name) ($\(String(format: "%.2f", goal.targetAmount))). Want to join me? "
-        let deepLink = "soteria://goal/\(goal.id)/invite/\(sharedGoalService.pendingInvitations.last?.id ?? "")"
+        // Use the first invitation's deep link, or a goal-specific link if no invitations yet
+        let deepLink = createdInvitations.first?.deepLink ?? "soteria://goal/\(goal.id)/invite"
         let customMsg = customMessage.isEmpty ? "" : "\n\n\(customMessage)\n\n"
         let instructions = "\n\nTo join, you'll need to:\n1. Create your own Soteria account\n2. Connect your bank account\n3. Start contributing!\n\n"
         return "\(baseMessage)\(customMsg)\(instructions)Join here: \(deepLink)"
     }
     
     private func shareGoal() {
-        guard isValidPhoneNumber else { return }
+        guard hasValidPhoneNumbers else { return }
+        
+        // Check if goal is at capacity
+        guard !isAtCapacity else {
+            errorMessage = "This goal has reached the maximum of \(maxTotalUsers) members."
+            return
+        }
+        
+        // Check if trying to invite more than available spots
+        guard validPhoneNumbers.count <= availableSpots else {
+            errorMessage = "You can only invite \(availableSpots) more member\(availableSpots == 1 ? "" : "s"). This goal already has \(currentMemberCount) member\(currentMemberCount == 1 ? "" : "s")."
+            return
+        }
         
         // Check if goal can be shared (not completed or cancelled)
         guard canShareGoal() else {
@@ -324,15 +455,20 @@ struct ShareGoalView: View {
                     _ = try await sharedGoalService.createSharedGoal(from: goal.id)
                 }
                 
-                // Send invitation
-                _ = try await sharedGoalService.sendInvitation(
-                    goalId: goal.id,
-                    phoneNumber: phoneNumber,
-                    message: customMessage.isEmpty ? nil : customMessage
-                )
+                // Send invitations for all valid phone numbers
+                var invitations: [GoalInvitation] = []
+                for phoneNumber in validPhoneNumbers {
+                    let invitation = try await sharedGoalService.sendInvitation(
+                        goalId: goal.id,
+                        phoneNumber: phoneNumber,
+                        message: customMessage.isEmpty ? nil : customMessage
+                    )
+                    invitations.append(invitation)
+                }
                 
-                // Show SMS composer
+                // Show SMS composer with all recipients
                 await MainActor.run {
+                    createdInvitations = invitations
                     isCreatingSharedGoal = false
                     showMessageComposer = true
                 }

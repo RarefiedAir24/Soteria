@@ -111,7 +111,7 @@ struct GoalInvitationView: View {
         VStack(spacing: 16) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 48))
-                .foregroundColor(.reverBlue)
+                .foregroundColor(.softGraphite)
             
             Text("You've been invited!")
                 .font(.system(size: 24, weight: .bold))
@@ -210,7 +210,7 @@ struct GoalInvitationView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.reverBlue)
+                .background(Color.softGraphite)
                 .cornerRadius(12)
             }
         }
@@ -237,7 +237,7 @@ struct GoalInvitationView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                         Text("You'll use your own bank account to make deposits")
                             .font(.system(size: 13))
                             .foregroundColor(.softGraphite)
@@ -245,7 +245,7 @@ struct GoalInvitationView: View {
                     
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                         Text("Your contributions are tracked separately from other members")
                             .font(.system(size: 13))
                             .foregroundColor(.softGraphite)
@@ -253,7 +253,7 @@ struct GoalInvitationView: View {
                     
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
-                            .foregroundColor(.reverBlue)
+                            .foregroundColor(.softGraphite)
                         Text("You can see everyone's progress toward the shared goal")
                             .font(.system(size: 13))
                             .foregroundColor(.softGraphite)
@@ -278,7 +278,7 @@ struct GoalInvitationView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(isAccepting ? Color.gray : Color.reverBlue)
+                .background(isAccepting ? Color.gray : Color.softGraphite)
                 .cornerRadius(12)
             }
             .disabled(isAccepting)

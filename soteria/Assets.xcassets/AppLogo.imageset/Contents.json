@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Asset 1.png",
+      "filename" : "soteria-icon.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Asset 2.png",
+      "filename" : "soteria-icon 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Asset 3.png",
+      "filename" : "soteria-icon 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

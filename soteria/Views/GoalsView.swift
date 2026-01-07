@@ -814,6 +814,10 @@ struct CreateGoalView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         goalDetailsSection
+                        // Show timeframe selection if price was extracted from URL
+                        if productInfo != nil && productInfo?.price != nil {
+                            timeframeSelectionSection
+                        }
                         dateRangeSection
                         if showTargetDatePicker && targetDate != nil {
                             savingsPlanSection
@@ -949,6 +953,7 @@ struct CreateGoalView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             goalNameField
+            productLinkField
             targetAmountField
             categoryPicker
             descriptionField
@@ -1025,6 +1030,190 @@ struct CreateGoalView: View {
                 .padding(14)
                 .background(Color.dreamMist)
                 .cornerRadius(12)
+        }
+    }
+    
+    // MARK: - Product Link Field
+    
+    private var productLinkField: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Product Link (Optional)")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.softGraphite)
+            
+            HStack(spacing: 12) {
+                TextField("Paste product URL here", text: $productLink)
+                    .font(.system(size: 16))
+                    .foregroundColor(.midnightSlate)
+                    .autocapitalization(.none)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .padding(14)
+                    .background(Color.dreamMist)
+                    .cornerRadius(12)
+                    .disabled(isFetchingProductInfo)
+                
+                if !productLink.isEmpty {
+                    Button(action: {
+                        fetchProductInfo()
+                    }) {
+                        if isFetchingProductInfo {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.softGraphite)
+                        }
+                    }
+                    .disabled(isFetchingProductInfo)
+                }
+            }
+            
+            if let info = productInfo {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let name = info.name {
+                        Text(name)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.midnightSlate)
+                    }
+                    
+                    if let price = info.price {
+                        HStack {
+                            Text("Price: \(formatCurrency(price))")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.softGraphite)
+                            Spacer()
+                            Button(action: {
+                                targetAmount = String(format: "%.2f", price)
+                                // Keep productInfo so timeframe selection section remains visible
+                                // Only clear the link field since price is now applied
+                                productLink = ""
+                            }) {
+                                Text("Use This Price")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.softGraphite)
+                                    .cornerRadius(8)
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color.dreamMist.opacity(0.5))
+                .cornerRadius(10)
+            }
+            
+            if let error = productFetchError {
+                Text(error)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .padding(.top, 4)
+            }
+        }
+    }
+    
+    // MARK: - Timeframe Selection Section
+    
+    private var timeframeSelectionSection: some View {
+        VStack(spacing: 16) {
+            Text("How soon do you need it?")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.midnightSlate)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    timeframeButton(days: 30, label: "30 Days")
+                    timeframeButton(days: 60, label: "60 Days")
+                    timeframeButton(days: 90, label: "90 Days")
+                }
+                
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 14))
+                        Text("For a custom date, use the Date Range selector below")
+                            .font(.system(size: 13, weight: .regular))
+                    }
+                    .foregroundColor(.softGraphite)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .background(Color.dreamMist.opacity(0.6))
+                    .cornerRadius(12)
+                }
+            }
+            
+            if let timeframe = selectedTimeframe, let price = productInfo?.price {
+                let dailyAmount = price / Double(timeframe)
+                VStack(alignment: .leading, spacing: 8) {
+                    Divider()
+                    HStack {
+                        Text("Daily Savings Needed:")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.softGraphite)
+                        Spacer()
+                        Text(formatCurrency(dailyAmount))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.midnightSlate)
+                    }
+                }
+                .padding(.top, 8)
+            }
+        }
+        .padding(20)
+        .background(Color.cloudWhite)
+        .cornerRadius(18)
+        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 4)
+    }
+    
+    private func timeframeButton(days: Int, label: String) -> some View {
+        Button(action: {
+            selectedTimeframe = days
+            let calendar = Calendar.current
+            let startDate = self.startDate ?? Date()
+            targetDate = calendar.date(byAdding: .day, value: days, to: startDate)
+            showTargetDatePicker = true
+        }) {
+            Text(label)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(selectedTimeframe == days ? .white : .softGraphite)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(selectedTimeframe == days ? Color.softGraphite : Color.dreamMist)
+                .cornerRadius(12)
+        }
+    }
+    
+    // MARK: - Product Info Fetching
+    
+    private func fetchProductInfo() {
+        guard !productLink.isEmpty else { return }
+        
+        isFetchingProductInfo = true
+        productFetchError = nil
+        productInfo = nil
+        
+        Task {
+            do {
+                let info = try await ProductLinkService.shared.extractProductInfo(from: productLink)
+                await MainActor.run {
+                    productInfo = info
+                    isFetchingProductInfo = false
+                    
+                    if goalName.isEmpty, let productName = info.name {
+                        goalName = productName
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    productFetchError = error.localizedDescription
+                    isFetchingProductInfo = false
+                }
+            }
         }
     }
     
@@ -1157,10 +1346,18 @@ struct CreateGoalView: View {
                     // Custom amount input
                     customAmountInput
                     
-                    // Show extension calculation if custom amount is less than required
+                    // Show calculation if custom amount differs from recommended
                     if let customAmount = Double(customSavingsAmount), customAmount > 0 {
-                        if let extensionInfo = calculateExtensionDays(customAmount: customAmount, requiredPerDay: requiredSavings.perDay) {
-                            extensionWarningCard(extensionDays: extensionInfo.days, newDueDate: extensionInfo.newDate)
+                        if customAmount < requiredSavings.perDay {
+                            // Less than recommended - show extension
+                            if let extensionInfo = calculateExtensionDays(customAmount: customAmount, requiredPerDay: requiredSavings.perDay) {
+                                extensionWarningCard(extensionDays: extensionInfo.days, newDueDate: extensionInfo.newDate)
+                            }
+                        } else if customAmount > requiredSavings.perDay {
+                            // More than recommended - show acceleration
+                            if let accelerationInfo = calculateAccelerationDays(customAmount: customAmount, requiredPerDay: requiredSavings.perDay) {
+                                accelerationCard(daysSaved: accelerationInfo.days, newDate: accelerationInfo.newDate)
+                            }
                         }
                     }
                 }
@@ -1174,7 +1371,7 @@ struct CreateGoalView: View {
     
     private func savingsRequirementCard(requiredSavings: (perDay: Double, perWeek: Double)) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Required Savings")
+            Text("Recommended Savings")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.softGraphite)
             
@@ -1285,6 +1482,61 @@ struct CreateGoalView: View {
         return formatter.string(from: date)
     }
     
+    private func accelerationCard(daysSaved: Double, newDate: Date) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.green)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Goal Acceleration")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.midnightSlate)
+                    Text("Saving more than recommended! You could complete your goal \(Int(ceil(daysSaved))) day\(Int(ceil(daysSaved)) == 1 ? "" : "s") earlier.")
+                        .font(.system(size: 13))
+                        .foregroundColor(.softGraphite)
+                }
+            }
+            
+            Divider()
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Expected Completion Date")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.softGraphite)
+                Text(formatDateForExtension(newDate))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.midnightSlate)
+            }
+            
+            Button(action: {
+                targetDate = newDate
+                showTargetDatePicker = true
+            }) {
+                HStack {
+                    Image(systemName: "calendar.badge.checkmark")
+                        .font(.system(size: 14))
+                    Text("Set as Target Date")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.green)
+                .cornerRadius(8)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.green.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
     // Calculate required savings per day and per week
     private func calculateRequiredSavings() -> (perDay: Double, perWeek: Double)? {
         guard let targetDate = targetDate,
@@ -1348,6 +1600,36 @@ struct CreateGoalView: View {
         }
         
         return (days: extensionDays, newDate: newDate)
+    }
+    
+    // Calculate how many days would be saved and the new completion date when saving more than recommended
+    private func calculateAccelerationDays(customAmount: Double, requiredPerDay: Double) -> (days: Double, newDate: Date)? {
+        guard customAmount > requiredPerDay, requiredPerDay > 0 else { return nil }
+        
+        guard let targetAmount = Double(targetAmount),
+              targetAmount > 0,
+              let targetDate = targetDate else { return nil }
+        
+        let calendar = Calendar.current
+        let startDate = self.startDate ?? Date()
+        guard let originalDays = calendar.dateComponents([.day], from: startDate, to: targetDate).day,
+              originalDays > 0 else { return nil }
+        
+        // With custom amount per day, how many days would it take?
+        let daysWithCustomAmount = targetAmount / customAmount
+        
+        // Days saved = difference (negative means we finish earlier)
+        let daysSaved = max(Double(originalDays) - daysWithCustomAmount, 0)
+        
+        // Calculate new completion date (earlier than target)
+        guard let newDate = calendar.date(byAdding: .day, value: -Int(ceil(daysSaved)), to: targetDate) else {
+            return nil
+        }
+        
+        // Make sure new date is not before start date
+        guard newDate >= startDate else { return nil }
+        
+        return (days: daysSaved, newDate: newDate)
     }
     
     private func formatCurrency(_ amount: Double) -> String {
@@ -2042,10 +2324,18 @@ struct EditGoalView: View {
                     // Custom amount input
                     customAmountInput
                     
-                    // Show extension calculation if custom amount is less than required
+                    // Show calculation if custom amount differs from recommended
                     if let customAmount = Double(customSavingsAmount), customAmount > 0 {
-                        if let extensionInfo = calculateExtensionDays(customAmount: customAmount, requiredPerDay: requiredSavings.perDay) {
-                            extensionWarningCard(extensionDays: extensionInfo.days, newDueDate: extensionInfo.newDate)
+                        if customAmount < requiredSavings.perDay {
+                            // Less than recommended - show extension
+                            if let extensionInfo = calculateExtensionDays(customAmount: customAmount, requiredPerDay: requiredSavings.perDay) {
+                                extensionWarningCard(extensionDays: extensionInfo.days, newDueDate: extensionInfo.newDate)
+                            }
+                        } else if customAmount > requiredSavings.perDay {
+                            // More than recommended - show acceleration
+                            if let accelerationInfo = calculateAccelerationDays(customAmount: customAmount, requiredPerDay: requiredSavings.perDay) {
+                                accelerationCard(daysSaved: accelerationInfo.days, newDate: accelerationInfo.newDate)
+                            }
                         }
                     }
                 }
@@ -2059,7 +2349,7 @@ struct EditGoalView: View {
     
     private func savingsRequirementCard(requiredSavings: (perDay: Double, perWeek: Double)) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Required Savings")
+            Text("Recommended Savings")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.softGraphite)
             
@@ -2239,6 +2529,94 @@ struct EditGoalView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter.string(from: date)
+    }
+    
+    // Calculate how many days would be saved and the new completion date when saving more than recommended
+    private func calculateAccelerationDays(customAmount: Double, requiredPerDay: Double) -> (days: Double, newDate: Date)? {
+        guard customAmount > requiredPerDay, requiredPerDay > 0 else { return nil }
+        
+        guard let targetAmount = Double(targetAmount),
+              targetAmount > 0,
+              let targetDate = targetDate else { return nil }
+        
+        let calendar = Calendar.current
+        let startDate = self.startDate ?? Date()
+        guard let originalDays = calendar.dateComponents([.day], from: startDate, to: targetDate).day,
+              originalDays > 0 else { return nil }
+        
+        // For editing, account for current amount saved
+        let remainingAmount = max(targetAmount - goal.currentAmount, 0)
+        
+        // With custom amount per day, how many days would it take?
+        let daysWithCustomAmount = remainingAmount / customAmount
+        
+        // Days saved = difference (negative means we finish earlier)
+        let daysSaved = max(Double(originalDays) - daysWithCustomAmount, 0)
+        
+        // Calculate new completion date (earlier than target)
+        guard let newDate = calendar.date(byAdding: .day, value: -Int(ceil(daysSaved)), to: targetDate) else {
+            return nil
+        }
+        
+        // Make sure new date is not before start date
+        guard newDate >= startDate else { return nil }
+        
+        return (days: daysSaved, newDate: newDate)
+    }
+    
+    private func accelerationCard(daysSaved: Double, newDate: Date) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.green)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Goal Acceleration")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.midnightSlate)
+                    Text("Saving more than recommended! You could complete your goal \(Int(ceil(daysSaved))) day\(Int(ceil(daysSaved)) == 1 ? "" : "s") earlier.")
+                        .font(.system(size: 13))
+                        .foregroundColor(.softGraphite)
+                }
+            }
+            
+            Divider()
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Expected Completion Date")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.softGraphite)
+                Text(formatDateForExtension(newDate))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.midnightSlate)
+            }
+            
+            Button(action: {
+                targetDate = newDate
+                showTargetDatePicker = true
+            }) {
+                HStack {
+                    Image(systemName: "calendar.badge.checkmark")
+                        .font(.system(size: 14))
+                    Text("Set as Target Date")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.green)
+                .cornerRadius(8)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.green.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+        )
     }
     
     private func formatCurrency(_ amount: Double) -> String {
@@ -2784,9 +3162,9 @@ extension GoalsView {
         if isRoseGold {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.88, green: 0.65, blue: 0.55),
-                    Color(red: 0.82, green: 0.58, blue: 0.48),
-                    Color(red: 0.78, green: 0.52, blue: 0.42)
+                    Color(red: 0.95, green: 0.75, blue: 0.65),  // Light rose gold - matches card
+                    Color(red: 0.90, green: 0.65, blue: 0.55), // Medium rose gold - matches card
+                    Color(red: 0.85, green: 0.55, blue: 0.45)  // Deeper rose gold - matches card (darkest)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

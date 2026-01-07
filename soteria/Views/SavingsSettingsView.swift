@@ -124,7 +124,7 @@ struct SavingsSettingsView: View {
                                     .foregroundColor(Color.reverBlue)
                             }
                             
-                            Text("Create a savings account to enable automatic transfers")
+                            Text("Create a savings account to enable transfers")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -178,7 +178,7 @@ struct SavingsSettingsView: View {
                 plaidService.disconnectAccounts()
             }
         } message: {
-            Text("This will disconnect all accounts and disable automatic transfers. Your money will remain in your bank accounts.")
+            Text("This will disconnect all accounts and disable transfers. Your money will remain in your bank accounts.")
         }
         .task {
             // Refresh balances when view appears
@@ -189,7 +189,7 @@ struct SavingsSettingsView: View {
     private var modeDescription: String {
         switch plaidService.savingsMode {
         case .automatic:
-            return "Automatic transfers enabled"
+            return "Transfers available (user-initiated)"
         case .virtual:
             return "Virtual savings mode (no savings account)"
         case .manual:

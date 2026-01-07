@@ -22,6 +22,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
+const { validateUserAccess, getCorsHeaders } = require('./auth-utils');
 
 // DynamoDB table names
 const TABLES = {
@@ -36,8 +37,26 @@ const PASS_TYPE_ID = process.env.PASS_TYPE_ID || 'pass.com.soteria.member';
 
 // Certificate paths (stored in S3 or Lambda layer)
 const CERT_PATH = process.env.CERT_PATH || '/tmp/cert.p12';
-const CERT_PASSWORD = process.env.CERT_PASSWORD || '';
+const CERT_PASSWORD_SECRET_NAME = process.env.CERT_PASSWORD_SECRET_NAME || 'soteria/apple-wallet/cert-password';
+const CERT_PASSWORD_ENV = process.env.CERT_PASSWORD || '';
 const WWDR_CERT_PATH = process.env.WWDR_CERT_PATH || '/tmp/wwdr.pem';
+
+// Get certificate password from Secrets Manager or environment variable
+let CERT_PASSWORD = '';
+async function getCertPassword() {
+    if (CERT_PASSWORD_ENV) {
+        return CERT_PASSWORD_ENV;
+    }
+    
+    try {
+        const secretsManager = new AWS.SecretsManager();
+        const secret = await secretsManager.getSecretValue({ SecretId: CERT_PASSWORD_SECRET_NAME }).promise();
+        return secret.SecretString;
+    } catch (error) {
+        console.warn('⚠️ [Lambda] Could not retrieve password from Secrets Manager, using empty password:', error.message);
+        return '';
+    }
+}
 
 /**
  * Get user data
@@ -194,7 +213,8 @@ async function createPassFile(passJSON, assets) {
         
         // Sign manifest
         const signaturePath = path.join(tempDir, 'signature');
-        execSync(`openssl smime -binary -sign -certfile ${WWDR_CERT_PATH} -signer ${CERT_PATH} -inkey ${CERT_PATH} -in ${path.join(tempDir, 'manifest.json')} -out ${signaturePath} -outform DER -passin pass:${CERT_PASSWORD}`, {
+        const certPassword = await getCertPassword();
+        execSync(`openssl smime -binary -sign -certfile ${WWDR_CERT_PATH} -signer ${CERT_PATH} -inkey ${CERT_PATH} -in ${path.join(tempDir, 'manifest.json')} -out ${signaturePath} -outform DER -passin pass:${certPassword}`, {
             stdio: 'inherit'
         });
         
@@ -229,12 +249,8 @@ exports.handler = async (event) => {
     console.log('📥 [Lambda] Event:', JSON.stringify(event, null, 2));
     
     // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Content-Type': 'application/vnd.apple.pkpass'
-    };
+    const headers = getCorsHeaders(event);
+    headers['Content-Type'] = 'application/vnd.apple.pkpass';
     
     // Handle OPTIONS request (CORS preflight)
     if (event.httpMethod === 'OPTIONS') {
@@ -246,11 +262,26 @@ exports.handler = async (event) => {
     }
     
     try {
+        // Validate authentication
+        const authResult = await validateUserAccess(event);
+        if (!authResult.valid) {
+            return {
+                statusCode: 401,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    success: false,
+                    error: authResult.error || 'Unauthorized'
+                })
+            };
+        }
+        
+        const authenticatedUserId = authResult.userId;
+        
         const queryParams = event.queryStringParameters || {};
-        const userId = queryParams.user_id;
+        const requestedUserId = queryParams.user_id;
         const cardType = queryParams.card_type || 'gold';
         
-        if (!userId) {
+        if (!requestedUserId) {
             return {
                 statusCode: 400,
                 headers: { ...headers, 'Content-Type': 'application/json' },
@@ -261,15 +292,27 @@ exports.handler = async (event) => {
             };
         }
         
+        // Verify user can only request their own pass
+        if (requestedUserId !== authenticatedUserId) {
+            return {
+                statusCode: 403,
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Forbidden: You can only request your own pass'
+                })
+            };
+        }
+        
         // Get user data
-        const userData = await getUserData(userId);
+        const userData = await getUserData(authenticatedUserId);
         const memberSince = userData?.signup_date ? new Date(userData.signup_date) : new Date();
         
         // Download certificates
         await downloadCertificates();
         
         // Generate pass.json
-        const passJSON = generatePassJSON(userId, userData, cardType, memberSince);
+        const passJSON = generatePassJSON(authenticatedUserId, userData, cardType, memberSince);
         
         // Download pass assets from S3
         let assets = {};
@@ -292,7 +335,7 @@ exports.handler = async (event) => {
         // Create .pkpass file
         const passData = await createPassFile(passJSON, assets);
         
-        console.log(`✅ [Lambda] Pass generated for user: ${userId}`);
+        console.log(`✅ [Lambda] Pass generated for user: ${authenticatedUserId}`);
         
         return {
             statusCode: 200,
