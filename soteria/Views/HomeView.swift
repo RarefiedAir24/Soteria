@@ -18,7 +18,8 @@ private func getScreenHeight() -> CGFloat {
        let window = windowScene.windows.first {
         return window.bounds.height
     }
-    return UIScreen.main.bounds.height
+    // Fallback for when window scene is not available
+    return 800.0 // Safe default height
 }
 
 struct HomeView: View {
@@ -108,13 +109,6 @@ struct HomeView: View {
         let initStart = Date()
         StartupDiagnostics.shared.log("🔍 [HomeView] init() started")
         StartupDiagnostics.shared.logViewInit("HomeView", startTime: initStart)
-    }
-    
-    private var formattedTotalSaved: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: NSNumber(value: totalSaved)) ?? "$0.00"
     }
     
     private func formatGoalAmounts(current: Double, target: Double) -> String {
