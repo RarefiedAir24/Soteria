@@ -488,10 +488,11 @@ struct OnboardingFlowView: View {
         goalsService.createGoal(
             name: goalName,
             targetAmount: amount,
+            startDate: Date(), // Start today
+            targetDate: Calendar.current.date(byAdding: .year, value: 1, to: Date()),
             category: .other,
             photoPath: nil,
-            description: nil,
-            targetDate: Calendar.current.date(byAdding: .year, value: 1, to: Date())
+            description: nil
         )
         
         // Success feedback
