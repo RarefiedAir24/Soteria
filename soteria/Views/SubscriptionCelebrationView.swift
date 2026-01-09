@@ -7,6 +7,15 @@
 
 import SwiftUI
 
+// Helper function for safe screen bounds access
+private func getScreenWidth() -> CGFloat {
+    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+       let window = windowScene.windows.first {
+        return window.bounds.width
+    }
+    return UIScreen.main.bounds.width
+}
+
 struct SubscriptionCelebrationView: View {
     @Binding var isPresented: Bool
     let subscriptionType: String // "Monthly" or "Annual"
@@ -217,7 +226,7 @@ struct SubscriptionConfettiView: View {
     private func createConfetti() {
         let colors: [Color] = [.red, .blue, .green, .yellow, .orange, .purple, .pink]
         let shapes: [ConfettiShape] = [.circle, .square, .triangle]
-        let screenWidth = UIScreen.main.bounds.width
+        let screenWidth = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.width ?? UIScreen.main.bounds.width
         
         confettiPieces = (0..<60).map { _ in
             ConfettiPiece(

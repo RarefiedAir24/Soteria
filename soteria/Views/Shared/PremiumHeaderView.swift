@@ -38,13 +38,25 @@ struct PremiumHeaderView: View {
         if userEmail.lowercased() == "supergeek@me.com" {
             return false
         }
+        
+        // Check if user is in first 100 TestFlight signups (gets Meta Yellow Card)
+        let isFirst100TestFlight = UserDefaults.standard.bool(forKey: "is_first_100_testflight_user")
+        if isFirst100TestFlight {
+            return true // First 100 TestFlight users get Meta Yellow Card
+        }
+        
+        // Check if running in TestFlight (but NOT first 100 - they don't get Meta Yellow Card)
         #if DEBUG
-        return true
+        return false // Debug builds don't get Meta Yellow Card unless they're first 100
         #else
+        // Check for TestFlight receipt
         if let receiptURL = Bundle.main.appStoreReceiptURL,
            receiptURL.lastPathComponent == "sandboxReceipt" {
-            return true
+            // User is in TestFlight but NOT first 100, so they don't get Meta Yellow Card
+            return false
         }
+        
+        // Check UserDefaults flag (can be set manually for testing)
         return UserDefaults.standard.bool(forKey: "is_beta_tester")
         #endif
     }

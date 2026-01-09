@@ -72,10 +72,12 @@ struct MainTabView: View {
                         }
                     }()
                     
-                    SettingsView()
-                        .environmentObject(subscriptionService)
-                        .environmentObject(authService)
-                        .id("settingsView")
+                    NavigationStack {
+                        SettingsView()
+                            .environmentObject(subscriptionService)
+                            .environmentObject(authService)
+                            .id("settingsView")
+                    }
                 } else {
                     EmptyView()
                 }

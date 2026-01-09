@@ -139,8 +139,8 @@ class DepositScreenshotAPIService {
             throw NSError(domain: "DepositScreenshotAPIService", code: -5, userInfo: [NSLocalizedDescriptionKey: "Failed to parse image"])
         }
         
-        // Cache locally
-        localScreenshotService.saveScreenshot(image, for: depositId)
+        // Cache locally (ignore return value as we're just caching)
+        _ = localScreenshotService.saveScreenshot(image, for: depositId)
         localScreenshotService.saveScreenshotToUserDefaults(image, for: depositId)
         
         print("✅ [DepositScreenshotAPIService] Screenshot downloaded from S3: \(depositId)")

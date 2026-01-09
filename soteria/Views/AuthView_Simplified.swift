@@ -26,6 +26,10 @@ struct AuthView_Simplified: View {
     @State private var isBiometricAvailable = false
     @State private var biometricType = "Face ID"
     @State private var isSignUp = false // Toggle between sign-in and sign-up
+    @State private var showConfirmationCode = false // Show email confirmation screen
+    @State private var confirmationCode = "" // 6-digit confirmation code
+    @State private var pendingConfirmationEmail = "" // Email that needs confirmation
+    @State private var pendingConfirmationPassword = "" // Password for auto sign-in after confirmation
     
     var body: some View {
         ZStack {
@@ -33,8 +37,12 @@ struct AuthView_Simplified: View {
             Color.cloudWhite
                 .ignoresSafeArea()
             
-            ScrollView {
-                VStack(spacing: ResponsiveSize.spacing(large: 40, medium: 32, small: 24)) {
+            Group {
+                if showConfirmationCode {
+                    confirmationCodeView
+                } else {
+                    ScrollView {
+                        VStack(spacing: ResponsiveSize.spacing(large: 40, medium: 32, small: 24)) {
                     // Logo/Title - Premium styling
                     VStack(spacing: 8) {
                         Text("SOTERIA")
@@ -337,24 +345,39 @@ struct AuthView_Simplified: View {
                                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
                         )
                     }
-                    .disabled(isLoading || email.isEmpty || password.isEmpty || (isSignUp && password.count < 8))
+                    .disabled(isLoading || email.isEmpty || password.isEmpty || (isSignUp && !isPasswordValid()))
                     .padding(.horizontal, 32)
                     .padding(.top, 8)
                     
                     // Password requirements for sign-up
                     if isSignUp {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Password must be at least 8 characters")
-                                .font(.system(size: 12))
-                                .foregroundColor(.softGraphite)
+                            Text("Password Requirements:")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.midnightSlate)
+                                .padding(.bottom, 4)
+                            
+                            PasswordRequirementRow(met: password.count >= 8, text: "At least 8 characters")
+                            PasswordRequirementRow(met: password.rangeOfCharacter(from: .uppercaseLetters) != nil, text: "One uppercase letter")
+                            PasswordRequirementRow(met: password.rangeOfCharacter(from: .lowercaseLetters) != nil, text: "One lowercase letter")
+                            PasswordRequirementRow(met: password.rangeOfCharacter(from: .decimalDigits) != nil, text: "One number")
+                            PasswordRequirementRow(met: password.rangeOfCharacter(from: CharacterSet(charactersIn: "!@#$%^&*()_+-=[]{}|;:,.<>?")) != nil, text: "One special character")
                         }
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.dreamMist.opacity(0.5))
+                        )
                         .padding(.horizontal, 32)
                         .padding(.top, 8)
                     }
                 
                     Spacer(minLength: 40)
+                        }
+                        .padding(.vertical, 40)
+                    }
                 }
-                .padding(.vertical, 40)
             }
         }
         .sheet(isPresented: $showPasswordReset) {
@@ -380,15 +403,50 @@ struct AuthView_Simplified: View {
         }
     }
     
+    // MARK: - Password Validation
+    
+    private func isPasswordValid() -> Bool {
+        guard isSignUp else { return true }
+        return validatePassword(password).isValid
+    }
+    
+    private func validatePassword(_ password: String) -> (isValid: Bool, errorMessage: String?) {
+        if password.count < 8 {
+            return (false, "Password must be at least 8 characters")
+        }
+        
+        if password.rangeOfCharacter(from: .uppercaseLetters) == nil {
+            return (false, "Password must contain at least one uppercase letter")
+        }
+        
+        if password.rangeOfCharacter(from: .lowercaseLetters) == nil {
+            return (false, "Password must contain at least one lowercase letter")
+        }
+        
+        if password.rangeOfCharacter(from: .decimalDigits) == nil {
+            return (false, "Password must contain at least one number")
+        }
+        
+        let specialCharacters = CharacterSet(charactersIn: "!@#$%^&*()_+-=[]{}|;:,.<>?")
+        if password.rangeOfCharacter(from: specialCharacters) == nil {
+            return (false, "Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
+        }
+        
+        return (true, nil)
+    }
+    
     private func performAuth() async {
         isLoading = true
         errorMessage = nil
         
         // Validate password for sign-up
-        if isSignUp && password.count < 8 {
-            errorMessage = "Password must be at least 8 characters"
-            isLoading = false
-            return
+        if isSignUp {
+            let passwordValidation = validatePassword(password)
+            if !passwordValidation.isValid {
+                errorMessage = passwordValidation.errorMessage
+                isLoading = false
+                return
+            }
         }
         
         // CRITICAL: Only create AuthService when user actually tries to sign in/sign up
@@ -397,7 +455,7 @@ struct AuthView_Simplified: View {
         
         do {
             if isSignUp {
-                try await authService.signUp(email: email, password: password)
+                let isFirst100 = try await authService.signUp(email: email, password: password)
                 // After successful sign-up, automatically sign in
                 try await authService.signIn(email: email, password: password)
                 
@@ -407,6 +465,12 @@ struct AuthView_Simplified: View {
                 // Record sign-in timestamp
                 UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sign_in_timestamp")
                 UserDefaults.standard.set(false, forKey: "welcome_back_shown_for_session")
+                
+                // Show congratulations if user is in first 100 TestFlight signups
+                if isFirst100 {
+                    // Post notification to show Meta Yellow Card congratulations
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowMetaYellowCardCelebration"), object: nil)
+                }
             } else {
                 try await authService.signIn(email: email, password: password)
                 
@@ -421,7 +485,41 @@ struct AuthView_Simplified: View {
             // Post notification when sign-in/sign-up succeeds so RootView can update
             NotificationCenter.default.post(name: NSNotification.Name("UserDidSignIn"), object: nil)
         } catch {
-            errorMessage = error.localizedDescription
+            // Check if email confirmation is required
+            if let nsError = error as NSError?,
+               nsError.userInfo["requiresConfirmation"] as? Bool == true {
+                // Show confirmation code screen
+                pendingConfirmationEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                pendingConfirmationPassword = password // Store password for auto sign-in after confirmation
+                withAnimation {
+                    showConfirmationCode = true
+                    errorMessage = nil // Clear error message when showing confirmation screen
+                }
+                isLoading = false
+                return
+            } else {
+                // Check for other specific error messages
+                let errorDesc = error.localizedDescription.lowercased()
+                if errorDesc.contains("confirm your email") || errorDesc.contains("usernotconfirmed") {
+                    // User trying to sign in without confirming
+                    pendingConfirmationEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    pendingConfirmationPassword = password // Store password for auto sign-in after confirmation
+                    withAnimation {
+                        showConfirmationCode = true
+                        errorMessage = "Please confirm your email address first"
+                    }
+                    isLoading = false
+                    return
+                } else {
+                    // Check for password requirement errors
+                    let errorDesc = error.localizedDescription.lowercased()
+                    if errorDesc.contains("password does not meet requirements") || errorDesc.contains("invalidpassword") {
+                        errorMessage = "Password must meet all requirements: at least 8 characters, one uppercase letter, one lowercase letter, one number, and one special character"
+                    } else {
+                        errorMessage = error.localizedDescription
+                    }
+                }
+            }
         }
         
         isLoading = false
@@ -490,6 +588,192 @@ struct AuthView_Simplified: View {
                 isAuthenticatingWithBiometric = false
             }
         }
+    }
+    
+    // MARK: - Email Confirmation View
+    private var confirmationCodeView: some View {
+        ScrollView {
+            VStack(spacing: ResponsiveSize.spacing(large: 32, medium: 28, small: 24)) {
+                Spacer()
+                    .frame(height: ResponsiveSize.padding(large: 60, medium: 50, small: 40))
+                
+                // Icon
+                Image(systemName: "envelope.badge.fill")
+                    .font(.system(size: ResponsiveSize.font(large: 64, medium: 56, small: 48)))
+                    .foregroundColor(.softGraphite)
+                
+                // Title
+                Text("Confirm Your Email")
+                    .font(.system(size: ResponsiveSize.font(large: 28, medium: 26, small: 24), weight: .bold))
+                    .foregroundColor(.midnightSlate)
+                    .padding(.top, ResponsiveSize.padding(large: 16, medium: 12, small: 8))
+                
+                // Description
+                VStack(spacing: 8) {
+                    Text("We sent a verification code to")
+                        .font(.system(size: ResponsiveSize.font(large: 16, medium: 15, small: 14)))
+                        .foregroundColor(.softGraphite)
+                    
+                    Text(pendingConfirmationEmail)
+                        .font(.system(size: ResponsiveSize.font(large: 16, medium: 15, small: 14), weight: .semibold))
+                        .foregroundColor(.midnightSlate)
+                }
+                .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
+                .padding(.bottom, ResponsiveSize.padding(large: 24, medium: 20, small: 16))
+                
+                // Confirmation Code Field
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("VERIFICATION CODE")
+                        .font(.system(size: ResponsiveSize.font(large: 11, medium: 10, small: 9), weight: .semibold, design: .default))
+                        .foregroundColor(.softGraphite)
+                        .tracking(1.5)
+                        .textCase(.uppercase)
+                    
+                    TextField("Enter 6-digit code", text: $confirmationCode)
+                        .font(.system(size: ResponsiveSize.font(large: 24, medium: 22, small: 20), weight: .bold, design: .monospaced))
+                        .foregroundColor(.midnightSlate)
+                        .keyboardType(.numberPad)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.cloudWhite)
+                                .shadow(color: Color.softGraphite.opacity(0.1), radius: 8, x: 0, y: 2)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.softGraphite.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                        .onChange(of: confirmationCode) { oldValue, newValue in
+                            confirmationCode = String(newValue.prefix(6)) // Limit to 6 digits
+                        }
+                }
+                .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
+                
+                // Error message
+                if let errorMessage = errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: ResponsiveSize.font(large: 14, medium: 13, small: 12)))
+                        Text(errorMessage)
+                            .font(.system(size: ResponsiveSize.font(large: 13, medium: 12, small: 11), weight: .medium, design: .default))
+                    }
+                    .foregroundColor(Color(red: 0.9, green: 0.3, blue: 0.3))
+                    .padding(.horizontal, ResponsiveSize.padding(large: 20, medium: 16, small: 12))
+                    .padding(.vertical, ResponsiveSize.padding(large: 12, medium: 10, small: 8))
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(red: 0.9, green: 0.3, blue: 0.3).opacity(0.1))
+                    )
+                    .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
+                    .multilineTextAlignment(.center)
+                }
+                
+                // Confirm Button
+                Button(action: {
+                    Task {
+                        await confirmEmail()
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.9)
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20, weight: .medium))
+                            Text("CONFIRM EMAIL")
+                                .font(.system(size: ResponsiveSize.font(large: 16, medium: 15, small: 14), weight: .semibold, design: .default))
+                                .tracking(1.5)
+                                .textCase(.uppercase)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: ResponsiveSize.padding(large: 56, medium: 50, small: 44))
+                    .foregroundColor(.white)
+                    .background(
+                        Group {
+                            if isLoading || confirmationCode.count != 6 {
+                                Color.softGraphite.opacity(0.8)
+                            } else {
+                                Color.softGraphite
+                            }
+                        }
+                    )
+                    .cornerRadius(14)
+                    .shadow(color: (isLoading || confirmationCode.count != 6) ? Color.clear : Color.softGraphite.opacity(0.3), radius: 12, x: 0, y: 4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .disabled(isLoading || confirmationCode.count != 6)
+                .padding(.horizontal, ResponsiveSize.padding(large: 32, medium: 28, small: 24))
+                .padding(.top, ResponsiveSize.padding(large: 8, medium: 6, small: 4))
+                
+                // Back to Sign In
+                Button(action: {
+                    withAnimation {
+                        showConfirmationCode = false
+                        confirmationCode = ""
+                        errorMessage = nil
+                    }
+                }) {
+                    Text("Back to Sign In")
+                        .font(.system(size: ResponsiveSize.font(large: 14, medium: 13, small: 12), weight: .medium))
+                        .foregroundColor(.softGraphite)
+                }
+                .padding(.top, ResponsiveSize.padding(large: 16, medium: 12, small: 8))
+                
+                Spacer(minLength: ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+            }
+            .padding(.vertical, ResponsiveSize.padding(large: 40, medium: 32, small: 24))
+        }
+    }
+    
+    // MARK: - Email Confirmation
+    private func confirmEmail() async {
+        isLoading = true
+        errorMessage = nil
+        
+        let authService = getAuthService()
+        
+        do {
+            try await authService.confirmSignUp(email: pendingConfirmationEmail, confirmationCode: confirmationCode)
+            
+            // After successful confirmation, automatically sign in
+            try await authService.signIn(email: pendingConfirmationEmail, password: pendingConfirmationPassword)
+            
+            // Save credentials for biometric auth
+            biometricService.saveCredentials(email: pendingConfirmationEmail, password: pendingConfirmationPassword)
+            
+            // Record sign-in timestamp
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_sign_in_timestamp")
+            UserDefaults.standard.set(false, forKey: "welcome_back_shown_for_session")
+            
+            // Check if user is in first 100 TestFlight signups and show celebration
+            if UserDefaults.standard.bool(forKey: "is_first_100_testflight_user") {
+                NotificationCenter.default.post(name: NSNotification.Name("ShowMetaYellowCardCelebration"), object: nil)
+            }
+            
+            // Post notification when sign-in succeeds so RootView can update
+            NotificationCenter.default.post(name: NSNotification.Name("UserDidSignIn"), object: nil)
+        } catch {
+            let errorDesc = error.localizedDescription.lowercased()
+            if errorDesc.contains("invalid") || errorDesc.contains("mismatch") {
+                errorMessage = "Invalid confirmation code. Please check your email and try again."
+            } else if errorDesc.contains("expired") {
+                errorMessage = "Confirmation code has expired. Please sign up again to receive a new code."
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        }
+        
+        isLoading = false
     }
 }
 
@@ -614,5 +898,22 @@ struct PasswordResetView: View {
         }
         
         isResetting = false
+    }
+}
+
+// MARK: - Password Requirement Row
+struct PasswordRequirementRow: View {
+    let met: Bool
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: met ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 14))
+                .foregroundColor(met ? .green : .softGraphite.opacity(0.5))
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundColor(met ? .softGraphite : .softGraphite.opacity(0.7))
+        }
     }
 }

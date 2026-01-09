@@ -35,7 +35,7 @@ class CognitoAuthService: ObservableObject {
     // MARK: - Authentication Methods
     
     /// Sign up a new user
-    func signUp(email: String, password: String) async throws {
+    func signUp(email: String, password: String, isTestFlight: Bool = false) async throws -> Bool {
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let trimmedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -79,16 +79,20 @@ class CognitoAuthService: ObservableObject {
         // Check if email confirmation is required
         if let requiresConfirmation = json["requiresConfirmation"] as? Bool, requiresConfirmation {
             let message = json["message"] as? String ?? "Please check your email for confirmation code"
+            let isFirst100 = json["isFirst100TestFlightUser"] as? Bool ?? false
             print("✅ [CognitoAuthService] User created, email confirmation required")
             // Don't sign in yet - user needs to confirm email first
             throw NSError(domain: "CognitoAuthService", code: -5, userInfo: [
                 NSLocalizedDescriptionKey: message,
-                "requiresConfirmation": true
+                "requiresConfirmation": true,
+                "isFirst100TestFlightUser": isFirst100
             ])
         }
         
         // If tokens are returned, store them (user was auto-confirmed)
         if let tokens = json["tokens"] as? [String: Any] {
+            let isFirst100 = json["isFirst100TestFlightUser"] as? Bool ?? false
+            
             await MainActor.run {
                 self.accessToken = tokens["accessToken"] as? String
                 self.idToken = tokens["idToken"] as? String
@@ -101,6 +105,9 @@ class CognitoAuthService: ObservableObject {
                 }
             }
             print("✅ [CognitoAuthService] User signed up and signed in successfully")
+            
+            // Return whether user is in first 100 TestFlight signups
+            return isFirst100
         } else {
             throw NSError(domain: "CognitoAuthService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Sign up completed but no tokens received"])
         }

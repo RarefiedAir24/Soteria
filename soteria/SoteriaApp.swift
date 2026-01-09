@@ -535,6 +535,12 @@ struct RootView: View {
             // Initialize notification badge manager on app launch
             NotificationBadgeManager.shared.startObserving()
             NotificationBadgeManager.shared.updateBadgeCount()
+            
+            // 🔒 SECURITY: Clean up any legacy screenshot files on app launch
+            // This removes old stored screenshots from the previous implementation
+            // New implementation uses ephemeral verification (no storage)
+            EphemeralScreenshotService.shared.cleanupLegacyScreenshots()
+            EphemeralScreenshotService.shared.cleanupOldMetadata(olderThanDays: 90)
         }
     }
     

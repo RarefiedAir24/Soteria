@@ -23,9 +23,6 @@ struct ManualDepositView: View {
     @State private var showImagePicker = false
     @State private var showImageSourceActionSheet = false
     @State private var imagePickerSourceType: UIImagePickerController.SourceType = .photoLibrary
-    @State private var isSavingScreenshot = false
-    
-    private let screenshotService = DepositScreenshotService.shared
     
     private var isValidAmount: Bool {
         guard let amount = Double(depositAmount), amount > 0 else { return false }
@@ -393,27 +390,20 @@ struct ManualDepositView: View {
         // Get active goal ID if available
         let activeGoalId = goalsService.activeGoal?.id
         
-        // Generate deposit ID first so we can use it for screenshot
+        // Generate deposit ID first
         let depositId = UUID().uuidString
         
-        // Save screenshot if provided (using the deposit ID we just generated)
-        var screenshotPath: String? = nil
-        if let screenshot = depositScreenshot {
-            // Save screenshot with the deposit ID
-            if let savedPath = screenshotService.saveScreenshot(screenshot, for: depositId) {
-                screenshotPath = savedPath
-                // Also save thumbnail to UserDefaults as backup
-                screenshotService.saveScreenshotToUserDefaults(screenshot, for: depositId)
-            }
-        }
+        // 🔒 SECURITY: EPHEMERAL screenshot verification
+        // Screenshot is passed directly (in-memory only), NEVER saved to disk
+        // This protects user privacy and prevents data breaches
+        // After verification, the image is immediately discarded
         
         // Record manual deposit (local tracking only - no Plaid API calls)
         // This is for physical cash savings or deposits made outside the app
-        // Pass the deposit ID so screenshot path matches
         plaidService.recordManualDeposit(
             amount: amount,
             goalId: activeGoalId,
-            screenshotPath: screenshotPath,
+            screenshot: depositScreenshot, // ⚠️ Pass image directly, NOT saved!
             referenceId: referenceId.isEmpty ? nil : referenceId,
             depositId: depositId
         )

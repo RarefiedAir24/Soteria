@@ -12,6 +12,15 @@ import UserNotifications
 // import FirebaseAuth
 // import FirebaseStorage
 
+// Helper function for safe screen bounds access
+private func getScreenHeight() -> CGFloat {
+    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+       let window = windowScene.windows.first {
+        return window.bounds.height
+    }
+    return UIScreen.main.bounds.height
+}
+
 struct HomeView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var subscriptionService: SubscriptionService
@@ -75,6 +84,10 @@ struct HomeView: View {
     @State private var showManageSubscriptions = false
     @State private var showDecisionWindows = false
     @State private var showNotificationCenter = false
+    @State private var showMetaYellowCardCelebration = false
+    @State private var showHomeScreenTutorial = false
+    @State private var showLoyaltyShop = false
+    @State private var showSceneEditor = false
     @State private var notificationCount: Int = 0
     @State private var badgePulse: Bool = false
     @AppStorage("last_sign_in_timestamp") private var lastSignInTimestamp: Double = 0
@@ -471,14 +484,21 @@ struct HomeView: View {
             return false
         }
         
-        // Check if running in TestFlight
+        // Check if user is in first 100 TestFlight signups (gets Meta Yellow Card)
+        let isFirst100TestFlight = UserDefaults.standard.bool(forKey: "is_first_100_testflight_user")
+        if isFirst100TestFlight {
+            return true // First 100 TestFlight users get Meta Yellow Card
+        }
+        
+        // Check if running in TestFlight (but NOT first 100 - they don't get Meta Yellow Card)
         #if DEBUG
-        return true // Always beta in debug builds (except supergeek)
+        return false // Debug builds don't get Meta Yellow Card unless they're first 100
         #else
         // Check for TestFlight receipt
         if let receiptURL = Bundle.main.appStoreReceiptURL,
            receiptURL.lastPathComponent == "sandboxReceipt" {
-            return true
+            // User is in TestFlight but NOT first 100, so they don't get Meta Yellow Card
+            return false
         }
         
         // Check UserDefaults flag (can be set manually for testing)
@@ -606,7 +626,7 @@ struct HomeView: View {
         let logoColor = premiumMemberCardLogoColor(isBlack: isBlack, isAnnual: isAnnual, isBeta: isBeta, isRoseGold: isRoseGold)
         let isSupergeek = userEmail.lowercased() == "supergeek@me.com"
         let fullUID = authService.currentUserId ?? authService.getUserId() ?? "N/A"
-        let formattedUID = formatUID(fullUID)
+        let _ = formatUID(fullUID) // Available if needed for display
         let cardType = isBeta ? "beta" : (isRoseGold ? "rosegold" : (isBlack ? "black" : (isAnnual ? "platinum" : "gold")))
         let memberSince = getMemberSinceDate()
         
@@ -838,6 +858,13 @@ struct HomeView: View {
             }
         }
         checkForUnitAccountPrompt()
+        
+        // Show home screen tutorial on first visit (if not permanently hidden)
+        if !UserDefaults.standard.bool(forKey: "home_screen_tutorial_hidden") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showHomeScreenTutorial = true
+            }
+        }
     }
     
     var body: some View {
@@ -910,6 +937,12 @@ struct HomeView: View {
                         self.lastSignInTimestamp = currentTimestamp
                         self.welcomeBackShownForSession = true
                     }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowMetaYellowCardCelebration"))) { _ in
+                // Show Meta Yellow Card celebration for first 100 TestFlight users
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.showMetaYellowCardCelebration = true
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenDecisionWindows"))) { _ in
@@ -1070,12 +1103,68 @@ struct HomeView: View {
             .sheet(isPresented: $showNotificationCenter) {
                 NotificationCenterView()
             }
+            .overlay {
+                if showMetaYellowCardCelebration {
+                    MetaYellowCardCelebrationView(isPresented: $showMetaYellowCardCelebration)
+                        .transition(.opacity.combined(with: .scale))
+                        .zIndex(1000)
+                }
+                
+                // Home Screen Tutorial
+                TutorialPopup(
+                    title: "Welcome to Your Money Tree",
+                    content: AnyView(HomeScreenTutorialContent()),
+                    userDefaultsKey: "home_screen_tutorial_hidden",
+                    isPresented: $showHomeScreenTutorial
+                )
+                
+                // Loyalty Shop & Scene Edit Floating Action Buttons
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            // Scene Edit Button
+                            Button(action: {
+                                showSceneEditor = true
+                            }) {
+                                Image(systemName: "paintbrush.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 56, height: 56)
+                                    .background(
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color.purple, Color.purple.opacity(0.8)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                    )
+                                    .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+                            }
+                            
+                            // Loyalty Shop Button
+                            LoyaltyShopButton(showShop: $showLoyaltyShop)
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 90) // Above tab bar
+                    }
+                }
+            }
             .sheet(isPresented: $showGoalDetails) {
                 goalDetailSheetContent
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
                     .environmentObject(SubscriptionService.shared)
+            }
+            .sheet(isPresented: $showLoyaltyShop) {
+                LoyaltyShopView()
+            }
+            .sheet(isPresented: $showSceneEditor) {
+                SceneEditorView()
             }
             .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
             .onChange(of: showGoalDetails) { oldValue, newValue in
@@ -1241,7 +1330,7 @@ struct HomeView: View {
         // First, check if premium card is in view (only for premium users)
         // This should ONLY hide when card is clearly visible
         if subscriptionService.isPremium && cardPosition > -1000 && scrollOffset < -400 {
-            let screenHeight = UIScreen.main.bounds.height
+            let screenHeight = getScreenHeight()
             let cardHeight: CGFloat = 220
             let initialOffset = subscriptionService.isPremium ? 110.0 : 90.0
             
@@ -1293,7 +1382,7 @@ struct HomeView: View {
         
         // Check if premium card is in view (only for premium users)
         if subscriptionService.isPremium && cardPosition > -1000 && scrollOffset < -400 {
-            let screenHeight = UIScreen.main.bounds.height
+            let screenHeight = getScreenHeight()
             let cardHeight: CGFloat = 220
             let initialOffset = subscriptionService.isPremium ? 110.0 : 90.0
             
@@ -1446,7 +1535,8 @@ struct HomeView: View {
         let isRoseGold = isRoseGoldFounder()
         let isBlack = (isBeta || isRoseGold) ? false : isBlackCardEligible()
         
-        let cardTypeText: String = {
+        // Card type text available if needed for display
+        let _: String = {
             if isBeta {
                 return "BETA"
             } else if isRoseGold {

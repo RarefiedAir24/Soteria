@@ -57,13 +57,13 @@ struct ProfileView: View {
         return "User"
     }
     
-    // App version and build number
+    // App version and build number (using shared utility)
     private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        Bundle.appVersion
     }
     
     private var buildNumber: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        Bundle.buildNumber
     }
     
     var body: some View {
@@ -454,7 +454,7 @@ struct ProfileView: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(Color.midnightSlate)
                             
-                            Text("\(appVersion) (\(buildNumber))")
+                            Text(Bundle.fullVersionString)
                                 .font(.system(size: 13))
                                 .foregroundColor(Color.softGraphite)
                         }

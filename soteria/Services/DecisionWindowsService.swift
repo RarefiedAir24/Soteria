@@ -418,11 +418,9 @@ class DecisionWindowsService: ObservableObject {
     // MARK: - Notifications
     
     private func scheduleNotifications() {
-        // Request notification permission with time-sensitive support
-        var options: UNAuthorizationOptions = [.alert, .sound, .badge]
-        if #available(iOS 15.0, *) {
-            options.insert(.timeSensitive)
-        }
+        // Request notification permission
+        // Note: Time-sensitive notifications are configured via entitlements, not authorization options
+        let options: UNAuthorizationOptions = [.alert, .sound, .badge]
         UNUserNotificationCenter.current().requestAuthorization(options: options) { granted, _ in
             guard granted else { return }
             

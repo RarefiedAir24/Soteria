@@ -55,13 +55,25 @@ struct SettingsView: View {
         if userEmail.lowercased() == "supergeek@me.com" {
             return false
         }
+        
+        // Check if user is in first 100 TestFlight signups (gets Meta Yellow Card)
+        let isFirst100TestFlight = UserDefaults.standard.bool(forKey: "is_first_100_testflight_user")
+        if isFirst100TestFlight {
+            return true // First 100 TestFlight users get Meta Yellow Card
+        }
+        
+        // Check if running in TestFlight (but NOT first 100 - they don't get Meta Yellow Card)
         #if DEBUG
-        return true
+        return false // Debug builds don't get Meta Yellow Card unless they're first 100
         #else
+        // Check for TestFlight receipt
         if let receiptURL = Bundle.main.appStoreReceiptURL,
            receiptURL.lastPathComponent == "sandboxReceipt" {
-            return true
+            // User is in TestFlight but NOT first 100, so they don't get Meta Yellow Card
+            return false
         }
+        
+        // Check UserDefaults flag (can be set manually for testing)
         return UserDefaults.standard.bool(forKey: "is_beta_tester")
         #endif
     }
@@ -680,6 +692,47 @@ struct SettingsView: View {
                                 showAdminPartnerManagement = true
                                 print("🔵 [SettingsView] showAdminPartnerManagement after: \(showAdminPartnerManagement)")
                             }
+                            
+                            // Developer Testing View (supergeek only)
+                            NavigationLink(destination: DeveloperTestingView()) {
+                                HStack {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.orange.opacity(0.15))
+                                            .frame(width: 44, height: 44)
+                                        
+                                        Image(systemName: "wrench.and.screwdriver.fill")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundColor(.orange)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("🔧 Developer Testing")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(Color.midnightSlate)
+                                        
+                                        Text("Add points, test icons & features")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(Color.softGraphite)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(Color.orange.opacity(0.6))
+                                }
+                                .padding(16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(Color.white)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                         
                         // Redemption History
@@ -770,6 +823,86 @@ struct SettingsView: View {
                             }
                             .padding(.top, 8)
                         }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .reverCard()
+                    .padding(.horizontal, .spacingCard)
+                    
+                    // Loyalty Points Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Loyalty Points")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Color.midnightSlate)
+                        
+                        NavigationLink(destination: LoyaltyHistoryView()) {
+                            HStack {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.orange.opacity(0.15), Color.yellow.opacity(0.08)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 44, height: 44)
+                                    
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [Color.orange, Color.yellow],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Points History")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(Color.midnightSlate)
+                                    
+                                    Text("View transactions & balance")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color.softGraphite)
+                                }
+                                
+                                Spacer()
+                                
+                                // Show current balance
+                                Text("\(LoyaltyPointsService.shared.totalPoints)")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(Color.orange)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.orange.opacity(0.1))
+                                    )
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color.orange.opacity(0.6))
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.white)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [Color.orange.opacity(0.2), Color.yellow.opacity(0.05)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 1
+                                            )
+                                    )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .reverCard()

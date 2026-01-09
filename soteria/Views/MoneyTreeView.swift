@@ -2,1232 +2,617 @@
 //  MoneyTreeView.swift
 //  soteria
 //
-//  Animated money tree that grows with savings deposits
-//  Leaves represent savings milestones and goals - they "fill in" as your savings grows
-//  This is the core "grow your money tree" concept: save money = grow tree = fill leaves
+//  Modern, sleek money tree that fills from bottom to top
+//  Clear lines show progress and dollar values
 //
 
 import SwiftUI
+import Combine
 
 struct MoneyTreeView: View {
     let totalSaved: Double
     let activeGoal: SavingsGoal?
     let allGoals: [SavingsGoal]
     var onGoalLeafTapped: ((SavingsGoal) -> Void)? = nil
+    var isEditMode: Bool = false // Edit mode for placing/moving items
     
-    // Default milestone leaves - all users get these
-    private let defaultMilestones: [Double] = [10, 100, 500, 1000, 5000, 10000, 15000, 20000]
+    @StateObject private var themeService = TimeBasedThemeService.shared
+    @State private var currentTime = Date()
     
-    // Generate additional milestones beyond default
-    // Uses dynamic increments: $5k up to $100k, then $10k up to $250k, then $25k up to $500k, then $50k beyond
-    // Always extends beyond highest goal to ensure goal leaves have milestone context
-    private func generateMilestones(upTo maxValue: Double) -> [Double] {
-        var milestones = defaultMilestones
-        var current = 20000.0
-        
-        // Phase 1: $5k increments up to $100k
-        while current < 100000 && current <= maxValue {
-            current += 5000
-            milestones.append(current)
-        }
-        
-        // Phase 2: $10k increments from $100k to $250k
-        if maxValue > 100000 {
-            current = 100000
-            while current < 250000 && current <= maxValue {
-                current += 10000
-                milestones.append(current)
-            }
-        }
-        
-        // Phase 3: $25k increments from $250k to $500k
-        if maxValue > 250000 {
-            current = 250000
-            while current < 500000 && current <= maxValue {
-                current += 25000
-                milestones.append(current)
-            }
-        }
-        
-        // Phase 4: $50k increments beyond $500k
-        if maxValue > 500000 {
-            current = 500000
-            while current <= maxValue {
-                current += 50000
-                milestones.append(current)
-            }
-        }
-        
-        // Cap at 100 total milestones to prevent excessive computation
-        return Array(milestones.prefix(100))
-    }
+    private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect() // Update every minute
     
-    // Growth thresholds (tree grows at these milestones) - extended for higher savings
-    // Tree represents piggy bank growth, so it continues growing as savings increase
-    private let growthThresholds: [Double] = [0, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000]
-    
-    // Calculate tree growth level (0-13, was 0-8) - tree continues growing with savings
-    private var treeLevel: Int {
-        for (index, threshold) in growthThresholds.enumerated().reversed() {
-            if totalSaved >= threshold {
-                return min(index, growthThresholds.count - 1)
-            }
-        }
-        return 0
-    }
-    
-    // Calculate tree height based on level - larger for better visual presentation
-    private var treeHeight: CGFloat {
-        let baseHeight: CGFloat = 180 // Increased from 120
-        let growthPerLevel: CGFloat = 40 // Increased from 30
-        return baseHeight + (CGFloat(treeLevel) * growthPerLevel)
-    }
-    
-    // Calculate trunk width based on level - wider for better visibility
-    private var trunkWidth: CGFloat {
-        let baseWidth: CGFloat = 18 // Increased from 12
-        let growthPerLevel: CGFloat = 3 // Increased from 2
-        return baseWidth + (CGFloat(treeLevel) * growthPerLevel)
-    }
-    
-    // Get active goals
-    private var activeGoals: [SavingsGoal] {
-        allGoals.filter { $0.status == .active }
-    }
-    
-    // Cached leaves to prevent recomputation on every body evaluation
-    @State private var allLeaves: [LeafData] = []
-    @State private var lastTotalSaved: Double = -1
-    @State private var lastGoalsHash: Int = 0
-    @State private var lastActiveGoalId: String? = nil
-    
-    // Compute leaves hash for change detection
-    private var goalsHash: Int {
-        activeGoals.map { $0.id.hashValue }.reduce(0, ^)
-    }
-    
-    // Update leaves when values change
-    private func updateLeavesIfNeeded() {
-        let currentGoalsHash = goalsHash
-        let shouldUpdate = allLeaves.isEmpty || 
-                          lastTotalSaved != totalSaved || 
-                          lastGoalsHash != currentGoalsHash ||
-                          lastActiveGoalId != activeGoal?.id
-        
-        print("🌳 [MoneyTreeView] updateLeavesIfNeeded - shouldUpdate: \(shouldUpdate), allLeaves.isEmpty: \(allLeaves.isEmpty), totalSaved changed: \(lastTotalSaved != totalSaved), goalsHash changed: \(lastGoalsHash != currentGoalsHash), activeGoal changed: \(lastActiveGoalId != activeGoal?.id)")
-        
-        guard shouldUpdate else {
-            return // No change needed
-        }
-        
-        var leaves: [LeafData] = []
-        
-        // Determine max milestone to show
-        // Always extend beyond highest goal to ensure goal leaves have milestone context
-        // Show milestones up to: max(current savings * 2, highest goal * 1.5, or default 20000)
-        let highestGoal = activeGoals.map { $0.targetAmount }.max() ?? 0
-        let maxMilestone = max(
-            totalSaved * 2.0,
-            highestGoal * 1.5, // Extend 50% beyond highest goal for context
-            20000.0
-        )
-        // No hard cap - let milestones extend as needed for goals
-        let allMilestones = generateMilestones(upTo: maxMilestone)
-        
-        // Add all default milestone leaves (always visible, but can be styled differently if not reached)
-        for milestone in allMilestones {
-            leaves.append(LeafData(
-                value: milestone,
-                type: .milestone,
-                goal: nil
-            ))
-        }
-        
-        // Add goal leaves (one per goal, positioned by target amount)
-        // IMPORTANT: Add ALL active goals, not just the first one
-        print("🌳 [MoneyTreeView] Adding goal leaves. Active goals count: \(activeGoals.count)")
-        for goal in activeGoals {
-            print("🌳 [MoneyTreeView] Adding goal leaf: \(goal.name) - Target: $\(goal.targetAmount), Status: \(goal.status)")
-            leaves.append(LeafData(
-                value: goal.targetAmount,
-                type: .goal,
-                goal: goal
-            ))
-        }
-        
-        // Sort leaves by dollar value (lowest to highest)
-        allLeaves = leaves.sorted { $0.value < $1.value }
-        
-        print("🌳 [MoneyTreeView] Total leaves: \(allLeaves.count) (Milestones: \(allMilestones.count), Goals: \(activeGoals.count))")
-        
-        lastTotalSaved = totalSaved
-        lastGoalsHash = currentGoalsHash
-        lastActiveGoalId = activeGoal?.id
-    }
-    
-    // Check if a milestone has been reached
-    private func isMilestoneReached(_ value: Double) -> Bool {
-        return totalSaved >= value
-    }
-    
-    // Tree visualization view - extracted to reduce complexity
-    @ViewBuilder
-    private var treeVisualization: some View {
-        ZStack(alignment: .bottom) {
-            // Background gradient (no sky elements here)
-            treeBackgroundGradient
-            groundBase
-            treeStructure
-            // Sky elements (sun/moon) on top so they appear above tree
-            skyElementsOverlay
-        }
-        .frame(height: treeHeight + 200) // Increased from 80 to 200 for larger background
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 30)
-        .padding(.horizontal, 10)
-        .clipped()
-        .overlay(celebrationOverlay)
-    }
-    
-    // Background gradient only (no sky elements)
-    @ViewBuilder
-    private var treeBackgroundGradient: some View {
-        let backgroundHeight = treeHeight + 200
-        GeometryReader { geometry in
-            ZStack {
-                // Base light blue background for day themes
-                if themeService.currentTheme != .night {
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.85, green: 0.92, blue: 0.98), // Light sky blue
-                            Color(red: 0.75, green: 0.88, blue: 0.95), // Soft blue
-                            Color(red: 0.7, green: 0.85, blue: 0.92)  // Deeper light blue
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .opacity(0.6)
-                }
-                
-                let gradientColors = themeService.currentGradient.isEmpty 
-                    ? TimeTheme.afternoon.gradientColors 
-                    : themeService.currentGradient
-                let backgroundOpacity = themeService.currentTheme == .night ? 0.4 : 0.3
-                
+    var body: some View {
+        ZStack {
+            // Background scene with sky and ground
+            VStack(spacing: 0) {
+                // Sky gradient (top 65% of view)
                 LinearGradient(
-                    colors: gradientColors,
+                    colors: themeService.currentGradient.isEmpty ? 
+                        [Color(red: 0.9, green: 0.95, blue: 1.0), Color(red: 0.8, green: 0.9, blue: 0.98)] :
+                        themeService.currentGradient,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                .opacity(backgroundOpacity)
-            }
-            .frame(height: backgroundHeight)
-            .frame(maxWidth: .infinity)
-        }
-        .frame(height: treeHeight + 200)
-        .animation(.easeInOut(duration: 2.0), value: themeService.currentTheme)
-    }
-    
-    // Sky elements overlay (sun/moon) - rendered above tree
-    @ViewBuilder
-    private var skyElementsOverlay: some View {
-        let backgroundHeight = treeHeight + 200
-        GeometryReader { geometry in
-            SkyElementsView(theme: themeService.currentTheme, size: geometry.size)
-                .opacity(themeService.currentTheme == .night ? 0.9 : 0.95)
-        }
-        .frame(height: backgroundHeight)
-        .frame(maxWidth: .infinity)
-        .allowsHitTesting(false) // Don't block touches to tree
-    }
-    
-    // Background with sky elements
-    @ViewBuilder
-    private var treeBackground: some View {
-        let backgroundHeight = treeHeight + 200 // Increased from 80 to 200 for larger background
-        GeometryReader { geometry in
-            ZStack {
-                // Base light blue background for day themes (similar to dark background for night)
-                if themeService.currentTheme != .night {
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.85, green: 0.92, blue: 0.98), // Light sky blue
-                            Color(red: 0.75, green: 0.88, blue: 0.95), // Soft blue
-                            Color(red: 0.7, green: 0.85, blue: 0.92)  // Deeper light blue
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .opacity(0.6) // Visible light blue background for day
-                }
+                .frame(maxHeight: .infinity) // Sky takes remaining space
                 
-                let gradientColors = themeService.currentGradient.isEmpty 
-                    ? TimeTheme.afternoon.gradientColors 
-                    : themeService.currentGradient
-                let backgroundOpacity = themeService.currentTheme == .night ? 0.4 : 0.3
-                let skyOpacity = themeService.currentTheme == .night ? 0.9 : 0.95 // Increased for day to match night visibility
+                // Horizon line
+                Rectangle()
+                    .fill(Color.black.opacity(0.2))
+                    .frame(height: 2)
                 
+                // Ground (bottom 35% of view)
                 LinearGradient(
-                    colors: gradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .opacity(backgroundOpacity)
-                
-                SkyElementsView(theme: themeService.currentTheme, size: geometry.size)
-                    .opacity(skyOpacity)
-            }
-            .frame(height: backgroundHeight)
-            .frame(maxWidth: .infinity)
-        }
-        .frame(height: treeHeight + 200) // Increased from 80 to 200
-        .animation(.easeInOut(duration: 2.0), value: themeService.currentTheme)
-    }
-    
-    // Ground/Base
-    @ViewBuilder
-    private var groundBase: some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(
-                LinearGradient(
-                    colors: [Color(red: 0.8, green: 0.7, blue: 0.6), Color(red: 0.7, green: 0.6, blue: 0.5)],
+                    colors: themeService.currentTheme == .night ? [
+                        Color(red: 0.15, green: 0.25, blue: 0.35),  // Blue-tinted grass at night
+                        Color(red: 0.12, green: 0.22, blue: 0.32)
+                    ] : [
+                        Color(red: 0.5, green: 0.75, blue: 0.3),  // Bright grass green
+                        Color(red: 0.45, green: 0.7, blue: 0.25)
+                    ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-            )
-            .frame(height: 20)
-            .frame(maxWidth: .infinity)
-    }
-    
-    // Tree structure (branches, leaves, trunk)
-    @ViewBuilder
-    private var treeStructure: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                if animatedLevel > 0 {
-                    BranchStructureView(level: animatedLevel, treeHeight: treeHeight * 0.7)
-                }
-                
-                if !allLeaves.isEmpty {
-                    ForEach(Array(allLeaves.enumerated()), id: \.element.id) { index, leafData in
-                        leafViewForData(leafData: leafData, index: index)
-                            .onAppear {
-                                let isActive = leafData.goal?.id == activeGoal?.id
-                                logActiveGoalIfNeeded(leafData: leafData, isActive: isActive)
-                            }
-                    }
-                }
+                .frame(height: 175) // Ground portion
             }
-            .frame(height: treeHeight * 0.7)
-            .opacity(showLeaves ? 1.0 : 0.0)
-            .scaleEffect(showLeaves ? 1.0 : 0.5)
+            .cornerRadius(12)
             
-            TrunkView(width: trunkWidth, height: treeHeight * 0.35)
-        }
-        .frame(height: treeHeight)
-    }
-    
-    // Celebration overlay
-    @ViewBuilder
-    private var celebrationOverlay: some View {
-        GeometryReader { geometry in
-            if showCelebration {
-                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                CelebrationEffectView(treeCenter: center)
-            }
-        }
-    }
-    
-    // Savings info section
-    @ViewBuilder
-    private var savingsInfo: some View {
-        VStack(spacing: 8) {
-            Text("$\(String(format: "%.2f", totalSaved))")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.softGraphite)
-            
-            if let next = nextMilestone {
-                milestoneProgressView(next: next)
-            } else {
-                Text("Maximum Growth Reached! 🌳")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.softGraphite)
-            }
-        }
-    }
-    
-    // Milestone progress view
-    @ViewBuilder
-    private func milestoneProgressView(next: Double) -> some View {
-        VStack(spacing: 4) {
-            Text("Next Growth: $\(String(format: "%.0f", next))")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.softGraphite)
-            
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.mistGray)
-                        .frame(height: 10)
+            // Time-based visual elements (stars, moon, sun, clouds)
+            if themeService.currentTheme.hasMoon {
+                // Full moon - positioned high in the sky
+                let moonPos = themeService.currentTheme.moonPosition
+                ZStack {
+                    // Moon glow
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 60, height: 60)
                     
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.softGraphite)
-                        .frame(width: geometry.size.width * progressToNextMilestone, height: 10)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: progressToNextMilestone)
+                    // Main moon body
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.95, green: 0.95, blue: 0.97),
+                                    Color(red: 0.85, green: 0.85, blue: 0.88)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 45, height: 45)
+                    
+                    // Moon craters (subtle texture)
+                    Circle()
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 8, height: 8)
+                        .offset(x: -8, y: -5)
+                    
+                    Circle()
+                        .fill(Color.gray.opacity(0.12))
+                        .frame(width: 6, height: 6)
+                        .offset(x: 10, y: 8)
+                    
+                    Circle()
+                        .fill(Color.gray.opacity(0.1))
+                        .frame(width: 5, height: 5)
+                        .offset(x: 5, y: -10)
+                }
+                .offset(x: moonPos.x * 150 - 75, y: -150) // Higher in the sky, above tree canopy
+            }
+            
+            if themeService.currentTheme.hasStars {
+                // Stars scattered across the sky portion only (stable positions with shimmer)
+                let starPositions: [(x: CGFloat, y: CGFloat, size: CGFloat)] = [
+                    (-120, -150, 6), (-80, -130, 5), (-40, -110, 7), (0, -140, 5),
+                    (40, -120, 6), (80, -150, 5), (120, -130, 7), (-100, -100, 5),
+                    (-60, -170, 6), (20, -110, 5), (60, -140, 7), (-140, -130, 5),
+                    (100, -100, 6), (-20, -160, 5), (140, -120, 7), (-80, -180, 5),
+                    (40, -160, 6), (-120, -90, 5), (80, -170, 7), (-40, -130, 5)
+                ]
+                ForEach(Array(starPositions.enumerated()), id: \.offset) { index, pos in
+                    ShimmeringStar(size: pos.size, delay: Double(index) * 0.1)
+                        .offset(x: pos.x, y: pos.y)
                 }
             }
-            .frame(height: 10)
-        }
-    }
-    
-    // Helper function to create leaf view - breaks up complex expression
-    @ViewBuilder
-    private func leafViewForData(leafData: LeafData, index: Int) -> some View {
-        let isActive = leafData.goal?.id == activeGoal?.id
-        let maxValue = allLeaves.last?.value ?? 1.0
-        
-        // Determine if leaf is reached based on total savings growth
-        // This ties leaves directly to "growing your money tree" concept
-        let isReached: Bool = {
-            if leafData.type == .goal {
-                // For goal leaves: reached when total savings has grown to include this goal's target
-                // OR when the individual goal is completed
-                let goalCompleted = (leafData.goal?.currentAmount ?? 0) >= leafData.value
-                let savingsReached = totalSaved >= leafData.value
-                return goalCompleted || savingsReached
-            } else {
-                // For milestone leaves: reached when total savings reaches the milestone
-                return isMilestoneReached(leafData.value)
+            
+            if themeService.currentTheme.hasSun {
+                // Sun - moves across sky based on time of day (updates every minute)
+                let sunPos = themeService.currentTheme.sunPosition
+                let calendar = Calendar.current
+                let hour = calendar.component(.hour, from: currentTime)
+                let minute = calendar.component(.minute, from: currentTime)
+                
+                // Calculate smooth sun position based on exact time
+                let sunX: CGFloat = {
+                    // Sun moves from left (dawn) to right (sunset) throughout the day
+                    if hour >= 5 && hour < 7 {
+                        // Dawn: 5-7am, moves from 0.1 to 0.2
+                        let progress = CGFloat(hour - 5) + CGFloat(minute) / 60.0
+                        return 0.1 + (progress / 2.0) * 0.1
+                    } else if hour >= 7 && hour < 12 {
+                        // Morning: 7am-12pm, moves from 0.2 to 0.5
+                        let progress = CGFloat(hour - 7) + CGFloat(minute) / 60.0
+                        return 0.2 + (progress / 5.0) * 0.3
+                    } else if hour >= 12 && hour < 17 {
+                        // Afternoon: 12pm-5pm, moves from 0.5 to 0.75
+                        let progress = CGFloat(hour - 12) + CGFloat(minute) / 60.0
+                        return 0.5 + (progress / 5.0) * 0.25
+                    } else if hour >= 17 && hour < 19 {
+                        // Evening: 5pm-7pm, moves from 0.75 to 0.85
+                        let progress = CGFloat(hour - 17) + CGFloat(minute) / 60.0
+                        return 0.75 + (progress / 2.0) * 0.1
+                    } else if hour >= 19 && hour < 21 {
+                        // Sunset: 7pm-9pm, moves from 0.85 to 0.95
+                        let progress = CGFloat(hour - 19) + CGFloat(minute) / 60.0
+                        return 0.85 + (progress / 2.0) * 0.1
+                    } else {
+                        return sunPos.x
+                    }
+                }()
+                
+                let sunY: CGFloat = {
+                    // Sun rises in morning, peaks at noon, sets in evening
+                    // Reduced values to position sun higher in sky (further from tree)
+                    if hour >= 5 && hour < 12 {
+                        // Rising: from 0.2 (dawn) to 0.08 (noon) - starts higher
+                        let progress = CGFloat(hour - 5) + CGFloat(minute) / 60.0
+                        return 0.2 - (progress / 7.0) * 0.12
+                    } else if hour >= 12 && hour < 19 {
+                        // Setting: from 0.08 (noon) to 0.15 (evening) - stays high
+                        let progress = CGFloat(hour - 12) + CGFloat(minute) / 60.0
+                        return 0.08 + (progress / 7.0) * 0.07
+                    } else {
+                        return sunPos.y
+                    }
+                }()
+                
+                ZStack {
+                    // Sun glow
+                    Circle()
+                        .fill(Color.yellow.opacity(0.3))
+                        .frame(width: 70, height: 70)
+                    
+                    // Sun
+                    Image(systemName: "sun.max.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.yellow)
+                }
+                .offset(x: sunX * 150 - 75, y: (sunY * 150) - 160) // Higher in sky, clear of tree canopy
+                .animation(.easeInOut(duration: 0.5), value: sunX)
             }
-        }()
-        
-        // Calculate progress toward this leaf (0.0 to 1.0)
-        // This shows how "filled in" the leaf should be
-        let progress: Double = {
-            if leafData.type == .goal {
-                // For goals: progress is based on total savings reaching the goal target
-                // OR individual goal progress, whichever is higher
-                let savingsProgress = min(totalSaved / max(leafData.value, 1.0), 1.0)
-                let goalProgress = min((leafData.goal?.currentAmount ?? 0) / max(leafData.value, 1.0), 1.0)
-                return max(savingsProgress, goalProgress)
-            } else {
-                // For milestones: progress is based on total savings
-                return min(totalSaved / max(leafData.value, 1.0), 1.0)
+            
+            if themeService.currentTheme.hasClouds {
+                // Clouds in sky portion only
+                let cloudPositions: [(x: CGFloat, y: CGFloat, size: CGFloat)] = [
+                    (-100, -100, 40), (80, -140, 35), (-20, -120, 38)
+                ]
+                ForEach(Array(cloudPositions.enumerated()), id: \.offset) { index, pos in
+                    Image(systemName: "cloud.fill")
+                        .font(.system(size: pos.size))
+                        .foregroundColor(.white.opacity(0.6))
+                        .offset(x: pos.x, y: pos.y)
+                }
             }
-        }()
-        
-        LeafView(
-            leafData: leafData,
-            index: index,
-            totalLeaves: allLeaves.count,
-            treeLevel: animatedLevel,
-            maxValue: maxValue,
-            isReached: isReached,
-            progress: progress, // Add progress for visual filling effect
-            isActiveGoal: isActive,
-            theme: themeService.currentTheme,
-            onGoalTapped: onGoalLeafTapped
-        )
-    }
-    
-    // Log active goal detection (called separately, not in ViewBuilder)
-    private func logActiveGoalIfNeeded(leafData: LeafData, isActive: Bool) {
-        if isActive && leafData.type == .goal {
-            print("🌟 [MoneyTreeView] Active goal leaf found: \(leafData.goal?.name ?? "unknown"), ID: \(leafData.goal?.id ?? "none")")
-        }
-    }
-    
-    // Next milestone
-    private var nextMilestone: Double? {
-        for threshold in growthThresholds {
-            if threshold > totalSaved {
-                return threshold
+            
+            // Money Tree - positioned on the ground, growing up into the sky
+            GeometryReader { geometry in
+                let treeWidth: CGFloat = min(geometry.size.width * 0.5, 200)
+                let treeHeight: CGFloat = geometry.size.height * 0.62 // Taller tree reaching toward stars
+                // Ground Y position calculated at 0.65 * geometry.size.height (not used but kept for reference)
+                
+                ZStack {
+                    // Tree positioned with base just above bottom, canopy reaches high
+                    MoneyTreeShape(
+                        treeWidth: treeWidth,
+                        treeHeight: treeHeight,
+                        totalSaved: totalSaved,
+                        allGoals: allGoals,
+                        onGoalTapped: onGoalLeafTapped
+                    )
+                    // Position: trunk base at bottom, canopy top stops just below stars
+                    .position(x: geometry.size.width / 2, y: geometry.size.height * 0.65)
+                    
+                    // Purchased Scene Items (animals, decorations)
+                    PurchasedSceneItems(geometry: geometry, isEditMode: isEditMode)
+                }
             }
         }
-        return nil
-    }
-    
-    // Progress to next milestone
-    private var progressToNextMilestone: Double {
-        guard let next = nextMilestone,
-              let current = growthThresholds.last(where: { $0 <= totalSaved }) else {
-            return 1.0
-        }
-        let range = next - current
-        let progress = (totalSaved - current) / range
-        return min(max(progress, 0), 1.0)
-    }
-    
-    @State private var animatedLevel: Int = 0
-    @State private var showLeaves: Bool = false
-    @State private var showCelebration: Bool = false
-    @State private var lastMilestoneReached: Double? = nil
-    
-    @StateObject private var themeService = TimeBasedThemeService.shared
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            treeVisualization
-            savingsInfo
+        .frame(maxWidth: .infinity, minHeight: 400, maxHeight: 500)
+        .cornerRadius(12)
+        .clipped()
+        .onReceive(timer) { _ in
+            currentTime = Date()
         }
         .onAppear {
-            // Update leaves on appear
-            print("🌳 [MoneyTreeView] onAppear - Total goals: \(allGoals.count), Active goals: \(activeGoals.count)")
-            updateLeavesIfNeeded()
-            
-            // Update theme based on current time
-            themeService.updateTheme()
-            
-            // Animate tree growth
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-                animatedLevel = treeLevel
-            }
-            
-            // Show leaves after a brief delay with staggered animation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation {
-                    showLeaves = true
-                }
-            }
-        }
-        .onChange(of: totalSaved) { oldValue, newValue in
-            // Update leaves when savings change
-            updateLeavesIfNeeded()
-            
-            // Check if a milestone was just reached
-            let oldLevel = growthThresholds.lastIndex(where: { $0 <= oldValue }) ?? 0
-            let newLevel = growthThresholds.lastIndex(where: { $0 <= newValue }) ?? 0
-            
-            if newLevel > oldLevel {
-                // Milestone reached! Show celebration
-                showCelebration = true
-                lastMilestoneReached = growthThresholds[newLevel]
-                
-                // Hide celebration after animation
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    showCelebration = false
-                }
-            }
-            
-            // Animate growth when savings increase
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-                animatedLevel = treeLevel
-            }
-            
-            // Add new leaves with animation
-            if newValue > oldValue {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.2)) {
-                    showLeaves = true
-                }
-            }
-        }
-        .onChange(of: allGoals.count) { oldCount, newCount in
-            // Update leaves when goals change
-            updateLeavesIfNeeded()
-            
-            // Animate when goals are added/removed
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                showLeaves = true
-            }
-        }
-        .onChange(of: activeGoals.count) { oldCount, newCount in
-            // Force update when active goals change
-            print("🌳 [MoneyTreeView] Active goals count changed: \(oldCount) -> \(newCount)")
-            updateLeavesIfNeeded()
-            
-            // Animate when goals are added/removed
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                showLeaves = true
-            }
-        }
-        .onChange(of: goalsHash) { oldHash, newHash in
-            // Force update when goals themselves change (not just count)
-            if oldHash != newHash {
-                print("🌳 [MoneyTreeView] Goals hash changed: \(oldHash) -> \(newHash)")
-                updateLeavesIfNeeded()
-            }
+            currentTime = Date()
         }
     }
 }
 
-// MARK: - Sky Elements View
-struct SkyElementsView: View {
-    let theme: TimeTheme
-    let size: CGSize
-    
-    var body: some View {
-        ZStack {
-            // Sun
-            if theme.hasSun {
-                sunView
-            }
-            
-            // Moon - brighter and more visible
-            if theme.hasMoon {
-                moonView
-            }
-            
-            // Clouds - very subtle
-            if theme.hasClouds {
-                cloudsView
-            }
-            
-            // Stars (only at night) - much more visible
-            if theme.hasStars {
-                starsView
-            }
-        }
-    }
-    
-    // MARK: - Sun View
-    private var sunView: some View {
-        let sunPos = theme.sunPosition
-        return ZStack {
-                    // Sun glow - more visible like moon glow
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Color(red: 1.0, green: 0.9, blue: 0.6).opacity(0.6), // Increased from 0.4
-                                    Color(red: 1.0, green: 0.85, blue: 0.5).opacity(0.3), // Increased from 0.2
-                                    Color.clear
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: size.width * 0.1
-                            )
-                        )
-                        .frame(width: size.width * 0.3, height: size.width * 0.3)
-                        .blur(radius: 2) // Add blur like moon for better visibility
-                    
-                    // Sun - brighter and more visible like the moon, taller than tree
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 1.0, green: 0.95, blue: 0.7),
-                                    Color(red: 1.0, green: 0.85, blue: 0.5)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: size.width * 0.15, height: size.width * 0.15) // Increased from 0.12 to 0.15
-                        .shadow(color: Color(red: 1.0, green: 0.9, blue: 0.6).opacity(0.6), radius: 8, x: 0, y: 0)
-                }
-                .position(
-                    x: size.width * sunPos.x,
-                    y: size.height * sunPos.y
-                )
-                .opacity(0.95) // Increased from 0.4 to match moon visibility
-    }
-    
-    // MARK: - Moon View
-    private var moonView: some View {
-        let moonPos = theme.moonPosition
-        return ZStack {
-                    // Moon glow - more visible
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Color.white.opacity(0.6),
-                                    Color.white.opacity(0.3),
-                                    Color.clear
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: size.width * 0.12
-                            )
-                        )
-                        .frame(width: size.width * 0.3, height: size.width * 0.3)
-                        .blur(radius: 2)
-                    
-                    // Moon - brighter white, taller than tree
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.98, green: 0.98, blue: 0.95), // Brighter white
-                                    Color(red: 0.9, green: 0.9, blue: 0.85)    // Slightly off-white
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: size.width * 0.15, height: size.width * 0.15) // Increased from 0.12 to 0.15
-                        .overlay(
-                            // Moon craters - more visible
-                            ZStack {
-                                Circle()
-                                    .fill(Color(red: 0.75, green: 0.75, blue: 0.7))
-                                    .frame(width: size.width * 0.018, height: size.width * 0.018)
-                                    .offset(x: -size.width * 0.025, y: -size.width * 0.015)
-                                Circle()
-                                    .fill(Color(red: 0.75, green: 0.75, blue: 0.7))
-                                    .frame(width: size.width * 0.015, height: size.width * 0.015)
-                                    .offset(x: size.width * 0.02, y: size.width * 0.025)
-                                Circle()
-                                    .fill(Color(red: 0.75, green: 0.75, blue: 0.7))
-                                    .frame(width: size.width * 0.012, height: size.width * 0.012)
-                                    .offset(x: -size.width * 0.015, y: size.width * 0.02)
-                            }
-                        )
-                        .shadow(color: Color.white.opacity(0.3), radius: 8, x: 0, y: 0)
-                }
-                .position(
-                    x: size.width * moonPos.x,
-                    y: size.height * moonPos.y
-                )
-    }
-    
-    // MARK: - Clouds View
-    private var cloudsView: some View {
-        ZStack {
-            // Cloud 1
-            CloudShape()
-                .fill(Color.white.opacity(0.15))
-                .frame(width: size.width * 0.25, height: size.width * 0.15)
-                .position(
-                    x: size.width * 0.2,
-                    y: size.height * 0.25
-                )
-                .blur(radius: 2)
-            
-            // Cloud 2
-            CloudShape()
-                .fill(Color.white.opacity(0.12))
-                .frame(width: size.width * 0.2, height: size.width * 0.12)
-                .position(
-                    x: size.width * 0.7,
-                    y: size.height * 0.35
-                )
-                .blur(radius: 2)
-            
-            // Cloud 3 (smaller, distant)
-            CloudShape()
-                .fill(Color.white.opacity(0.1))
-                .frame(width: size.width * 0.15, height: size.width * 0.1)
-                .position(
-                    x: size.width * 0.5,
-                    y: size.height * 0.2
-                )
-                .blur(radius: 2)
-        }
-    }
-    
-    // MARK: - Stars View
-    private var starsView: some View {
-        // Define a lightweight per-star model for twinkling
-        struct Star: Identifiable {
-            let id = UUID()
-            let index: Int
-            let x: CGFloat
-            let y: CGFloat
-            let size: CGFloat
-            let baseOpacity: Double
-            let amplitude: Double
-            let speed: Double
-            let phase: Double
-        }
-
-        // Seeded pseudo-random generator based on index for consistent layout but varied animation
-        func starForIndex(_ index: Int) -> Star {
-            // Positions and size are deterministic from index (as before)
-            let starX = CGFloat(Double((index * 37) % 100) / 100.0)
-            let starY = CGFloat(Double((index * 23) % 80) / 100.0) + 0.05
-            let starSize = CGFloat(Double(index % 4) + 1.5)
-
-            // Pseudo-random values derived from index for animation parameters
-            let seed = Double((index * 91) % 1000) / 1000.0
-            let seed2 = Double((index * 57 + 23) % 1000) / 1000.0
-            let seed3 = Double((index * 131 + 7) % 1000) / 1000.0
-
-            // Base opacity between 0.55 and 0.9
-            let baseOpacity = 0.55 + seed * 0.35
-            // Amplitude between 0.08 and 0.22 (how much it twinkles)
-            let amplitude = 0.08 + seed2 * 0.14
-            // Speed between 0.7 and 1.6 seconds per cycle
-            let speed = 0.7 + seed3 * 0.9
-            // Phase offset (0..2π) to desynchronize stars
-            let phase = seed * 2 * .pi
-
-            return Star(index: index, x: starX, y: starY, size: starSize, baseOpacity: baseOpacity, amplitude: amplitude, speed: speed, phase: phase)
-        }
-
-        // Build stars once for this render pass
-        let stars: [Star] = (0..<30).map { starForIndex($0) }
-
-        // Animate opacity using a sine wave approximation via keyframe-like repeating animation
-        return ZStack {
-            ForEach(stars) { star in
-                // Compute current opacity using time-based effect via animating a dummy value
-                TwinklingStarView(
-                    position: CGPoint(x: size.width * star.x, y: size.height * star.y),
-                    size: star.size,
-                    baseOpacity: star.baseOpacity,
-                    amplitude: star.amplitude,
-                    speed: star.speed,
-                    phase: star.phase
-                )
-            }
-        }
-    }
-}
-
-// MARK: - Twinkling Star View
-private struct TwinklingStarView: View {
-    let position: CGPoint
+// Shimmering star view with animation
+struct ShimmeringStar: View {
     let size: CGFloat
-    let baseOpacity: Double
-    let amplitude: Double
-    let speed: Double
-    let phase: Double
-
-    @State private var t: Double = 0.0
-
+    let delay: Double
+    @State private var isShimmering = false
+    
     var body: some View {
-        // Opacity oscillates between baseOpacity - amplitude and baseOpacity + amplitude
-        let currentOpacity = baseOpacity + amplitude * sin(t + phase)
-        Group {
-            StarShape()
-                .fill(Color.white.opacity(currentOpacity))
-                .frame(width: size, height: size)
-                .position(x: position.x, y: position.y)
-                .shadow(color: Color.white.opacity(0.5), radius: 2, x: 0, y: 0)
-                .onAppear {
-                    // Drive a continuous oscillation by animating `t` linearly and repeating forever.
-                    withAnimation(.linear(duration: speed).repeatForever(autoreverses: false)) {
-                        t = 2 * .pi
-                    }
-                }
-                .onChange(of: speed) { _, newSpeed in
-                    // Restart animation if speed changes (defensive)
-                    t = 0
-                    withAnimation(.linear(duration: newSpeed).repeatForever(autoreverses: false)) {
-                        t = 2 * .pi
-                    }
-                }
-        }
-    }
-}
-
-// MARK: - Cloud Shape
-struct CloudShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let width = rect.width
-        let height = rect.height
-        
-        // Create a fluffy cloud shape
-        let centerX = width / 2
-        let centerY = height / 2
-        
-        // Main cloud body (large circle)
-        path.addEllipse(in: CGRect(
-            x: centerX - width * 0.3,
-            y: centerY - height * 0.2,
-            width: width * 0.6,
-            height: height * 0.8
-        ))
-        
-        // Left puff
-        path.addEllipse(in: CGRect(
-            x: centerX - width * 0.4,
-            y: centerY - height * 0.1,
-            width: width * 0.4,
-            height: height * 0.6
-        ))
-        
-        // Right puff
-        path.addEllipse(in: CGRect(
-            x: centerX + width * 0.1,
-            y: centerY - height * 0.1,
-            width: width * 0.4,
-            height: height * 0.6
-        ))
-        
-        // Top puff
-        path.addEllipse(in: CGRect(
-            x: centerX - width * 0.2,
-            y: centerY - height * 0.3,
-            width: width * 0.4,
-            height: height * 0.5
-        ))
-        
-        return path
-    }
-}
-
-// MARK: - Star Shape
-struct StarShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = min(rect.width, rect.height) / 2
-        
-        // Create a 5-pointed star
-        let points = 5
-        let angle = Double.pi * 2 / Double(points)
-        
-        for i in 0..<points {
-            let outerAngle = angle * Double(i) - Double.pi / 2
-            let innerAngle = angle * (Double(i) + 0.5) - Double.pi / 2
-            
-            let outerX = center.x + CGFloat(cos(outerAngle)) * radius
-            let outerY = center.y + CGFloat(sin(outerAngle)) * radius
-            let innerX = center.x + CGFloat(cos(innerAngle)) * radius * 0.4
-            let innerY = center.y + CGFloat(sin(innerAngle)) * radius * 0.4
-            
-            if i == 0 {
-                path.move(to: CGPoint(x: outerX, y: outerY))
-            } else {
-                path.addLine(to: CGPoint(x: outerX, y: outerY))
+        Image(systemName: "star.fill")
+            .font(.system(size: size))
+            .foregroundColor(.white)
+            .opacity(isShimmering ? 0.4 : 1.0)
+            .scaleEffect(isShimmering ? 0.8 : 1.0)
+            .animation(
+                Animation.easeInOut(duration: Double.random(in: 1.5...2.5))
+                    .repeatForever(autoreverses: true)
+                    .delay(delay),
+                value: isShimmering
+            )
+            .onAppear {
+                isShimmering = true
             }
-            path.addLine(to: CGPoint(x: innerX, y: innerY))
-        }
-        
-        path.closeSubpath()
-        return path
     }
 }
 
-// MARK: - Leaf Data Structure
-struct LeafData: Identifiable {
-    let id: String
-    let value: Double
-    let type: LeafType
-    let goal: SavingsGoal?
+// Money Tree Shape with cloud-like canopy and progressive fill
+struct MoneyTreeShape: View {
+    let treeWidth: CGFloat
+    let treeHeight: CGFloat
+    let totalSaved: Double
+    let allGoals: [SavingsGoal]
+    var onGoalTapped: ((SavingsGoal) -> Void)?
     
-    enum LeafType {
-        case milestone
-        case goal
-    }
-    
-    init(value: Double, type: LeafType, goal: SavingsGoal?) {
-        self.value = value
-        self.type = type
-        self.goal = goal
-        // Create unique ID based on type and value
-        if let goal = goal {
-            self.id = "goal-\(goal.id)"
-        } else {
-            self.id = "milestone-\(Int(value))"
+    // MARK: - Tree Scaling Logic
+    // Calculate max value for the tree scale - adaptive to user's actual savings
+    // This determines the "top" of the tree and how progress fills from bottom to top
+    private var maxValue: Double {
+        let highestGoal = allGoals.map { $0.targetAmount }.max() ?? 0
+        
+        // SCENARIO 1: New users with no goals and minimal savings
+        // Purpose: Show immediate progress to motivate new users
+        if highestGoal == 0 && totalSaved < 1000 {
+            return 1000 // Start with $1k scale - saving $100 shows ~23% tree fill
+        }
+        
+        // SCENARIO 2: User has small goals ($0-$5k)
+        // Purpose: Keep tree scale tight to goals for maximum visual progress
+        else if highestGoal > 0 && highestGoal <= 5000 {
+            return max(highestGoal * 1.1, 5000) // 10% buffer above goal, minimum $5k scale
+        }
+        
+        // SCENARIO 3: User has larger goals (>$5k)
+        // Purpose: Show goal clearly with breathing room above it
+        else if highestGoal > 0 {
+            return highestGoal * 1.15 // 15% buffer above highest goal
+        }
+        
+        // SCENARIO 4: No goals set, user is saving
+        // Purpose: Grow tree dynamically but cap it to encourage goal setting
+        else {
+            // Scale at 2x current savings to show progress while leaving room to grow
+            let dynamicScale = max(totalSaved * 2.0, 1000)
+            
+            // ⚠️ KEY TUNING PARAMETER: $10k cap without goals
+            // Why: Encourages users to set goals once they reach ~$5k in savings
+            // To adjust: Increase cap (e.g., $25k) if users commonly save more without goals
+            //            Decrease cap (e.g., $5k) to push goal setting earlier
+            return min(dynamicScale, 10000)
         }
     }
-}
-
-// MARK: - Leaf View
-struct LeafView: View {
-    let leafData: LeafData
-    let index: Int
-    let totalLeaves: Int
-    let treeLevel: Int
-    let maxValue: Double
-    let isReached: Bool // Whether the milestone/goal has been reached
-    let progress: Double // Progress toward this leaf (0.0 to 1.0) - shows how "filled in" it is
-    let isActiveGoal: Bool // Whether this is the currently active goal
-    let theme: TimeTheme // Current time-based theme
-    var onGoalTapped: ((SavingsGoal) -> Void)? = nil
     
-    // Check if theme is dark (night)
-    private var isDarkTheme: Bool {
-        theme == .night
-    }
-    
-    // Position on tree based on dollar value
-    // Lower values at bottom/left, higher values at top/right
-    // Organize in a spiral pattern around the tree
-    private var angle: Double {
-        // Distribute leaves evenly around the tree (360 degrees)
-        let baseAngle = (Double(index) / Double(max(totalLeaves, 1))) * 360.0
-        // Add slight variation for natural look
-        let variation = sin(Double(index) * 0.5) * 15.0
-        return baseAngle + variation
-    }
-    
-    private var distance: CGFloat {
-        // Distance from center based on value (higher values further out) - grand oak tree spacing
-        let baseDistance: CGFloat = 60 // Increased from 50 for fuller tree
-        let growthPerLevel: CGFloat = 15 // Increased from 12 for more spread
+    // MARK: - Fill Progress Calculation
+    // Converts dollar amount to visual fill percentage (0.0 to 1.0)
+    // Uses power curve to make early progress more motivating
+    private var fillProgress: Double {
+        let linearProgress = min(totalSaved / maxValue, 1.0)
         
-        // Position based on value: normalize to 0-1, then scale
-        let normalizedValue = min(leafData.value / max(maxValue, 1.0), 1.0)
-        let valueBasedDistance = CGFloat(normalizedValue) * 45.0 // Max 45pt additional distance (increased from 35)
-        
-        // Add variation for natural distribution
-        let variation = sin(Double(index) * 0.3) * 10.0 // More variation for fuller look
-        
-        return baseDistance + (CGFloat(treeLevel) * growthPerLevel) + valueBasedDistance + CGFloat(variation)
+        // ⚠️ KEY TUNING PARAMETER: Power curve exponent (currently 0.55)
+        // Lower values (e.g., 0.5) = MORE early progress visibility
+        // Higher values (e.g., 0.7) = LESS early progress boost, more linear
+        // Current setting shows:
+        //   - $100 of $1,000 → ~23% fill (vs 10% linear)
+        //   - $500 of $5,000 → ~18% fill (vs 10% linear)
+        //   - $1,000 of $10,000 → ~16% fill (vs 10% linear)
+        return pow(linearProgress, 0.55)
     }
     
-    private var verticalOffset: CGFloat {
-        // Higher values positioned slightly higher on tree
-        let normalizedValue = min(leafData.value / max(maxValue, 1.0), 1.0)
-        return CGFloat(normalizedValue) * -15.0 // Move up for higher values
-    }
-    
-    private var xOffset: CGFloat {
-        cos(angle * .pi / 180) * distance
-    }
-    
-    private var yOffset: CGFloat {
-        sin(angle * .pi / 180) * distance + verticalOffset
-    }
-    
-    // Leaf size based on value (larger leaves for higher values) - grand oak tree size
-    // Ensure minimum size for readability, especially for small values like $10
-    private var leafSize: (width: CGFloat, height: CGFloat) {
-        let baseSize: CGFloat = 55 // Increased from 42 for better readability
-        let normalizedValue = min(leafData.value / max(maxValue, 1.0), 1.0)
-        // Minimum multiplier ensures even small values are readable
-        let sizeMultiplier = max(1.0, 1.0 + (CGFloat(normalizedValue) * 0.5)) // Up to 50% larger, but minimum 1.0
-        
-        if leafData.type == .goal {
-            // Goal leaves: minimum 60x80, can grow larger
-            let width = max(60, 60 * sizeMultiplier)
-            let height = max(80, 80 * sizeMultiplier)
-            return (width: width, height: height)
-        } else {
-            // Milestone leaves: minimum 55x70, can grow larger
-            let width = max(55, baseSize * sizeMultiplier)
-            let height = max(70, 70 * sizeMultiplier)
-            return (width: width, height: height)
+    // Trunk occupies bottom 40% of tree height
+    private var trunkFillProgress: Double {
+        if fillProgress <= 0.4 {
+            return fillProgress / 0.4 // 0 to 1 for trunk portion
         }
+        return 1.0 // Trunk fully filled
+    }
+    
+    // Canopy occupies top 60% of tree height
+    private var canopyFillProgress: Double {
+        if fillProgress <= 0.4 {
+            return 0.0 // Not started yet
+        }
+        return (fillProgress - 0.4) / 0.6 // 0 to 1 for canopy portion
     }
     
     var body: some View {
         ZStack {
-            if leafData.type == .goal {
-                // Goal leaf - special color with actual leaf shape
-                Button(action: {
-                    // Only allow tap on goal leaves (not milestone leaves)
-                    print("🍃 [LeafView] Goal leaf tapped: \(leafData.goal?.name ?? "unknown")")
-                    if let goal = leafData.goal {
-                        print("🍃 [LeafView] Calling onGoalTapped callback for goal: \(goal.name)")
-                        onGoalTapped?(goal)
-                    } else {
-                        print("⚠️ [LeafView] Goal leaf tapped but goal is nil!")
-                    }
-                }) {
-                    ZStack {
-                        // Custom leaf shape with gradient - fills in as savings grow
-                        ZStack {
-                            // Background (unfilled portion) - lighter/more transparent
-                            // In night mode, make it very subtle so only filled portion shows when progress > 0
-                            LeafShape()
-                                .fill(
-                                    LinearGradient(
-                                        colors: isDarkTheme ? [
-                                            Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.1), // Very subtle for night - only shows outline
-                                            Color(red: 0.4, green: 0.6, blue: 0.95).opacity(0.05)
-                                        ] : [
-                                            Color.reverBlue.opacity(0.3), // Light blue
-                                            Color.deepReverBlue.opacity(0.2)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: leafSize.width, height: leafSize.height)
-                            
-                            // Filled portion - grows as progress increases
-                            LeafShape()
-                                .fill(
-                                    LinearGradient(
-                                        colors: isReached ? [
-                                            Color(red: 0.9, green: 0.7, blue: 0.1), // Gold for completed
-                                            Color(red: 0.8, green: 0.6, blue: 0.0)
-                                        ] : isDarkTheme ? [
-                                            // Lighter blue for night theme to stand out
-                                            Color(red: 0.5, green: 0.7, blue: 1.0), // Bright light blue
-                                            Color(red: 0.4, green: 0.6, blue: 0.95)  // Slightly darker light blue
-                                        ] : [
-                                            Color.reverBlue, // Full opacity for visibility
-                                            Color.deepReverBlue
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: leafSize.width, height: leafSize.height)
-                                .mask(
-                                    // Mask to show only the filled portion based on progress
-                                    GeometryReader { geometry in
-                                        Rectangle()
-                                            .frame(width: geometry.size.width * CGFloat(progress), height: geometry.size.height)
-                                            .offset(x: -geometry.size.width * (1.0 - CGFloat(progress)) / 2)
-                                    }
-                                )
-                        }
-                        .frame(width: leafSize.width, height: leafSize.height)
-                        .rotationEffect(.degrees(angle))
-                        .overlay(
-                            // Leaf vein detail
-                            LeafShape()
-                                .stroke(
-                                    isReached ? Color(red: 0.7, green: 0.5, blue: 0.0).opacity(0.3) : Color.white.opacity(0.2),
-                                    lineWidth: 1
-                                )
-                                .frame(width: leafSize.width, height: leafSize.height)
-                                .rotationEffect(.degrees(angle))
-                        )
-                        
-                        // Goal name/value text and icon - larger and more readable
-                        ZStack {
-                            if !isReached && progress > 0.1 {
-                                // Show progress percentage for leaves that are filling in
-                                Text("\(Int(progress * 100))%")
-                                    .font(.system(size: min(leafSize.width * 0.32, 14), weight: .bold))
-                                    .foregroundColor(.white)
-                                    .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)
-                                    .offset(x: 0, y: -leafSize.height * 0.15)
-                            }
-                            
-                            // Goal name/value text for goal leaves - larger and more readable
-                            if let goal = leafData.goal {
-                                VStack(spacing: 2) {
-                                    Text(goal.name)
-                                        .font(.system(size: min(leafSize.width * 0.25, 11), weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .shadow(color: Color.black.opacity(0.6), radius: 2, x: 0, y: 1)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.7)
-                                    Text(formatMilestoneValue(leafData.value))
-                                        .font(.system(size: min(leafSize.width * 0.35, 15), weight: .bold))
-                                        .foregroundColor(.white)
-                                        .shadow(color: Color.black.opacity(0.6), radius: 3, x: 0, y: 1)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.7)
-                                }
-                                .offset(x: 0, y: -2)
-                            }
-                            
-                            Image(systemName: isReached ? "checkmark.circle.fill" : "tree.fill")
-                                .font(.system(size: min(leafSize.width * 0.4, 18)))
-                                .foregroundColor(.white)
-                                .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 0)
-                                .offset(x: 0, y: leafData.goal != nil ? leafSize.height * 0.2 : -2)
-                        }
-                    }
-                    .frame(width: leafSize.width, height: leafSize.height)
-                }
-                .buttonStyle(PlainButtonStyle()) // Remove default button styling
-                .contentShape(Rectangle()) // Ensure entire button area is tappable
-                .offset(x: xOffset, y: yOffset)
-                .shadow(
-                    color: isReached 
-                        ? Color(red: 0.9, green: 0.7, blue: 0.1).opacity(0.8) 
-                        : isDarkTheme 
-                            ? Color(red: 0.5, green: 0.7, blue: 1.0).opacity(0.8) // Brighter shadow for night
-                            : Color.reverBlue.opacity(0.6), 
-                    radius: isReached ? 10 : (isDarkTheme ? 9 : 7), 
-                    x: 0, 
-                    y: 4
-                )
-                .scaleEffect(isReached ? 1.1 : 1.0) // Larger when reached
-            } else {
-                // Milestone leaf - green with actual leaf shape, fills in as savings grow
+            // OUTLINE LAYER (white/unfilled)
+            ZStack {
+                // Trunk outline (unfilled)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white)
+                    .frame(width: treeWidth * 0.25, height: treeHeight * 0.4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.black, lineWidth: 3)
+                    )
+                    .offset(y: treeHeight * 0.3)
+                
+                // Canopy outline (unfilled) - cloud shapes
                 ZStack {
-                    // Background (unfilled portion) - lighter/more transparent
-                    // In night mode, make it very subtle so only filled portion shows when progress > 0
-                    LeafShape()
-                        .fill(
-                            LinearGradient(
-                                colors: isDarkTheme ? [
-                                    Color(red: 0.5, green: 0.9, blue: 0.55).opacity(0.1), // Very subtle for night - only shows outline
-                                    Color(red: 0.45, green: 0.8, blue: 0.5).opacity(0.05)
-                                ] : [
-                                    Color(red: 0.3, green: 0.75, blue: 0.35).opacity(0.3), // Light green
-                                    Color(red: 0.25, green: 0.65, blue: 0.3).opacity(0.2)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: leafSize.width, height: leafSize.height)
-                    
-                    // Filled portion - grows as progress increases
-                    LeafShape()
-                        .fill(
-                            LinearGradient(
-                                colors: isReached ? [
-                                    isDarkTheme 
-                                        ? Color(red: 0.4, green: 0.85, blue: 0.5)  // Lighter green for night
-                                        : Color(red: 0.2, green: 0.7, blue: 0.3), // Rich green
-                                    isDarkTheme 
-                                        ? Color(red: 0.35, green: 0.75, blue: 0.45)  // Lighter green for night
-                                        : Color(red: 0.15, green: 0.6, blue: 0.25)
-                                ] : isDarkTheme ? [
-                                    Color(red: 0.5, green: 0.9, blue: 0.55), // Much lighter green for night
-                                    Color(red: 0.45, green: 0.8, blue: 0.5)   // Lighter green for night
-                                ] : [
-                                    Color(red: 0.3, green: 0.75, blue: 0.35), // More vibrant green
-                                    Color(red: 0.25, green: 0.65, blue: 0.3)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: leafSize.width, height: leafSize.height)
-                        .mask(
-                            // Mask to show only the filled portion based on progress
-                            GeometryReader { geometry in
-                                Rectangle()
-                                    .frame(width: geometry.size.width * CGFloat(progress), height: geometry.size.height)
-                                    .offset(x: -geometry.size.width * (1.0 - CGFloat(progress)) / 2)
-                            }
-                        )
-                    
-                    // Leaf vein detail
-                    LeafShape()
-                        .stroke(
-                            isReached ? Color.white.opacity(0.3) : Color.white.opacity(0.15),
-                            lineWidth: 0.5
-                        )
-                        .frame(width: leafSize.width, height: leafSize.height)
-                    
-                    // Value label for milestone leaves - larger for readability with better contrast
-                    VStack(spacing: 3) {
-                        if !isReached && progress > 0.1 {
-                            Text("\(Int(progress * 100))%")
-                                .font(.system(size: min(leafSize.width * 0.32, 14), weight: .bold))
-                                .foregroundColor(.white)
-                                .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)
-                        }
-                        Text(formatMilestoneValue(leafData.value))
-                            .font(.system(size: min(leafSize.width * 0.4, 16), weight: .bold))
-                            .foregroundColor(.white)
-                            .shadow(color: Color.black.opacity(0.6), radius: 3, x: 0, y: 1)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
+                    // Bottom layer
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: treeWidth * 0.35, height: treeWidth * 0.35)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2.5))
+                            .offset(x: CGFloat(i - 2) * treeWidth * 0.25, y: treeHeight * 0.08)
                     }
-                    .offset(x: 0, y: -1)
+                    
+                    // Middle layer
+                    ForEach(0..<6, id: \.self) { i in
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: treeWidth * 0.32, height: treeWidth * 0.32)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2.5))
+                            .offset(x: (CGFloat(i) - 2.5) * treeWidth * 0.22, y: -treeHeight * 0.08)
+                    }
+                    
+                    // Upper middle layer (NEW - for more height)
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: treeWidth * 0.3, height: treeWidth * 0.3)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2.5))
+                            .offset(x: CGFloat(i - 2) * treeWidth * 0.21, y: -treeHeight * 0.18)
+                    }
+                    
+                    // Top layer
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: treeWidth * 0.28, height: treeWidth * 0.28)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2.5))
+                            .offset(x: CGFloat(i - 2) * treeWidth * 0.2, y: -treeHeight * 0.28)
+                    }
+                    
+                    // Upper layer
+                    ForEach(0..<4, id: \.self) { i in
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: treeWidth * 0.26, height: treeWidth * 0.26)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2.5))
+                            .offset(x: (CGFloat(i) - 1.5) * treeWidth * 0.19, y: -treeHeight * 0.36)
+                    }
+                    
+                    // Peak clouds
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: treeWidth * 0.24, height: treeWidth * 0.24)
+                            .overlay(Circle().stroke(Color.black, lineWidth: 2.5))
+                            .offset(x: CGFloat(i - 1) * treeWidth * 0.18, y: -treeHeight * 0.43)
+                    }
                 }
-                .frame(width: leafSize.width, height: leafSize.height)
-                .rotationEffect(.degrees(angle))
-                .offset(x: xOffset, y: yOffset)
-                .opacity(isReached ? 1.0 : (isDarkTheme ? 0.85 : 0.6)) // More visible at night
-                .shadow(
-                    color: isDarkTheme 
-                        ? Color(red: 0.5, green: 0.9, blue: 0.55).opacity(isReached ? 0.8 : 0.5)  // Brighter green shadow for night
-                        : Color.green.opacity(isReached ? 0.6 : 0.3), 
-                    radius: isReached ? (isDarkTheme ? 10 : 8) : (isDarkTheme ? 7 : 5), 
-                    x: 0, 
-                    y: 3
+                .offset(y: -treeHeight * 0.05)
+            }
+            
+            // FILL LAYER (colored, masked from bottom up)
+            ZStack {
+                // Trunk fill (brown)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(red: 0.55, green: 0.35, blue: 0.2))
+                    .frame(width: treeWidth * 0.25, height: treeHeight * 0.4)
+                    .mask(
+                        Rectangle()
+                            .frame(height: treeHeight * 0.4 * trunkFillProgress)
+                            .offset(y: treeHeight * 0.4 * (1 - trunkFillProgress) / 2)
+                    )
+                    .offset(y: treeHeight * 0.3)
+                
+                // Canopy fill (money green)
+                ZStack {
+                    // Bottom layer
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: treeWidth * 0.35, height: treeWidth * 0.35)
+                            .offset(x: CGFloat(i - 2) * treeWidth * 0.25, y: treeHeight * 0.08)
+                    }
+                    
+                    // Middle layer
+                    ForEach(0..<6, id: \.self) { i in
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: treeWidth * 0.32, height: treeWidth * 0.32)
+                            .offset(x: (CGFloat(i) - 2.5) * treeWidth * 0.22, y: -treeHeight * 0.08)
+                    }
+                    
+                    // Upper middle layer (NEW - for more height)
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: treeWidth * 0.3, height: treeWidth * 0.3)
+                            .offset(x: CGFloat(i - 2) * treeWidth * 0.21, y: -treeHeight * 0.18)
+                    }
+                    
+                    // Top layer
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: treeWidth * 0.28, height: treeWidth * 0.28)
+                            .offset(x: CGFloat(i - 2) * treeWidth * 0.2, y: -treeHeight * 0.28)
+                    }
+                    
+                    // Upper layer
+                    ForEach(0..<4, id: \.self) { i in
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: treeWidth * 0.26, height: treeWidth * 0.26)
+                            .offset(x: (CGFloat(i) - 1.5) * treeWidth * 0.19, y: -treeHeight * 0.36)
+                    }
+                    
+                    // Peak clouds
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: treeWidth * 0.24, height: treeWidth * 0.24)
+                            .offset(x: CGFloat(i - 1) * treeWidth * 0.18, y: -treeHeight * 0.43)
+                    }
+                }
+                .offset(y: -treeHeight * 0.05)
+                .mask(
+                    Rectangle()
+                        .frame(height: treeHeight * 0.6 * canopyFillProgress)
+                        .offset(y: treeHeight * 0.6 * (1 - canopyFillProgress) / 2 - treeHeight * 0.05)
                 )
             }
+            
+            // VALUE MARKERS
+            ForEach(generateMilestones(), id: \.self) { value in
+                let yPos = milestonePosition(for: value)
+                
+                HStack(spacing: 4) {
+                    // Left line
+                    Rectangle()
+                        .fill(Color.black.opacity(0.4))
+                        .frame(width: 15, height: 1.5)
+                    
+                    // Value label
+                    Text(formatValue(value))
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.black.opacity(0.7))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.9))
+                        .cornerRadius(4)
+                    
+                    // Right line
+                    Rectangle()
+                        .fill(Color.black.opacity(0.4))
+                        .frame(width: 15, height: 1.5)
+                }
+                .offset(y: yPos)
+            }
+            
+            // GOAL MARKERS
+            ForEach(allGoals.filter { $0.targetAmount <= maxValue }, id: \.id) { goal in
+                let yPos = milestonePosition(for: goal.targetAmount)
+                
+                Button(action: {
+                    onGoalTapped?(goal)
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "target")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        Text(goal.name)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 0.2, green: 0.5, blue: 0.8))
+                            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white, lineWidth: 2)
+                    )
+                }
+                .offset(x: treeWidth * 0.45, y: yPos)
+            }
+            
+            // Grass tufts at base
+            ForEach(0..<3, id: \.self) { i in
+                GrassTuft()
+                    .fill(Color(red: 0.25, green: 0.45, blue: 0.2))
+                    .frame(width: 20, height: 15)
+                    .overlay(
+                        GrassTuft()
+                            .stroke(Color.black, lineWidth: 1.5)
+                    )
+                    .offset(
+                        x: CGFloat(i - 1) * 30 - 10,
+                        y: treeHeight * 0.48
+                    )
+            }
         }
-        .animation(
-            .spring(response: 0.6, dampingFraction: 0.7)
-                .delay(Double(index) * 0.05), // Staggered appearance
-            value: progress
-        )
+        .frame(width: treeWidth, height: treeHeight)
     }
     
-    private func formatMilestoneValue(_ value: Double) -> String {
-        if value >= 1000 {
+    // Calculate Y position for a given dollar value
+    private func milestonePosition(for value: Double) -> CGFloat {
+        let progress = value / maxValue
+        // Bottom of tree (trunk base) to top
+        return treeHeight * 0.5 - (CGFloat(progress) * treeHeight)
+    }
+    
+    // MARK: - Milestone Generation
+    // Generate dollar value markers displayed on the tree
+    // Adaptive spacing based on tree scale to avoid clutter
+    private func generateMilestones() -> [Double] {
+        var milestones: [Double] = []
+        let max = maxValue
+        
+        // ⚠️ TUNING GUIDE: Milestone Increments
+        // Smaller increments = more markers = more progress feedback
+        // Larger increments = fewer markers = cleaner display
+        // Current settings balance motivation with readability
+        
+        if max <= 1000 {
+            // $50 increments: $50, $100, $150... up to $1k
+            milestones = stride(from: 50.0, through: max, by: 50).map { $0 }
+        } else if max <= 2500 {
+            // $250 increments: $250, $500, $750... up to $2.5k
+            milestones = stride(from: 250.0, through: max, by: 250).map { $0 }
+        } else if max <= 5000 {
+            // $500 increments: $500, $1k, $1.5k... up to $5k
+            milestones = stride(from: 500.0, through: max, by: 500).map { $0 }
+        } else if max <= 10000 {
+            // $1k increments: $1k, $2k, $3k... up to $10k
+            milestones = stride(from: 1000.0, through: max, by: 1000).map { $0 }
+        } else if max <= 25000 {
+            // $2.5k increments: $2.5k, $5k, $7.5k... up to $25k
+            milestones = stride(from: 2500.0, through: max, by: 2500).map { $0 }
+        } else if max <= 50000 {
+            // $5k increments: $5k, $10k, $15k... up to $50k
+            milestones = stride(from: 5000.0, through: max, by: 5000).map { $0 }
+        } else if max <= 100000 {
+            // $10k increments: $10k, $20k, $30k... up to $100k
+            milestones = stride(from: 10000.0, through: max, by: 10000).map { $0 }
+        } else if max <= 250000 {
+            // $25k increments: $25k, $50k, $75k... up to $250k
+            milestones = stride(from: 25000.0, through: max, by: 25000).map { $0 }
+        } else if max <= 500000 {
+            // $50k increments: $50k, $100k, $150k... up to $500k
+            milestones = stride(from: 50000.0, through: max, by: 50000).map { $0 }
+        } else {
+            // $100k increments: $100k, $200k, $300k... above $500k
+            milestones = stride(from: 100000.0, through: max, by: 100000).map { $0 }
+        }
+        
+        // ⚠️ KEY TUNING PARAMETER: Maximum milestone markers (currently 15)
+        // Increase: More markers = better granularity but potential clutter
+        // Decrease: Fewer markers = cleaner but less progress feedback
+        return Array(milestones.prefix(15))
+    }
+    
+    // Format value for display
+    private func formatValue(_ value: Double) -> String {
+        if value >= 1000000 {
+            return String(format: "$%.1fM", value / 1000000)
+        } else if value >= 1000 {
             return String(format: "$%.0fk", value / 1000)
         } else {
             return String(format: "$%.0f", value)
@@ -1235,358 +620,190 @@ struct LeafView: View {
     }
 }
 
-// MARK: - Custom Leaf Shape
-struct LeafShape: Shape {
+// Simple grass tuft shape
+struct GrassTuft: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let width = rect.width
         let height = rect.height
-        let centerX = width / 2
         
-        // Create a natural leaf shape (oval with pointed tip)
-        path.move(to: CGPoint(x: centerX, y: height * 0.95)) // Bottom center (stem)
+        // Three grass blades
+        path.move(to: CGPoint(x: width * 0.2, y: height))
+        path.addLine(to: CGPoint(x: width * 0.15, y: 0))
         
-        // Left side curve
-        path.addCurve(
-            to: CGPoint(x: width * 0.2, y: height * 0.3),
-            control1: CGPoint(x: width * 0.15, y: height * 0.7),
-            control2: CGPoint(x: width * 0.1, y: height * 0.5)
-        )
+        path.move(to: CGPoint(x: width * 0.5, y: height))
+        path.addLine(to: CGPoint(x: width * 0.5, y: 0))
         
-        // Top point
-        path.addLine(to: CGPoint(x: centerX, y: height * 0.05))
+        path.move(to: CGPoint(x: width * 0.8, y: height))
+        path.addLine(to: CGPoint(x: width * 0.85, y: 0))
         
-        // Right side curve
-        path.addCurve(
-            to: CGPoint(x: centerX, y: height * 0.95),
-            control1: CGPoint(x: width * 0.9, y: height * 0.5),
-            control2: CGPoint(x: width * 0.85, y: height * 0.7)
-        )
-        
-        path.closeSubpath()
         return path
     }
 }
 
-// MARK: - Branch Structure View
-struct BranchStructureView: View {
-    let level: Int
-    let treeHeight: CGFloat
+// MARK: - Purchased Scene Items Display
+struct PurchasedSceneItems: View {
+    let geometry: GeometryProxy
+    let isEditMode: Bool
+    @StateObject private var sceneManager = SceneManager.shared
     
     var body: some View {
         ZStack {
-            // Completely redesigned branch structure - natural tree canopy pattern
-            // Use straight lines with slight curves instead of C-shapes
-            if level >= 1 {
-                // Main branches - spread outward in a V pattern
-                // Left branch - straight outward, not curved
-                Path { path in
-                    let centerX = treeHeight * 0.5
-                    let startY = treeHeight * 0.5
-                    path.move(to: CGPoint(x: centerX, y: startY))
-                    path.addLine(to: CGPoint(
-                        x: centerX - treeHeight * 0.25,
-                        y: startY - treeHeight * 0.15
-                    ))
+            // Display all placed items
+            ForEach(sceneManager.visiblePlacements) { placement in
+                if let item = SceneItem.catalog.first(where: { $0.id == placement.itemId }) {
+                    DraggableSceneItemView(
+                        item: item,
+                        placement: placement,
+                        geometry: geometry,
+                        isEditMode: isEditMode
+                    )
                 }
-                .stroke(Color(red: 0.55, green: 0.35, blue: 0.2), lineWidth: 5)
-                
-                // Right branch - straight outward
-                Path { path in
-                    let centerX = treeHeight * 0.5
-                    let startY = treeHeight * 0.5
-                    path.move(to: CGPoint(x: centerX, y: startY))
-                    path.addLine(to: CGPoint(
-                        x: centerX + treeHeight * 0.25,
-                        y: startY - treeHeight * 0.15
-                    ))
-                }
-                .stroke(Color(red: 0.55, green: 0.35, blue: 0.2), lineWidth: 5)
-                
-                // Center branch - goes straight up
-                Path { path in
-                    let centerX = treeHeight * 0.5
-                    let startY = treeHeight * 0.5
-                    path.move(to: CGPoint(x: centerX, y: startY))
-                    path.addLine(to: CGPoint(
-                        x: centerX,
-                        y: startY - treeHeight * 0.2
-                    ))
-                }
-                .stroke(Color(red: 0.55, green: 0.35, blue: 0.2), lineWidth: 4)
             }
-            
-            if level >= 3 {
-                // Secondary branches - branch off from main branches
-                // Left side secondary branches
-                Path { path in
-                    let startX = treeHeight * 0.25
-                    let startY = treeHeight * 0.35
-                    path.move(to: CGPoint(x: startX, y: startY))
-                    path.addLine(to: CGPoint(x: startX - treeHeight * 0.15, y: startY - treeHeight * 0.12))
-                }
-                .stroke(Color(red: 0.52, green: 0.32, blue: 0.18), lineWidth: 3.5)
-                
-                Path { path in
-                    let startX = treeHeight * 0.25
-                    let startY = treeHeight * 0.35
-                    path.move(to: CGPoint(x: startX, y: startY))
-                    path.addLine(to: CGPoint(x: startX - treeHeight * 0.1, y: startY - treeHeight * 0.15))
-                }
-                .stroke(Color(red: 0.52, green: 0.32, blue: 0.18), lineWidth: 3.5)
-                
-                // Right side secondary branches
-                Path { path in
-                    let startX = treeHeight * 0.75
-                    let startY = treeHeight * 0.35
-                    path.move(to: CGPoint(x: startX, y: startY))
-                    path.addLine(to: CGPoint(x: startX + treeHeight * 0.15, y: startY - treeHeight * 0.12))
-                }
-                .stroke(Color(red: 0.52, green: 0.32, blue: 0.18), lineWidth: 3.5)
-                
-                Path { path in
-                    let startX = treeHeight * 0.75
-                    let startY = treeHeight * 0.35
-                    path.move(to: CGPoint(x: startX, y: startY))
-                    path.addLine(to: CGPoint(x: startX + treeHeight * 0.1, y: startY - treeHeight * 0.15))
-                }
-                .stroke(Color(red: 0.52, green: 0.32, blue: 0.18), lineWidth: 3.5)
-                
-                // Center secondary branches
-                Path { path in
-                    let centerX = treeHeight * 0.5
-                    let startY = treeHeight * 0.3
-                    path.move(to: CGPoint(x: centerX, y: startY))
-                    path.addLine(to: CGPoint(x: centerX - treeHeight * 0.08, y: startY - treeHeight * 0.1))
-                }
-                .stroke(Color(red: 0.52, green: 0.32, blue: 0.18), lineWidth: 3.5)
-                
-                Path { path in
-                    let centerX = treeHeight * 0.5
-                    let startY = treeHeight * 0.3
-                    path.move(to: CGPoint(x: centerX, y: startY))
-                    path.addLine(to: CGPoint(x: centerX + treeHeight * 0.08, y: startY - treeHeight * 0.1))
-                }
-                .stroke(Color(red: 0.52, green: 0.32, blue: 0.18), lineWidth: 3.5)
-            }
-            
-            if level >= 5 {
-                // Tertiary branches - smaller twigs
-                ForEach([-60, -40, -20, 20, 40, 60], id: \.self) { angle in
-                    Path { path in
-                        let centerX = treeHeight * 0.5
-                        let baseY = treeHeight * 0.2
-                        let radians = Double(angle) * .pi / 180
-                        let length = treeHeight * 0.1
-                        path.move(to: CGPoint(x: centerX, y: baseY))
-                        path.addLine(to: CGPoint(
-                            x: centerX + cos(radians) * length,
-                            y: baseY + sin(radians) * length - treeHeight * 0.08
-                        ))
+        }
+    }
+}
+
+// MARK: - Draggable Scene Item
+struct DraggableSceneItemView: View {
+    let item: SceneItem
+    let placement: SceneItemPlacement
+    let geometry: GeometryProxy
+    let isEditMode: Bool
+    
+    @StateObject private var sceneManager = SceneManager.shared
+    @StateObject private var themeService = TimeBasedThemeService.shared
+    @State private var dragOffset: CGSize = .zero
+    @State private var isAnimating = false
+    @State private var isInDragMode = false // Local drag mode enabled by long press
+    
+    var body: some View {
+        SceneItemIcon(item: item, tintColor: colorForItem)
+            .scaleEffect(x: placement.isFlipped ? -1 : 1, y: 1) // Flip horizontally if isFlipped
+            .scaleEffect(dragOffset != .zero ? 1.2 : (isAnimating && !isEditMode ? 1.1 : 1.0))
+            .animation(
+                isEditMode ? nil : Animation.easeInOut(duration: 2.0)
+                    .repeatForever(autoreverses: true)
+                    .delay(Double.random(in: 0...1)),
+                value: isAnimating
+            )
+            .offset(x: absoluteXPosition, y: absoluteYPosition)
+            .opacity(dragOffset != .zero ? 0.8 : (isEditMode || isInDragMode ? 0.9 : itemOpacity))
+            .overlay(
+                // Drag mode indicator
+                Group {
+                    if isEditMode || isInDragMode {
+                        Circle()
+                            .stroke(Color.blue, lineWidth: 2)
+                            .frame(width: item.fontSizeForIcon + 10, height: item.fontSizeForIcon + 10)
+                        
+                        // Exit drag mode button
+                        if isInDragMode {
+                            Button(action: {
+                                withAnimation {
+                                    isInDragMode = false
+                                }
+                            }) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.green)
+                                    .background(Circle().fill(Color.white))
+                            }
+                            .offset(x: item.fontSizeForIcon / 2 + 15, y: -item.fontSizeForIcon / 2 - 15)
+                        }
                     }
-                    .stroke(Color(red: 0.5, green: 0.3, blue: 0.15), lineWidth: 2.5)
+                }
+            )
+            .onTapGesture {
+                // Quick tap to flip orientation
+                if !isInDragMode && !isEditMode {
+                    sceneManager.toggleFlip(placementId: placement.id)
                 }
             }
+            .onLongPressGesture(minimumDuration: 0.5) {
+                // Long press to enable drag mode
+                withAnimation {
+                    isInDragMode = true
+                }
+            }
+            .gesture(
+                (isEditMode || isInDragMode) ? DragGesture(minimumDistance: 10)
+                    .onChanged { value in
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        // Calculate new normalized position
+                        let newX = (absoluteXPosition + value.translation.width + geometry.size.width / 2) / geometry.size.width
+                        let newY = (absoluteYPosition + value.translation.height + geometry.size.height / 2) / geometry.size.height
+                        
+                        let newPosition = SceneItemPlacement.PlacementPosition(x: newX, y: newY)
+                        sceneManager.updateItemPosition(placement.id, to: newPosition)
+                        dragOffset = .zero
+                        
+                        // Auto-exit drag mode after positioning
+                        withAnimation {
+                            isInDragMode = false
+                        }
+                    } : nil
+            )
+            .onAppear {
+                isAnimating = true
+            }
+    }
+    
+    // Convert normalized position to absolute screen position
+    private var absoluteXPosition: CGFloat {
+        let normalizedX = placement.position.x
+        // Center is 0, left is negative, right is positive
+        return (normalizedX * geometry.size.width) - (geometry.size.width / 2) + dragOffset.width
+    }
+    
+    private var absoluteYPosition: CGFloat {
+        let normalizedY = placement.position.y
+        // Center is 0, top is negative, bottom is positive
+        return (normalizedY * geometry.size.height) - (geometry.size.height / 2) + dragOffset.height
+    }
+    
+    // Opacity adjusts based on time of day
+    private var itemOpacity: Double {
+        switch themeService.currentTheme {
+        case .night:
+            return 0.8 // Slightly dimmed at night
+        case .sunset, .evening:
+            return 0.9 // Transitioning
+        default:
+            return 1.0 // Full brightness during day
+        }
+    }
+    
+    // Dynamic color based on item type and time of day
+    // Note: For custom images and emojis, this tint is only used if rendering as template
+    private var colorForItem: Color {
+        let isNight = themeService.currentTheme == .night
+        let isEvening = themeService.currentTheme == .evening || themeService.currentTheme == .sunset
+        
+        switch item.category {
+        case .animal:
+            // Animals - Brown during day, cooler/darker at night
+            return isNight ? Color(red: 0.3, green: 0.25, blue: 0.3) :
+                   isEvening ? Color(red: 0.5, green: 0.35, blue: 0.25) :
+                   Color(red: 0.6, green: 0.4, blue: 0.2)
+            
+        case .decoration:
+            // Decorations - Colorful, slightly dimmed at night
+            if item.id == "fireflies" {
+                // Fireflies - Glow brighter at night!
+                return isNight ? Color(red: 1.0, green: 0.9, blue: 0.3) :
+                       Color(red: 0.8, green: 0.7, blue: 0.2)
+            } else {
+                return isNight ? Color(red: 0.5, green: 0.4, blue: 0.6) :
+                       Color(red: 0.7, green: 0.5, blue: 0.8)
+            }
+            
+        case .plant:
+            // Plants - Green, darker and cooler at night
+            return isNight ? Color(red: 0.2, green: 0.35, blue: 0.25) :
+                   Color(red: 0.3, green: 0.7, blue: 0.3)
         }
     }
 }
-
-// MARK: - Branch Path
-struct BranchPath: Shape {
-    let angle: Double // Angle in degrees
-    let length: CGFloat
-    let startY: CGFloat
-    let curvature: Double // Curvature factor (-1 to 1, positive curves right, negative curves left)
-    
-    init(angle: Double, length: CGFloat, startY: CGFloat, curvature: Double = 0.0) {
-        self.angle = angle
-        self.length = length
-        self.startY = startY
-        self.curvature = curvature
-    }
-    
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let centerX = rect.width / 2
-        let startPoint = CGPoint(x: centerX, y: startY)
-        
-        path.move(to: startPoint)
-        
-        // Create more natural branch curve
-        let radians = angle * .pi / 180
-        let endX = startPoint.x + cos(radians) * length
-        let endY = startPoint.y + sin(radians) * length
-        
-        // Control point for curve - adjusted to create more natural branching
-        // Perpendicular offset based on curvature
-        let perpAngle = radians + .pi / 2
-        let curveOffset = length * 0.4 * CGFloat(curvature)
-        let controlX = startPoint.x + cos(radians) * length * 0.6 + cos(perpAngle) * curveOffset
-        let controlY = startPoint.y + sin(radians) * length * 0.4 + sin(perpAngle) * curveOffset
-        
-        path.addQuadCurve(
-            to: CGPoint(x: endX, y: endY),
-            control: CGPoint(x: controlX, y: controlY)
-        )
-        
-        return path
-    }
-}
-
-// MARK: - Trunk View with Enhanced Texture
-struct TrunkView: View {
-    let width: CGFloat
-    let height: CGFloat
-    
-    var body: some View {
-        ZStack {
-            // Base trunk - rich brown gradient
-            RoundedRectangle(cornerRadius: width / 2)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.7, green: 0.5, blue: 0.3), // Rich light brown
-                            Color(red: 0.6, green: 0.4, blue: 0.25), // Medium brown
-                            Color(red: 0.5, green: 0.35, blue: 0.2), // Darker brown
-                            Color(red: 0.45, green: 0.3, blue: 0.18)  // Deep brown
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: width, height: height)
-                .shadow(color: Color(red: 0.2, green: 0.15, blue: 0.1).opacity(0.5), radius: 6, x: 0, y: 3)
-            
-            // Vertical bark texture lines
-            VStack(spacing: 2) {
-                ForEach(0..<Int(height / 8), id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 0.5)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.4, green: 0.25, blue: 0.15).opacity(0.3),
-                                    Color.clear,
-                                    Color(red: 0.4, green: 0.25, blue: 0.15).opacity(0.3)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: width * 0.3, height: 1)
-                }
-            }
-            
-            // Horizontal bark texture (subtle rings)
-            HStack(spacing: 3) {
-                ForEach(0..<3, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 0.5)
-                        .fill(Color(red: 0.35, green: 0.22, blue: 0.12).opacity(0.2))
-                        .frame(width: 1, height: height * 0.4)
-                }
-            }
-            
-            // Highlight on left side for 3D effect
-            RoundedRectangle(cornerRadius: width / 2)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.15),
-                            Color.clear
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: width, height: height)
-            
-            // Shadow on right side for depth
-            RoundedRectangle(cornerRadius: width / 2)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            Color(red: 0.2, green: 0.15, blue: 0.1).opacity(0.3)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: width, height: height)
-        }
-    }
-}
-
-// MARK: - Celebration Effect View
-struct CelebrationEffectView: View {
-    let treeCenter: CGPoint
-    @State private var sparkles: [Sparkle] = []
-    
-    struct Sparkle: Identifiable {
-        let id = UUID()
-        var x: CGFloat
-        var y: CGFloat
-        var opacity: Double
-        var scale: CGFloat
-    }
-    
-    var body: some View {
-        ZStack {
-            ForEach(sparkles) { sparkle in
-                Image(systemName: "sparkle")
-                    .font(.system(size: 14))
-                    .foregroundColor(.yellow)
-                    .opacity(sparkle.opacity)
-                    .scaleEffect(sparkle.scale)
-                    .position(x: sparkle.x, y: sparkle.y)
-            }
-        }
-        .onAppear {
-            // Generate sparkles in a circle around tree center
-            let radius: CGFloat = 100
-            
-            for i in 0..<24 {
-                let angle = Double(i) * (360.0 / 24.0) * .pi / 180.0
-                let x = treeCenter.x + cos(angle) * radius
-                let y = treeCenter.y + sin(angle) * radius
-                
-                sparkles.append(Sparkle(
-                    x: x,
-                    y: y,
-                    opacity: 1.0,
-                    scale: 0.5
-                ))
-            }
-            
-            // Animate sparkles outward
-            withAnimation(.easeOut(duration: 1.5)) {
-                for i in sparkles.indices {
-                    let angle = Double(i) * (360.0 / 24.0) * .pi / 180.0
-                    sparkles[i].x = treeCenter.x + cos(angle) * radius * 2.5
-                    sparkles[i].y = treeCenter.y + sin(angle) * radius * 2.5
-                    sparkles[i].opacity = 0.0
-                    sparkles[i].scale = 1.5
-                }
-            }
-        }
-    }
-}
-
-#Preview {
-    MoneyTreeView(
-        totalSaved: 150.0,
-        activeGoal: SavingsGoal(
-            id: "preview",
-            name: "Trip to Hawaii",
-            targetAmount: 2000,
-            currentAmount: 500,
-            category: .trip
-        ),
-        allGoals: [
-            SavingsGoal(id: "preview", name: "Trip to Hawaii", targetAmount: 2000, currentAmount: 500, category: .trip),
-            SavingsGoal(id: "preview2", name: "New Car", targetAmount: 15000, currentAmount: 3000, category: .purchase)
-        ]
-    )
-    .padding()
-    .background(Color.dreamMist)
-}
-

@@ -21,6 +21,7 @@ struct GoalsView: View {
     @State private var isActiveGoalsExpanded = true
     @State private var isHistoricalGoalsExpanded = true
     @State private var refreshTrigger = UUID() // Force view refresh
+    @State private var showGoalsTutorial = false
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -338,6 +339,22 @@ struct GoalsView: View {
             // Force refresh of archived goals to remove any active goals
             // This ensures the view refreshes with correct data
             goalsService.refreshGoals()
+            
+            // Show goals tutorial on first visit (if not permanently hidden)
+            if !UserDefaults.standard.bool(forKey: "goals_tutorial_hidden") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showGoalsTutorial = true
+                }
+            }
+        }
+        .overlay {
+            // Goals Tutorial
+            TutorialPopup(
+                title: "Getting Started with Goals",
+                content: AnyView(GoalsTutorialContent()),
+                userDefaultsKey: "goals_tutorial_hidden",
+                isPresented: $showGoalsTutorial
+            )
         }
     }
 }
@@ -565,24 +582,6 @@ struct GoalCard: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
-                    
-                    // Only show cancel button for active goals
-                    if goal.status == .active {
-                        Button(action: {
-                            goalsService.cancelGoal(goal)
-                        }) {
-                            Text("Cancel Goal")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.red.opacity(0.1))
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
                 }
             }
             
@@ -793,12 +792,7 @@ struct CreateGoalView: View {
     @State private var progressNotificationFrequency: SavingsGoal.ProgressNotificationFrequency = .daily
     @State private var milestoneNotificationsEnabled: Bool = true
     @State private var achievementNotificationEnabled: Bool = true
-    @State private var notificationTime: Date = {
-        var components = DateComponents()
-        components.hour = 9
-        components.minute = 0
-        return Calendar.current.date(from: components) ?? Date()
-    }()
+    @State private var notificationTimes: [Date] = [] // Up to 5 notification times
     @State private var showNotificationSettings: Bool = false
     
     // Reset flag when view appears (in case it was left in true state)
@@ -822,6 +816,7 @@ struct CreateGoalView: View {
                         if showTargetDatePicker && targetDate != nil {
                             savingsPlanSection
                         }
+                        notificationSettingsSection // Notification configuration during creation
                         goalPhotoSection // Moved to bottom - photo appears after goal details
                     }
                     .padding(20)
@@ -849,6 +844,16 @@ struct CreateGoalView: View {
             .onAppear {
                 // Reset creation state when view appears
                 resetCreationState()
+                
+                // Initialize notification times with default 9 AM if empty
+                if notificationTimes.isEmpty {
+                    var components = DateComponents()
+                    components.hour = 9
+                    components.minute = 0
+                    if let defaultTime = Calendar.current.date(from: components) {
+                        notificationTimes = [defaultTime]
+                    }
+                }
             }
             .alert("Invalid Date Range", isPresented: $showDateValidationAlert) {
                 Button("OK", role: .cancel) {}
@@ -1676,18 +1681,99 @@ struct CreateGoalView: View {
                         .cornerRadius(10)
                     }
                     
-                    // Notification time (if not "Never")
+                    // Notification times (if not "Never") - up to 5 times
                     if progressNotificationFrequency != .never {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Notification Time")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.softGraphite)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Notification Times")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.softGraphite)
+                                
+                                Spacer()
+                                
+                                if notificationTimes.count < 5 {
+                                    Button(action: {
+                                        // Add a new time (default to 9 AM or next hour after last time)
+                                        let newTime: Date
+                                        if let lastTime = notificationTimes.last {
+                                            let calendar = Calendar.current
+                                            let components = calendar.dateComponents([.hour, .minute], from: lastTime)
+                                            var newComponents = DateComponents()
+                                            newComponents.hour = ((components.hour ?? 9) + 1) % 24
+                                            newComponents.minute = components.minute ?? 0
+                                            newTime = calendar.date(from: newComponents) ?? {
+                                                var defaultComponents = DateComponents()
+                                                defaultComponents.hour = 9
+                                                defaultComponents.minute = 0
+                                                return calendar.date(from: defaultComponents) ?? Date()
+                                            }()
+                                        } else {
+                                            var components = DateComponents()
+                                            components.hour = 9
+                                            components.minute = 0
+                                            newTime = Calendar.current.date(from: components) ?? Date()
+                                        }
+                                        notificationTimes.append(newTime)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "plus.circle.fill")
+                                                .font(.system(size: 14))
+                                            Text("Add Time")
+                                                .font(.system(size: 13, weight: .medium))
+                                        }
+                                        .foregroundColor(.softGraphite)
+                                    }
+                                }
+                            }
                             
-                            DatePicker("", selection: $notificationTime, displayedComponents: .hourAndMinute)
+                            if notificationTimes.isEmpty {
+                                // Default to 9 AM if no times set
+                                let defaultTime: Date = {
+                                    var components = DateComponents()
+                                    components.hour = 9
+                                    components.minute = 0
+                                    return Calendar.current.date(from: components) ?? Date()
+                                }()
+                                
+                                DatePicker("", selection: Binding(
+                                    get: { defaultTime },
+                                    set: { notificationTimes = [$0] }
+                                ), displayedComponents: .hourAndMinute)
                                 .datePickerStyle(.compact)
                                 .padding(12)
                                 .background(Color.dreamMist)
                                 .cornerRadius(10)
+                            } else {
+                                ForEach(Array(notificationTimes.enumerated()), id: \.offset) { index, time in
+                                    HStack {
+                                        DatePicker("", selection: Binding(
+                                            get: { time },
+                                            set: { notificationTimes[index] = $0 }
+                                        ), displayedComponents: .hourAndMinute)
+                                        .datePickerStyle(.compact)
+                                        
+                                        if notificationTimes.count > 1 {
+                                            Button(action: {
+                                                notificationTimes.remove(at: index)
+                                            }) {
+                                                Image(systemName: "minus.circle.fill")
+                                                    .font(.system(size: 18))
+                                                    .foregroundColor(.red)
+                                            }
+                                        }
+                                    }
+                                    .padding(12)
+                                    .background(Color.dreamMist)
+                                    .cornerRadius(10)
+                                }
+                            }
+                            
+                            if notificationTimes.count >= 5 {
+                                Text("Maximum 5 notification times")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.softGraphite)
+                                    .italic()
+                            }
                         }
                     }
                     
@@ -1812,7 +1898,20 @@ struct CreateGoalView: View {
         updatedGoal.progressNotificationFrequency = progressNotificationFrequency
         updatedGoal.milestoneNotificationsEnabled = milestoneNotificationsEnabled
         updatedGoal.achievementNotificationEnabled = achievementNotificationEnabled
-        updatedGoal.notificationTime = notificationsEnabled ? notificationTime : nil
+        // Set notification times (default to 9 AM if empty)
+        if notificationsEnabled && !notificationTimes.isEmpty {
+            updatedGoal.notificationTimes = notificationTimes
+        } else if notificationsEnabled {
+            // Default to 9 AM if no times set
+            var components = DateComponents()
+            components.hour = 9
+            components.minute = 0
+            if let defaultTime = Calendar.current.date(from: components) {
+                updatedGoal.notificationTimes = [defaultTime]
+            }
+        } else {
+            updatedGoal.notificationTimes = []
+        }
         
         // Use updateGoal to properly save the changes
         goalsService.updateGoal(updatedGoal)
@@ -1949,12 +2048,7 @@ struct EditGoalView: View {
     @State private var progressNotificationFrequency: SavingsGoal.ProgressNotificationFrequency = .daily
     @State private var milestoneNotificationsEnabled: Bool = true
     @State private var achievementNotificationEnabled: Bool = true
-    @State private var notificationTime: Date = {
-        var components = DateComponents()
-        components.hour = 9
-        components.minute = 0
-        return Calendar.current.date(from: components) ?? Date()
-    }()
+    @State private var notificationTimes: [Date] = [] // Up to 5 notification times
     
     var body: some View {
         NavigationView {
@@ -2008,12 +2102,17 @@ struct EditGoalView: View {
                 progressNotificationFrequency = goal.progressNotificationFrequency
                 milestoneNotificationsEnabled = goal.milestoneNotificationsEnabled
                 achievementNotificationEnabled = goal.achievementNotificationEnabled
-                notificationTime = goal.notificationTime ?? {
+                // Load notification times, or default to 9 AM if empty
+                if !goal.notificationTimes.isEmpty {
+                    notificationTimes = goal.notificationTimes
+                } else if let defaultTime = goal.notificationTime {
+                    notificationTimes = [defaultTime]
+                } else {
                     var components = DateComponents()
                     components.hour = 9
                     components.minute = 0
-                    return Calendar.current.date(from: components) ?? Date()
-                }()
+                    notificationTimes = [Calendar.current.date(from: components) ?? Date()]
+                }
                 
                 // Load existing photo if available
                 if let photoPath = goal.photoPath {
@@ -2663,18 +2762,92 @@ struct EditGoalView: View {
                         .cornerRadius(10)
                     }
                     
-                    // Notification time (if not "Never")
+                    // Notification times (if not "Never") - up to 5 times
                     if progressNotificationFrequency != .never {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Notification Time")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.softGraphite)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Notification Times (up to 5)")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.softGraphite)
+                                
+                                Spacer()
+                                
+                                if notificationTimes.count < 5 {
+                                    Button(action: {
+                                        // Add a new time (default to 9 AM or next hour after last time)
+                                        let newTime: Date
+                                        if let lastTime = notificationTimes.last {
+                                            let calendar = Calendar.current
+                                            let components = calendar.dateComponents([.hour, .minute], from: lastTime)
+                                            var newComponents = DateComponents()
+                                            newComponents.hour = ((components.hour ?? 9) + 1) % 24
+                                            newComponents.minute = components.minute ?? 0
+                                            newTime = calendar.date(from: newComponents) ?? {
+                                                var defaultComponents = DateComponents()
+                                                defaultComponents.hour = 9
+                                                defaultComponents.minute = 0
+                                                return calendar.date(from: defaultComponents) ?? Date()
+                                            }()
+                                        } else {
+                                            var components = DateComponents()
+                                            components.hour = 9
+                                            components.minute = 0
+                                            newTime = Calendar.current.date(from: components) ?? Date()
+                                        }
+                                        notificationTimes.append(newTime)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "plus.circle.fill")
+                                                .font(.system(size: 14))
+                                            Text("Add Time")
+                                                .font(.system(size: 13, weight: .medium))
+                                        }
+                                        .foregroundColor(.softGraphite)
+                                    }
+                                }
+                            }
                             
-                            DatePicker("", selection: $notificationTime, displayedComponents: .hourAndMinute)
+                            if notificationTimes.isEmpty {
+                                // Default to 9 AM if no times set
+                                let defaultTime: Date = {
+                                    var components = DateComponents()
+                                    components.hour = 9
+                                    components.minute = 0
+                                    return Calendar.current.date(from: components) ?? Date()
+                                }()
+                                
+                                DatePicker("", selection: Binding(
+                                    get: { defaultTime },
+                                    set: { notificationTimes = [$0] }
+                                ), displayedComponents: .hourAndMinute)
                                 .datePickerStyle(.compact)
                                 .padding(12)
                                 .background(Color.dreamMist)
                                 .cornerRadius(10)
+                            } else {
+                                ForEach(Array(notificationTimes.enumerated()), id: \.offset) { index, time in
+                                    HStack {
+                                        DatePicker("", selection: Binding(
+                                            get: { time },
+                                            set: { notificationTimes[index] = $0 }
+                                        ), displayedComponents: .hourAndMinute)
+                                        .datePickerStyle(.compact)
+                                        
+                                        if notificationTimes.count > 1 {
+                                            Button(action: {
+                                                notificationTimes.remove(at: index)
+                                            }) {
+                                                Image(systemName: "minus.circle.fill")
+                                                    .font(.system(size: 18))
+                                                    .foregroundColor(.red)
+                                            }
+                                        }
+                                    }
+                                    .padding(12)
+                                    .background(Color.dreamMist)
+                                    .cornerRadius(10)
+                                }
+                            }
                         }
                     }
                     
@@ -2763,7 +2936,7 @@ struct EditGoalView: View {
         updatedGoal.progressNotificationFrequency = progressNotificationFrequency
         updatedGoal.milestoneNotificationsEnabled = milestoneNotificationsEnabled
         updatedGoal.achievementNotificationEnabled = achievementNotificationEnabled
-        updatedGoal.notificationTime = notificationsEnabled ? notificationTime : nil
+        updatedGoal.notificationTimes = notificationsEnabled ? notificationTimes : []
         
         goalsService.updateGoal(updatedGoal)
         
@@ -3116,13 +3289,25 @@ extension GoalsView {
         if userEmail.lowercased() == "supergeek@me.com" {
             return false
         }
+        
+        // Check if user is in first 100 TestFlight signups (gets Meta Yellow Card)
+        let isFirst100TestFlight = UserDefaults.standard.bool(forKey: "is_first_100_testflight_user")
+        if isFirst100TestFlight {
+            return true // First 100 TestFlight users get Meta Yellow Card
+        }
+        
+        // Check if running in TestFlight (but NOT first 100 - they don't get Meta Yellow Card)
         #if DEBUG
-        return true
+        return false // Debug builds don't get Meta Yellow Card unless they're first 100
         #else
+        // Check for TestFlight receipt
         if let receiptURL = Bundle.main.appStoreReceiptURL,
            receiptURL.lastPathComponent == "sandboxReceipt" {
-            return true
+            // User is in TestFlight but NOT first 100, so they don't get Meta Yellow Card
+            return false
         }
+        
+        // Check UserDefaults flag (can be set manually for testing)
         return UserDefaults.standard.bool(forKey: "is_beta_tester")
         #endif
     }

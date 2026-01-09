@@ -1,0 +1,11 @@
+{
+  "name": "soteria-unit-create-counterparty",
+  "version": "1.0.0",
+  "description": "Create Unit counterparty using Plaid processor token",
+  "main": "index.js",
+  "dependencies": {
+    "aws-sdk": "^2.1400.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0"
+  }
+}

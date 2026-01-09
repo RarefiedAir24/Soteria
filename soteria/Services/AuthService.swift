@@ -224,8 +224,21 @@ class AuthService: ObservableObject {
     
     // Sign up with email and password
     @MainActor
-    func signUp(email: String, password: String) async throws {
-        try await getCognitoService().signUp(email: email, password: password)
+    func signUp(email: String, password: String) async throws -> Bool {
+        // Detect if running in TestFlight
+        let isInTestFlight: Bool = {
+            #if DEBUG
+            return false // Don't count debug builds
+            #else
+            if let receiptURL = Bundle.main.appStoreReceiptURL,
+               receiptURL.lastPathComponent == "sandboxReceipt" {
+                return true
+            }
+            return false
+            #endif
+        }()
+        
+        let isFirst100 = try await getCognitoService().signUp(email: email, password: password, isTestFlight: isInTestFlight)
         self.updateAuthState()
         
         // Mark as new sign-up to show Unit account creation banner
@@ -233,6 +246,16 @@ class AuthService: ObservableObject {
         
         // Store sign-up date for premium card display
         UserDefaults.standard.set(Date(), forKey: "user_signup_date")
+        
+        // Store if user is in first 100 TestFlight signups (for Meta Yellow Card)
+        if isFirst100 {
+            UserDefaults.standard.set(true, forKey: "is_first_100_testflight_user")
+            print("🎉 [AuthService] User is in first 100 TestFlight signups - Meta Yellow Card unlocked!")
+        } else {
+            UserDefaults.standard.set(false, forKey: "is_first_100_testflight_user")
+        }
+        
+        return isFirst100
     }
     
     // Sign in with email and password

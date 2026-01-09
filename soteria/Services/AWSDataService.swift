@@ -87,6 +87,8 @@ class AWSDataService: ObservableObject {
         case quietHours = "quiet_hours"
         case appUsage = "app_usage"
         case unblockEvents = "unblock_events"
+        case loyaltyPoints = "loyalty_points"
+        case scenePlacements = "scene_placements"
     }
     
     private init() {

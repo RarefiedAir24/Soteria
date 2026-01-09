@@ -7,6 +7,16 @@
 
 import SwiftUI
 
+// Helper to safely get screen bounds
+private func getScreenBounds() -> CGRect {
+    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+       let window = windowScene.windows.first {
+        return window.bounds
+    }
+    // Fallback to UIScreen.main (deprecated but safe for iOS 15+)
+    return UIScreen.main.bounds
+}
+
 extension View {
     /// Returns a responsive font size based on screen height
     /// - Parameters:
@@ -14,7 +24,7 @@ extension View {
     ///   - medium: Font size for medium screens (iPhone Pro, etc.)
     ///   - small: Font size for small screens (iPhone SE, etc.)
     func responsiveFont(large: CGFloat, medium: CGFloat? = nil, small: CGFloat? = nil) -> CGFloat {
-        let screenHeight = UIScreen.main.bounds.height
+        let screenHeight = getScreenBounds().height
         let mediumSize = medium ?? large * 0.9
         let smallSize = small ?? mediumSize * 0.9
         
@@ -38,7 +48,7 @@ extension View {
     ///   - medium: Padding for medium screens (defaults to large * 0.85)
     ///   - small: Padding for small screens (defaults to medium * 0.85)
     func responsivePadding(large: CGFloat, medium: CGFloat? = nil, small: CGFloat? = nil) -> CGFloat {
-        let screenHeight = UIScreen.main.bounds.height
+        let screenHeight = getScreenBounds().height
         let mediumPadding = medium ?? large * 0.85
         let smallPadding = small ?? mediumPadding * 0.85
         
@@ -60,7 +70,7 @@ extension View {
 // MARK: - Responsive Size Helper
 struct ResponsiveSize {
     static var screenHeight: CGFloat {
-        UIScreen.main.bounds.height
+        getScreenBounds().height
     }
     
     static var isSmallScreen: Bool {

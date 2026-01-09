@@ -1,0 +1,12 @@
+{
+  "name": "soteria-plaid-create-processor-token",
+  "version": "1.0.0",
+  "description": "Create Plaid processor token for Unit integration",
+  "main": "index.js",
+  "dependencies": {
+    "plaid": "^20.0.0",
+    "aws-sdk": "^2.1400.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0"
+  }
+}

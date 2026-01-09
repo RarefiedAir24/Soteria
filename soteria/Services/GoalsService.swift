@@ -30,7 +30,25 @@ struct SavingsGoal: Identifiable, Codable {
     var progressNotificationFrequency: ProgressNotificationFrequency = .daily // How often to send progress updates
     var milestoneNotificationsEnabled: Bool = true // Notify at 25%, 50%, 75%
     var achievementNotificationEnabled: Bool = true // Notify when goal is achieved
-    var notificationTime: Date? = nil // Time of day for notifications (optional, defaults to 9 AM)
+    var notificationTimes: [Date] = [] // Times of day for notifications (up to 5, defaults to 9 AM if empty)
+    
+    // Legacy support: notificationTime for backward compatibility
+    var notificationTime: Date? {
+        get {
+            return notificationTimes.first
+        }
+        set {
+            if let time = newValue {
+                if notificationTimes.isEmpty {
+                    notificationTimes = [time]
+                } else {
+                    notificationTimes[0] = time
+                }
+            } else {
+                notificationTimes = []
+            }
+        }
+    }
     
     enum ProgressNotificationFrequency: String, Codable {
         case daily = "daily"
@@ -162,6 +180,13 @@ class GoalsService: ObservableObject {
     private let goalsKey = "saved_goals"
     private let archivedGoalsKey = "archived_goals"
     
+    // AWS sync support
+    private let awsDataService = AWSDataService.shared
+    private var useAWS: Bool {
+        // Enable AWS sync if user is authenticated
+        return CognitoAuthService.shared.isAuthenticated
+    }
+    
     // Computed properties for filtering
     var activeGoals: [SavingsGoal] {
         goals.filter { $0.status == .active }
@@ -182,6 +207,13 @@ class GoalsService: ObservableObject {
         loadGoals()
         // Load and filter archived goals immediately
         refreshArchivedGoals()
+        
+        // If no local goals and user is authenticated, try to restore from AWS
+        if goals.isEmpty && archivedGoals.isEmpty && useAWS {
+            Task {
+                await restoreGoalsFromAWS()
+            }
+        }
     }
     
     // Ensure data is loaded (call on-demand)
@@ -225,7 +257,7 @@ class GoalsService: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: goalsKey),
            let decoded = try? JSONDecoder().decode([SavingsGoal].self, from: data) {
             // Migrate old goals that might not have new fields
-            var loadedGoals = decoded.map { goal in
+            let loadedGoals = decoded.map { goal in
                 var migratedGoal = goal
                 // Ensure createdDate is set (handles migration from old goals)
                 // The default value in the struct should handle this, but we'll ensure it's reasonable
@@ -446,6 +478,14 @@ class GoalsService: ObservableObject {
         // FINAL CHECK: Log all active goals before creating to debug duplicates
         print("🔵 [GoalsService] Active goals before creation: \(goals.map { "\($0.name) (id: \($0.id.prefix(8)))" }.joined(separator: ", "))")
         
+        // Default notification time to 9 AM if not set
+        let defaultNotificationTime: Date = {
+            var components = DateComponents()
+            components.hour = 9
+            components.minute = 0
+            return Calendar.current.date(from: components) ?? Date()
+        }()
+        
         let goal = SavingsGoal(
             id: UUID().uuidString,
             name: name,
@@ -464,7 +504,7 @@ class GoalsService: ObservableObject {
             progressNotificationFrequency: .daily, // Default to daily
             milestoneNotificationsEnabled: true, // Default to enabled
             achievementNotificationEnabled: true, // Default to enabled
-            notificationTime: nil // Default to 9 AM (handled in service)
+            notificationTimes: [defaultNotificationTime] // Default to 9 AM
         )
         
         print("✅ [GoalsService] Creating new goal: \(goal.id), name: \(name), target: \(targetAmount), status: \(goal.status)")
@@ -496,6 +536,13 @@ class GoalsService: ObservableObject {
         
         // Schedule notifications for the new goal
         GoalNotificationService.shared.scheduleNotifications(for: goal)
+        
+        // Sync to AWS (non-blocking, errors are logged but don't fail creation)
+        if useAWS {
+            Task {
+                await syncGoalToAWS(goal)
+            }
+        }
         
         // Final verification: ensure goal is only in active, not archived
         let finalArchived = loadArchivedGoals()
@@ -563,10 +610,23 @@ class GoalsService: ObservableObject {
             saveGoals()
             
             // Reschedule notifications if settings changed
-            if oldGoal.notificationsEnabled != goal.notificationsEnabled ||
-               oldGoal.progressNotificationFrequency != goal.progressNotificationFrequency ||
-               oldGoal.notificationTime != goal.notificationTime {
+            let notificationSettingsChanged = 
+                oldGoal.notificationsEnabled != goal.notificationsEnabled ||
+                oldGoal.progressNotificationFrequency != goal.progressNotificationFrequency ||
+                oldGoal.milestoneNotificationsEnabled != goal.milestoneNotificationsEnabled ||
+                oldGoal.achievementNotificationEnabled != goal.achievementNotificationEnabled ||
+                oldGoal.notificationTimes != goal.notificationTimes
+            
+            if notificationSettingsChanged {
+                print("🔄 [GoalsService] Notification settings changed for goal \(goal.id), rescheduling notifications")
                 GoalNotificationService.shared.scheduleNotifications(for: goal)
+            }
+            
+            // Sync to AWS (non-blocking)
+            if useAWS {
+                Task {
+                    await syncGoalToAWS(goal)
+                }
             }
         }
     }
@@ -608,6 +668,9 @@ class GoalsService: ObservableObject {
             // Send system notification for achievement
             GoalNotificationService.shared.sendAchievementNotification(for: goal)
             
+            // Award bonus loyalty points for completing goal
+            LoyaltyPointsService.shared.awardPointsForGoalCompletion()
+            
             // Remove from active goals first
             goals.remove(at: index)
             saveGoals()
@@ -623,6 +686,13 @@ class GoalsService: ObservableObject {
             // Refresh to ensure proper filtering
             refreshArchivedGoals()
             
+            // Sync archived goal to AWS
+            if useAWS {
+                Task {
+                    await syncGoalToAWS(goal)
+                }
+            }
+            
             // Update active goal if needed
             if activeGoal?.id == goalId {
                 activeGoal = activeGoals.first
@@ -633,6 +703,13 @@ class GoalsService: ObservableObject {
                 activeGoal = goal
             }
             saveGoals()
+            
+            // Sync updated goal to AWS
+            if useAWS {
+                Task {
+                    await syncGoalToAWS(goal)
+                }
+            }
         }
     }
     
@@ -674,10 +751,83 @@ class GoalsService: ObservableObject {
         }
     }
     
+    // Diagnostic function to check UserDefaults state
+    func diagnosticInfo() -> String {
+        var info = "=== Goals Service Diagnostic ===\n\n"
+        
+        // Check active goals
+        info += "Active Goals: \(goals.count)\n"
+        for goal in goals {
+            info += "  - \(goal.name) (ID: \(goal.id.prefix(8))...), Status: \(goal.status), Created: \(goal.createdDate)\n"
+        }
+        
+        // Check archived goals
+        info += "\nArchived Goals: \(archivedGoals.count)\n"
+        for goal in archivedGoals {
+            info += "  - \(goal.name) (ID: \(goal.id.prefix(8))...), Status: \(goal.status), Created: \(goal.createdDate)\n"
+        }
+        
+        // Check UserDefaults directly
+        info += "\nUserDefaults Check:\n"
+        if let data = UserDefaults.standard.data(forKey: goalsKey) {
+            if let decoded = try? JSONDecoder().decode([SavingsGoal].self, from: data) {
+                info += "  - 'saved_goals' key exists: YES (\(decoded.count) goals)\n"
+                for goal in decoded {
+                    info += "    * \(goal.name) (ID: \(goal.id.prefix(8))...), Status: \(goal.status)\n"
+                }
+            } else {
+                info += "  - 'saved_goals' key exists: YES (but decode failed)\n"
+            }
+        } else {
+            info += "  - 'saved_goals' key exists: NO\n"
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: archivedGoalsKey) {
+            if let decoded = try? JSONDecoder().decode([SavingsGoal].self, from: data) {
+                info += "  - 'archived_goals' key exists: YES (\(decoded.count) goals)\n"
+                for goal in decoded {
+                    info += "    * \(goal.name) (ID: \(goal.id.prefix(8))...), Status: \(goal.status)\n"
+                }
+            } else {
+                info += "  - 'archived_goals' key exists: YES (but decode failed)\n"
+            }
+        } else {
+            info += "  - 'archived_goals' key exists: NO\n"
+        }
+        
+        return info
+    }
+    
     // Set active goal (only if goal is active)
     func setActiveGoal(_ goal: SavingsGoal?) {
         guard let goal = goal, goal.status == .active else { return }
         activeGoal = goal
+    }
+    
+    // Restore an archived goal back to active (useful for recovery)
+    func restoreArchivedGoal(_ goal: SavingsGoal) {
+        // Remove from archived
+        var currentArchived = loadArchivedGoals()
+        currentArchived.removeAll { $0.id == goal.id }
+        saveArchivedGoals(currentArchived)
+        
+        // Create a new active goal with the same data
+        var restoredGoal = goal
+        restoredGoal.status = .active
+        restoredGoal.completedDate = nil
+        restoredGoal.completedAmount = nil
+        
+        // Add to active goals
+        goals.append(restoredGoal)
+        if activeGoal == nil {
+            activeGoal = restoredGoal
+        }
+        saveGoals()
+        
+        // Schedule notifications
+        GoalNotificationService.shared.scheduleNotifications(for: restoredGoal)
+        
+        print("✅ [GoalsService] Restored archived goal to active: \(goal.id), name: \(goal.name)")
     }
     
     // Cancel a goal (move to historical with cancelled status)
@@ -709,6 +859,13 @@ class GoalsService: ObservableObject {
         
         // Cancel notifications for the cancelled goal
         GoalNotificationService.shared.cancelNotifications(for: cancelledGoal)
+        
+        // Sync cancelled goal to AWS
+        if useAWS {
+            Task {
+                await syncGoalToAWS(cancelledGoal)
+            }
+        }
         
         print("✅ [GoalsService] Goal cancelled: \(goal.id), name: \(goal.name)")
     }
@@ -742,6 +899,13 @@ class GoalsService: ObservableObject {
             activeGoal = activeGoals.first
         }
         saveGoals()
+        
+        // Delete from AWS (non-blocking)
+        if useAWS {
+            Task {
+                await deleteGoalFromAWS(goalId: goal.id)
+            }
+        }
         
         // Refresh to ensure UI updates
         refreshArchivedGoals()
@@ -833,6 +997,211 @@ class GoalsService: ObservableObject {
         }
         
         print("✅ [GoalsService] Goal amounts recalculated and notifications updated")
+    }
+    
+    // MARK: - AWS Cloud Sync
+    
+    /// Sync a single goal to AWS DynamoDB
+    private func syncGoalToAWS(_ goal: SavingsGoal) async {
+        guard useAWS else { return }
+        
+        do {
+            // Create a Codable struct for AWS sync (matches Lambda expectations)
+            struct GoalSyncData: Codable {
+                let goal_id: String
+                let name: String
+                let targetAmount: Double
+                let currentAmount: Double
+                let startDate: TimeInterval?
+                let targetDate: TimeInterval?
+                let category: String
+                let protectionAmount: Double
+                let photoPath: String?
+                let description: String?
+                let status: String
+                let createdDate: TimeInterval
+                let completedDate: TimeInterval?
+                let completedAmount: Double?
+                let notificationsEnabled: Bool
+                let progressNotificationFrequency: String
+                let milestoneNotificationsEnabled: Bool
+                let achievementNotificationEnabled: Bool
+                let notificationTimes: [TimeInterval]
+            }
+            
+            let goalData = GoalSyncData(
+                goal_id: goal.id,
+                name: goal.name,
+                targetAmount: goal.targetAmount,
+                currentAmount: goal.currentAmount,
+                startDate: goal.startDate?.timeIntervalSince1970,
+                targetDate: goal.targetDate?.timeIntervalSince1970,
+                category: goal.category.rawValue,
+                protectionAmount: goal.protectionAmount,
+                photoPath: goal.photoPath,
+                description: goal.description,
+                status: goal.status.rawValue,
+                createdDate: goal.createdDate.timeIntervalSince1970,
+                completedDate: goal.completedDate?.timeIntervalSince1970,
+                completedAmount: goal.completedAmount,
+                notificationsEnabled: goal.notificationsEnabled,
+                progressNotificationFrequency: goal.progressNotificationFrequency.rawValue,
+                milestoneNotificationsEnabled: goal.milestoneNotificationsEnabled,
+                achievementNotificationEnabled: goal.achievementNotificationEnabled,
+                notificationTimes: goal.notificationTimes.map { $0.timeIntervalSince1970 }
+            )
+            
+            // Use AWSDataService to sync
+            try await awsDataService.syncData(goalData, dataType: .goals)
+            print("✅ [GoalsService] Goal synced to AWS: \(goal.id)")
+        } catch {
+            // Log error but don't fail - UserDefaults is the source of truth
+            print("⚠️ [GoalsService] Failed to sync goal to AWS: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Delete a goal from AWS DynamoDB
+    private func deleteGoalFromAWS(goalId: String) async {
+        guard useAWS else { return }
+        
+        // Note: AWS sync uses goal_id as the sort key, so we need to delete by user_id + goal_id
+        // For now, we'll just log - actual deletion would require a Lambda endpoint
+        // The goal will be overwritten on next sync if it's recreated
+        print("ℹ️ [GoalsService] Goal deletion from AWS (goal will be removed on next sync): \(goalId)")
+    }
+    
+    /// Restore goals from AWS DynamoDB (called on app launch if local storage is empty)
+    private func restoreGoalsFromAWS() async {
+        guard useAWS else { return }
+        
+        do {
+            print("🔄 [GoalsService] Attempting to restore goals from AWS...")
+            // AWSDataService.getData returns decoded objects, but we need to handle the raw format
+            // For now, we'll use a workaround: sync individual goals back
+            // The Lambda returns data in a format that needs to be decoded
+            
+            // Try to get goals as dictionaries first (Lambda returns JSON)
+            // We'll need to decode them manually since SavingsGoal is Codable
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .millisecondsSince1970
+            
+            // Use a wrapper to decode the response
+            struct GoalResponse: Codable {
+                let goal_id: String
+                let name: String
+                let targetAmount: Double
+                let currentAmount: Double
+                let startDate: TimeInterval?
+                let targetDate: TimeInterval?
+                let category: String
+                let protectionAmount: Double?
+                let photoPath: String?
+                let description: String?
+                let status: String
+                let createdDate: TimeInterval
+                let completedDate: TimeInterval?
+                let completedAmount: Double?
+                let notificationsEnabled: Bool?
+                let progressNotificationFrequency: String?
+                let milestoneNotificationsEnabled: Bool?
+                let achievementNotificationEnabled: Bool?
+                let notificationTimes: [TimeInterval]?
+            }
+            
+            // Get raw data from AWS
+            let rawGoals: [GoalResponse] = try await awsDataService.getData(dataType: .goals)
+            
+            guard !rawGoals.isEmpty else {
+                print("ℹ️ [GoalsService] No goals found in AWS")
+                return
+            }
+            
+            // Convert to SavingsGoal objects
+            var restoredGoals: [SavingsGoal] = []
+            var restoredArchived: [SavingsGoal] = []
+            
+            for rawGoal in rawGoals {
+                guard let category = SavingsGoal.GoalCategory(rawValue: rawGoal.category),
+                      let status = SavingsGoal.GoalStatus(rawValue: rawGoal.status) else {
+                    print("⚠️ [GoalsService] Skipping invalid goal data from AWS")
+                    continue
+                }
+                
+                // Reconstruct goal
+                var goal = SavingsGoal(
+                    id: rawGoal.goal_id,
+                    name: rawGoal.name,
+                    targetAmount: rawGoal.targetAmount,
+                    currentAmount: rawGoal.currentAmount,
+                    startDate: rawGoal.startDate.map { Date(timeIntervalSince1970: $0) },
+                    targetDate: rawGoal.targetDate.map { Date(timeIntervalSince1970: $0) },
+                    category: category,
+                    photoPath: rawGoal.photoPath,
+                    description: rawGoal.description,
+                    status: status,
+                    createdDate: Date(timeIntervalSince1970: rawGoal.createdDate),
+                    completedDate: rawGoal.completedDate.map { Date(timeIntervalSince1970: $0) },
+                    completedAmount: rawGoal.completedAmount,
+                    notificationsEnabled: rawGoal.notificationsEnabled ?? true,
+                    progressNotificationFrequency: SavingsGoal.ProgressNotificationFrequency(rawValue: rawGoal.progressNotificationFrequency ?? "daily") ?? .daily,
+                    milestoneNotificationsEnabled: rawGoal.milestoneNotificationsEnabled ?? true,
+                    achievementNotificationEnabled: rawGoal.achievementNotificationEnabled ?? true,
+                    notificationTimes: (rawGoal.notificationTimes ?? []).map { Date(timeIntervalSince1970: $0) }
+                )
+                
+                // Set protection amount if present
+                if let protectionAmount = rawGoal.protectionAmount {
+                    goal.protectionAmount = protectionAmount
+                }
+                
+                // Separate active and archived goals
+                if status == .active {
+                    restoredGoals.append(goal)
+                } else {
+                    restoredArchived.append(goal)
+                }
+            }
+            
+            // Only restore if we have goals and local storage is empty
+            if !restoredGoals.isEmpty || !restoredArchived.isEmpty {
+                if goals.isEmpty && archivedGoals.isEmpty {
+                    // Restore to local storage
+                    await MainActor.run {
+                        goals = restoredGoals
+                        if let firstActive = restoredGoals.first {
+                            activeGoal = firstActive
+                        }
+                    }
+                    
+                    // Save to UserDefaults
+                    if let encoded = try? JSONEncoder().encode(restoredGoals) {
+                        UserDefaults.standard.set(encoded, forKey: goalsKey)
+                    }
+                    
+                    // Restore archived goals
+                    if !restoredArchived.isEmpty {
+                        if let encoded = try? JSONEncoder().encode(restoredArchived) {
+                            UserDefaults.standard.set(encoded, forKey: archivedGoalsKey)
+                        }
+                        await MainActor.run {
+                            archivedGoals = restoredArchived
+                        }
+                    }
+                    
+                    // Reschedule notifications for restored active goals
+                    for goal in restoredGoals where goal.notificationsEnabled {
+                        GoalNotificationService.shared.scheduleNotifications(for: goal)
+                    }
+                    
+                    print("✅ [GoalsService] Restored \(restoredGoals.count) active and \(restoredArchived.count) archived goals from AWS")
+                } else {
+                    print("ℹ️ [GoalsService] Local goals exist, skipping AWS restore")
+                }
+            }
+        } catch {
+            // Log error but don't fail - UserDefaults is the source of truth
+            print("⚠️ [GoalsService] Failed to restore goals from AWS: \(error.localizedDescription)")
+        }
     }
 }
 

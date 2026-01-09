@@ -65,6 +65,8 @@ class BiometricAuthService: ObservableObject {
             type = "Face ID"
         case .touchID:
             type = "Touch ID"
+        case .opticID:
+            type = "Optic ID"
         case .none:
             type = "Biometric"
         @unknown default:

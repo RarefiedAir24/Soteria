@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import UIKit
 
 // MARK: - Models
 
@@ -642,6 +643,10 @@ class PlaidService: ObservableObject {
         // Record savings streak
         StreakService.shared.recordSavings()
         
+        // Award loyalty points for saving
+        let hasStreak = StreakService.shared.currentStreak > 0
+        LoyaltyPointsService.shared.awardPointsForSaving(amount: amount, hasStreak: hasStreak)
+        
         print("✅ [PlaidService] Virtual savings recorded: $\(amount), total: $\(virtualSavings), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none")")
         
         // Check if we should show monthly goal prompt
@@ -680,6 +685,10 @@ class PlaidService: ObservableObject {
         // Record savings streak
         StreakService.shared.recordSavings()
         
+        // Award loyalty points for saving
+        let hasStreak = StreakService.shared.currentStreak > 0
+        LoyaltyPointsService.shared.awardPointsForSaving(amount: amount, hasStreak: hasStreak, source: "plaid")
+        
         print("✅ [PlaidService] Confirmed deposit recorded: $\(amount), total saved: $\(totalSaved), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none"), transferId: \(transferId ?? "none")")
         
         // Post notification for deposit made (for UI refresh)
@@ -710,7 +719,10 @@ class PlaidService: ObservableObject {
     /// 
     /// NOTE: This does NOT use Plaid API. It only updates local tracking.
     /// No bank transfers or API calls are made.
-    func recordManualDeposit(amount: Double, goalId: String? = nil, screenshotPath: String? = nil, referenceId: String? = nil, depositId: String? = nil) {
+    /// 
+    /// ⚠️ SECURITY: Pass screenshot image directly (ephemeral verification)
+    /// Screenshots are NEVER stored, only verified and discarded immediately
+    func recordManualDeposit(amount: Double, goalId: String? = nil, screenshot: UIImage? = nil, referenceId: String? = nil, depositId: String? = nil) {
         let wasFirstDeposit = totalSaved == 0
         
         // Get active goal ID if not provided
@@ -719,13 +731,13 @@ class PlaidService: ObservableObject {
         totalSaved += amount
         
         // Create unique deposit record with timestamp
-        // Use provided depositId if available (for screenshot matching), otherwise generate new one
+        // Use provided depositId if available, otherwise generate new one
         let deposit = SavingsDeposit(
             amount: amount,
             type: .manual,
             goalId: depositGoalId,
             source: "manual_entry",
-            screenshotPath: screenshotPath,
+            screenshotPath: nil, // ⚠️ SECURITY: Never store screenshot path (ephemeral verification)
             referenceId: referenceId,
             id: depositId
         )
@@ -737,26 +749,39 @@ class PlaidService: ObservableObject {
         // Record savings streak
         StreakService.shared.recordSavings()
         
-        print("✅ [PlaidService] Manual deposit recorded: $\(amount), total saved: \(totalSaved), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none"), referenceId: \(referenceId ?? "none"), screenshot: \(screenshotPath != nil ? "yes" : "no")")
-        
-        // Post notification for deposit made (for UI refresh)
-        NotificationCenter.default.post(
-            name: NSNotification.Name("DepositMade"),
-            object: ["amount": amount, "goalId": depositGoalId as Any]
-        )
-        
-        // Sync screenshot to cloud in background (if provided)
-        if screenshotPath != nil, let screenshot = DepositScreenshotService.shared.loadScreenshot(for: deposit.id) {
+        // ⚠️ SECURITY: EPHEMERAL screenshot verification (image NEVER stored)
+        // Screenshots are verified immediately and discarded for maximum privacy
+        if let screenshot = screenshot {
             Task {
                 do {
-                    _ = try await DepositScreenshotAPIService.shared.uploadScreenshot(image: screenshot, depositId: deposit.id)
-                    print("✅ [PlaidService] Screenshot synced to cloud for deposit: \(deposit.id)")
+                    // Ephemeral verification (image processed in-memory only)
+                    let verification = try await EphemeralScreenshotService.shared.verifyScreenshotEphemerally(
+                        image: screenshot,
+                        depositId: deposit.id,
+                        claimedAmount: amount
+                    )
+                    
+                    if verification.shouldAwardPoints {
+                        // Award reduced points based on verification confidence
+                        let pointsEarned = Int(amount * verification.pointsMultiplier)
+                        await MainActor.run {
+                            LoyaltyPointsService.shared.addPointsManual(pointsEarned)
+                            print("✅ Loyalty: Awarded \(pointsEarned) points for verified manual deposit (confidence: \(verification.confidence))")
+                        }
+                    } else {
+                        print("⚠️ Loyalty: No points awarded - verification failed: \(verification.reason)")
+                    }
+                    
+                    print("🔒 [PlaidService] Screenshot verified and discarded (ephemeral mode)")
                 } catch {
-                    print("⚠️ [PlaidService] Failed to sync screenshot to cloud: \(error.localizedDescription)")
-                    // Screenshot is still saved locally, so this is not critical
+                    print("⚠️ Loyalty: Screenshot verification failed: \(error.localizedDescription)")
                 }
             }
+        } else {
+            print("ℹ️ Loyalty: No points awarded - no screenshot provided")
         }
+        
+        print("✅ [PlaidService] Manual deposit recorded: $\(amount), total saved: \(totalSaved), timestamp: \(deposit.timestamp), goalId: \(depositGoalId ?? "none"), referenceId: \(referenceId ?? "none"), screenshot: \(screenshot != nil ? "verified_ephemeral" : "none")")
         
         // Check if this is the first deposit
         if wasFirstDeposit {

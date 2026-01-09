@@ -25,6 +25,7 @@
 const AWS = require('aws-sdk');
 const crypto = require('crypto');
 const cognito = new AWS.CognitoIdentityServiceProvider();
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 
 // These will be set via environment variables
 const USER_POOL_ID = process.env.USER_POOL_ID;
@@ -71,7 +72,7 @@ exports.handler = async (event) => {
         }
         
         console.log('📥 [Lambda] Parsed body:', JSON.stringify(body, null, 2));
-        const { email, password } = body;
+        const { email, password, isTestFlight } = body; // Check if signup is from TestFlight
         
         if (!email || !password) {
             return {
@@ -125,6 +126,66 @@ exports.handler = async (event) => {
         
         const signUpResult = await cognito.signUp(signUpParams).promise();
         
+        // Track TestFlight signups and check if user is in first 100
+        let isFirst100TestFlightUser = false;
+        if (isTestFlight === true) {
+            try {
+                const counterKey = 'testflight_signup_counter';
+                const counterTable = process.env.COUNTER_TABLE || 'soteria-counters';
+                
+                // Atomically increment counter and get new value
+                const updateParams = {
+                    TableName: counterTable,
+                    Key: { counter_key: counterKey },
+                    UpdateExpression: 'ADD #count :inc SET #updated = :now',
+                    ExpressionAttributeNames: {
+                        '#count': 'count',
+                        '#updated': 'updated_at'
+                    },
+                    ExpressionAttributeValues: {
+                        ':inc': 1,
+                        ':now': new Date().toISOString()
+                    },
+                    ReturnValues: 'UPDATED_NEW'
+                };
+                
+                // Try to update counter (create if doesn't exist)
+                try {
+                    const result = await dynamodb.update(updateParams).promise();
+                    const newCount = result.Attributes.count;
+                    console.log(`📊 [Lambda] TestFlight signup count: ${newCount}`);
+                    
+                    if (newCount <= 100) {
+                        isFirst100TestFlightUser = true;
+                        console.log(`✅ [Lambda] User is in first 100 TestFlight signups (${newCount}/100)`);
+                    } else {
+                        console.log(`⚠️ [Lambda] User is NOT in first 100 TestFlight signups (${newCount}/100)`);
+                    }
+                } catch (updateError) {
+                    // If table doesn't exist or item doesn't exist, create it
+                    if (updateError.code === 'ResourceNotFoundException' || updateError.code === 'ValidationException') {
+                        console.log('⚠️ [Lambda] Counter table/item not found, creating...');
+                        await dynamodb.put({
+                            TableName: counterTable,
+                            Item: {
+                                counter_key: counterKey,
+                                count: 1,
+                                updated_at: new Date().toISOString()
+                            }
+                        }).promise();
+                        isFirst100TestFlightUser = true; // First user gets it
+                        console.log('✅ [Lambda] Created counter, user is first TestFlight signup');
+                    } else {
+                        console.error('❌ [Lambda] Error updating counter:', updateError);
+                        // Continue without counter - don't fail signup
+                    }
+                }
+            } catch (counterError) {
+                console.error('❌ [Lambda] Error tracking TestFlight signup:', counterError);
+                // Don't fail signup if counter fails
+            }
+        }
+        
         // If user needs to confirm email, return confirmation required
         if (signUpResult.UserConfirmed === false) {
             return {
@@ -133,7 +194,8 @@ exports.handler = async (event) => {
                 body: JSON.stringify({
                     success: true,
                     requiresConfirmation: true,
-                    message: 'User created. Please check your email for confirmation code.'
+                    message: 'User created. Please check your email for confirmation code.',
+                    isFirst100TestFlightUser: isFirst100TestFlightUser
                 })
             };
         }
@@ -166,7 +228,8 @@ exports.handler = async (event) => {
                     refreshToken: authResult.AuthenticationResult.RefreshToken,
                     userId: signUpResult.UserSub,
                     email: email.toLowerCase().trim()
-                }
+                },
+                isFirst100TestFlightUser: isFirst100TestFlightUser
             })
         };
         

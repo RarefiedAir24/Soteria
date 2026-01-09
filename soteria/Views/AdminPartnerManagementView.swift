@@ -8,6 +8,15 @@
 import SwiftUI
 import PhotosUI
 
+// Helper function for safe screen bounds access
+private func getScreenWidth() -> CGFloat {
+    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+       let window = windowScene.windows.first {
+        return window.bounds.width
+    }
+    return UIScreen.main.bounds.width
+}
+
 struct AdminPartnerManagementView: View {
     @ObservedObject private var partnerService = PartnerLoyaltyService.shared
     @EnvironmentObject var authService: AuthService
@@ -500,7 +509,7 @@ struct AdminPartnerCard: View {
                         if value.translation.width < deleteThreshold {
                             // Swiped far enough - trigger delete
                             withAnimation(.spring()) {
-                                offset = -UIScreen.main.bounds.width
+                                offset = -getScreenWidth()
                             }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 onDelete()

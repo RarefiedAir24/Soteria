@@ -76,29 +76,38 @@ class GoalNotificationService {
     private func scheduleProgressNotifications(for goal: SavingsGoal) {
         let calendar = Calendar.current
         
-        // Default notification time: 9 AM
-        let notificationTime = goal.notificationTime ?? {
+        // Get notification times (support multiple times, up to 5)
+        var notificationTimes = goal.notificationTimes
+        if notificationTimes.isEmpty {
+            // Default to 9 AM if no times set
             var components = DateComponents()
             components.hour = 9
             components.minute = 0
-            return Calendar.current.date(from: components) ?? Date()
-        }()
+            if let defaultTime = calendar.date(from: components) {
+                notificationTimes = [defaultTime]
+            }
+        }
         
-        let timeComponents = calendar.dateComponents([.hour, .minute], from: notificationTime)
-        
-        switch goal.progressNotificationFrequency {
-        case .daily:
-            scheduleDailyProgressNotification(for: goal, hour: timeComponents.hour ?? 9, minute: timeComponents.minute ?? 0)
-        case .weekly:
-            scheduleWeeklyProgressNotification(for: goal, hour: timeComponents.hour ?? 9, minute: timeComponents.minute ?? 0)
-        case .twiceWeekly:
-            scheduleTwiceWeeklyProgressNotification(for: goal, hour: timeComponents.hour ?? 9, minute: timeComponents.minute ?? 0)
-        case .never:
-            break
+        // Schedule notifications for each time
+        for notificationTime in notificationTimes {
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: notificationTime)
+            let hour = timeComponents.hour ?? 9
+            let minute = timeComponents.minute ?? 0
+            
+            switch goal.progressNotificationFrequency {
+            case .daily:
+                scheduleDailyProgressNotification(for: goal, hour: hour, minute: minute, timeIndex: notificationTimes.firstIndex(of: notificationTime) ?? 0)
+            case .weekly:
+                scheduleWeeklyProgressNotification(for: goal, hour: hour, minute: minute, timeIndex: notificationTimes.firstIndex(of: notificationTime) ?? 0)
+            case .twiceWeekly:
+                scheduleTwiceWeeklyProgressNotification(for: goal, hour: hour, minute: minute, timeIndex: notificationTimes.firstIndex(of: notificationTime) ?? 0)
+            case .never:
+                break
+            }
         }
     }
     
-    private func scheduleDailyProgressNotification(for goal: SavingsGoal, hour: Int, minute: Int) {
+    private func scheduleDailyProgressNotification(for goal: SavingsGoal, hour: Int, minute: Int, timeIndex: Int = 0) {
         let center = UNUserNotificationCenter.current()
         
         var dateComponents = DateComponents()
@@ -122,7 +131,7 @@ class GoalNotificationService {
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(
-            identifier: "goal_progress_\(goal.id)",
+            identifier: "goal_progress_\(goal.id)_\(timeIndex)",
             content: content,
             trigger: trigger
         )
@@ -131,12 +140,12 @@ class GoalNotificationService {
             if let error = error {
                 print("❌ [GoalNotificationService] Failed to schedule daily progress notification: \(error)")
             } else {
-                print("✅ [GoalNotificationService] Scheduled daily progress notification for goal: \(goal.name)")
+                print("✅ [GoalNotificationService] Scheduled daily progress notification for goal: \(goal.name) at \(hour):\(String(format: "%02d", minute))")
             }
         }
     }
     
-    private func scheduleWeeklyProgressNotification(for goal: SavingsGoal, hour: Int, minute: Int) {
+    private func scheduleWeeklyProgressNotification(for goal: SavingsGoal, hour: Int, minute: Int, timeIndex: Int = 0) {
         let center = UNUserNotificationCenter.current()
         
         // Default to Monday (weekday 2)
@@ -162,7 +171,7 @@ class GoalNotificationService {
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(
-            identifier: "goal_progress_\(goal.id)",
+            identifier: "goal_progress_\(goal.id)_weekly_\(timeIndex)",
             content: content,
             trigger: trigger
         )
@@ -171,12 +180,12 @@ class GoalNotificationService {
             if let error = error {
                 print("❌ [GoalNotificationService] Failed to schedule weekly progress notification: \(error)")
             } else {
-                print("✅ [GoalNotificationService] Scheduled weekly progress notification for goal: \(goal.name)")
+                print("✅ [GoalNotificationService] Scheduled weekly progress notification for goal: \(goal.name) at \(hour):\(String(format: "%02d", minute))")
             }
         }
     }
     
-    private func scheduleTwiceWeeklyProgressNotification(for goal: SavingsGoal, hour: Int, minute: Int) {
+    private func scheduleTwiceWeeklyProgressNotification(for goal: SavingsGoal, hour: Int, minute: Int, timeIndex: Int = 0) {
         let center = UNUserNotificationCenter.current()
         
         // Monday and Thursday
@@ -205,7 +214,7 @@ class GoalNotificationService {
             
             let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
             let request = UNNotificationRequest(
-                identifier: "goal_progress_\(goal.id)_\(weekday)",
+                identifier: "goal_progress_\(goal.id)_twice_\(timeIndex)_\(weekday)",
                 content: content,
                 trigger: trigger
             )
@@ -341,12 +350,35 @@ class GoalNotificationService {
     
     private func cancelProgressNotifications(for goal: SavingsGoal) {
         let center = UNUserNotificationCenter.current()
-        // Cancel all progress notifications for this goal
-        center.removePendingNotificationRequests(withIdentifiers: [
+        
+        // Build list of all possible notification identifiers for this goal
+        var identifiers: [String] = []
+        
+        // Daily notifications (up to 5 times)
+        for timeIndex in 0..<5 {
+            identifiers.append("goal_progress_\(goal.id)_\(timeIndex)")
+        }
+        
+        // Weekly notifications (up to 5 times)
+        for timeIndex in 0..<5 {
+            identifiers.append("goal_progress_\(goal.id)_weekly_\(timeIndex)")
+        }
+        
+        // Twice-weekly notifications (up to 5 times, for Monday and Thursday)
+        for timeIndex in 0..<5 {
+            identifiers.append("goal_progress_\(goal.id)_twice_\(timeIndex)_2") // Monday
+            identifiers.append("goal_progress_\(goal.id)_twice_\(timeIndex)_5") // Thursday
+        }
+        
+        // Legacy identifiers (for backward compatibility)
+        identifiers.append(contentsOf: [
             "goal_progress_\(goal.id)",
             "goal_progress_\(goal.id)_2", // Monday
             "goal_progress_\(goal.id)_5"  // Thursday
         ])
+        
+        // Cancel all progress notifications for this goal
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
     
     private func cancelMilestoneNotifications(for goal: SavingsGoal) {

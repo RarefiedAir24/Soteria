@@ -66,7 +66,7 @@ class SmartSavingsService {
     private func findMilestoneSuggestion(for goal: SavingsGoal) -> SmartSuggestion? {
         let currentAmount = goal.currentAmount
         let targetAmount = goal.targetAmount
-        let remainingAmount = goal.remainingAmount
+        let _ = goal.remainingAmount // Available if needed
         
         // Find next milestone
         let milestones: [Double] = [

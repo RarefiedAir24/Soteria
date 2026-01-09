@@ -17,6 +17,8 @@ struct SplashScreenView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 40) {
+                Spacer()
+                
                 // Soteria Logo
                 if let logoImage = UIImage(named: "soteria_logo") {
                     Image(uiImage: logoImage)
@@ -39,6 +41,14 @@ struct SplashScreenView: View {
                 ProgressView()
                     .scaleEffect(1.2)
                     .tint(.deepReverBlue)
+                
+                Spacer()
+                
+                // App version and build number at the bottom
+                Text(Bundle.displayVersionString)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.softGraphite)
+                    .padding(.bottom, 40)
             }
         }
     }

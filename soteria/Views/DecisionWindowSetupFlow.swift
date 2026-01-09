@@ -10,6 +10,15 @@
 
 import SwiftUI
 
+// Helper function for safe screen bounds access
+private func getScreenWidth() -> CGFloat {
+    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+       let window = windowScene.windows.first {
+        return window.bounds.width
+    }
+    return UIScreen.main.bounds.width
+}
+
 struct DecisionWindowSetupFlow: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject private var decisionWindowsService = DecisionWindowsService.shared
@@ -872,7 +881,7 @@ struct DecisionWindowSetupFlow: View {
         // Create confetti pieces
         let colors: [Color] = [.red, .blue, .green, .yellow, .orange, .purple, .pink, .softGraphite, .midnightSlate]
         let shapes: [DecisionConfettiShape] = [.circle, .square, .triangle]
-        let screenWidth = UIScreen.main.bounds.width
+        let screenWidth = getScreenWidth()
         
         confettiPieces = (0..<60).map { _ in
             DecisionConfettiPiece(
