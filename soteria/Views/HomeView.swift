@@ -135,6 +135,14 @@ struct HomeView: View {
     
     // MARK: - Computed Properties (defined before body to help compiler)
     
+    private var formattedTotalSaved: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: totalSaved)) ?? "$0"
+    }
+    
     @ViewBuilder
     private var essentialMetricsCard: some View {
         VStack(spacing: .spacingSection) {
@@ -222,27 +230,86 @@ struct HomeView: View {
                         }
                     }
                     
-                    // Money Tree Visualization
-                    MoneyTreeView(
-                        totalSaved: totalSaved,
-                        activeGoal: activeGoal,
-                        allGoals: allGoals,
-                        onGoalLeafTapped: { tappedGoal in
-                            print("🏠 [HomeView] Goal leaf tapped: \(tappedGoal.name), ID: \(tappedGoal.id)")
-                            print("🏠 [HomeView] Current allGoals count: \(allGoals.count)")
-                            // Find the goal in allGoals by ID to ensure we have the latest version
-                            if let foundGoal = allGoals.first(where: { $0.id == tappedGoal.id }) {
-                                print("🏠 [HomeView] Found goal in allGoals: \(foundGoal.name)")
-                                selectedGoalForDetails = foundGoal
-                                showGoalDetails = true
-                            } else {
-                                print("⚠️ [HomeView] Goal not found in allGoals, using tapped goal directly")
-                                // Fallback: use the tapped goal directly
-                                selectedGoalForDetails = tappedGoal
-                                showGoalDetails = true
+                    // Money Tree Visualization with Value Overlay
+                    ZStack(alignment: .bottom) {
+                        MoneyTreeView(
+                            totalSaved: totalSaved,
+                            activeGoal: activeGoal,
+                            allGoals: allGoals,
+                            onGoalLeafTapped: { tappedGoal in
+                                print("🏠 [HomeView] Goal leaf tapped: \(tappedGoal.name), ID: \(tappedGoal.id)")
+                                print("🏠 [HomeView] Current allGoals count: \(allGoals.count)")
+                                // Find the goal in allGoals by ID to ensure we have the latest version
+                                if let foundGoal = allGoals.first(where: { $0.id == tappedGoal.id }) {
+                                    print("🏠 [HomeView] Found goal in allGoals: \(foundGoal.name)")
+                                    selectedGoalForDetails = foundGoal
+                                    showGoalDetails = true
+                                } else {
+                                    print("⚠️ [HomeView] Goal not found in allGoals, using tapped goal directly")
+                                    // Fallback: use the tapped goal directly
+                                    selectedGoalForDetails = tappedGoal
+                                    showGoalDetails = true
+                                }
+                            }
+                        )
+                        
+                        // Tree Value Overlay - Shows current savings and deposit CTA
+                        VStack(spacing: 12) {
+                            // Current tree value
+                            VStack(spacing: 4) {
+                                Text("Tree Value")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.9))
+                                
+                                Text(formattedTotalSaved)
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                            }
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.black.opacity(0.6))
+                                    .blur(radius: 10)
+                            )
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.green.opacity(0.8), Color.green.opacity(0.6)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            )
+                            
+                            // Deposit CTA Button
+                            Button(action: {
+                                showDepositOptions = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 16))
+                                    Text("Water Your Tree")
+                                        .font(.system(size: 15, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.blue.opacity(0.8)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(12)
+                                .shadow(color: Color.blue.opacity(0.4), radius: 8, x: 0, y: 4)
                             }
                         }
-                    )
+                        .padding(.bottom, 20)
+                    }
                 }
                 .padding()
             }
