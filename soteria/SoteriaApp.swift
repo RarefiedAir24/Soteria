@@ -732,8 +732,8 @@ struct OnboardingSurveyWrapper: View {
     var body: some View {
         Group {
             if !surveyService.hasCompletedSurvey {
-                OnboardingSurveyView()
-                    .id("onboarding-survey")
+                OnboardingFlowView()
+                    .id("onboarding-flow")
                     .onAppear {
                         // Check if we should show Unit account banner after onboarding
                         checkForUnitAccountPrompt()
