@@ -10,7 +10,9 @@ import SwiftUI
 struct LoyaltyShopView: View {
     @StateObject private var loyaltyService = LoyaltyPointsService.shared
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var subscriptionService: SubscriptionService
     
+    @State private var selectedTab: ShopTab = .sceneItems
     @State private var selectedCategory: SceneItem.ItemCategory = .animal
     @State private var showingPurchaseConfirmation = false
     @State private var itemToPurchase: SceneItem?
@@ -19,6 +21,11 @@ struct LoyaltyShopView: View {
     // Mock data for unlock requirements (would come from actual services)
     @State private var goalsCompleted = 0
     @State private var totalSaved: Double = 0
+    
+    enum ShopTab {
+        case sceneItems
+        case giftCards
+    }
     
     var body: some View {
         NavigationView {
@@ -35,32 +42,47 @@ struct LoyaltyShopView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Points Balance Header
-                    pointsBalanceHeader
+                    // Tab Selector
+                    tabSelector
                     
-                    // Category Picker
-                    categoryPicker
-                    
-                    // Items Grid
-                    ScrollView {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: 16),
-                            GridItem(.flexible(), spacing: 16)
-                        ], spacing: 16) {
-                            ForEach(filteredItems) { item in
-                                ItemCard(
-                                    item: item,
-                                    isUnlocked: isUnlocked(item),
-                                    isPurchased: loyaltyService.hasPurchased(itemId: item.id),
-                                    canAfford: loyaltyService.totalPoints >= item.pointCost,
-                                    onPurchase: {
-                                        itemToPurchase = item
-                                        showingPurchaseConfirmation = true
+                    // Content based on selected tab
+                    if selectedTab == .sceneItems {
+                        VStack(spacing: 0) {
+                            // Points Balance Header
+                            pointsBalanceHeader
+                            
+                            // Category Picker
+                            categoryPicker
+                            
+                            // Items Grid
+                            ScrollView {
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible(), spacing: 16),
+                                    GridItem(.flexible(), spacing: 16)
+                                ], spacing: 16) {
+                                    ForEach(filteredItems) { item in
+                                        ItemCard(
+                                            item: item,
+                                            isUnlocked: isUnlocked(item),
+                                            isPurchased: loyaltyService.hasPurchased(itemId: item.id),
+                                            canAfford: loyaltyService.totalPoints >= item.pointCost,
+                                            onPurchase: {
+                                                itemToPurchase = item
+                                                showingPurchaseConfirmation = true
+                                            }
+                                        )
                                     }
-                                )
+                                }
+                                .padding()
                             }
                         }
-                        .padding()
+                    } else {
+                        // Gift Cards Tab
+                        if subscriptionService.isPremium {
+                            GiftCardShopView()
+                        } else {
+                            GiftCardsLockedView()
+                        }
                     }
                 }
             }
@@ -101,6 +123,60 @@ struct LoyaltyShopView: View {
     }
     
     // MARK: - Components
+    
+    private var tabSelector: some View {
+        HStack(spacing: 0) {
+            // Scene Items Tab
+            Button(action: { selectedTab = .sceneItems }) {
+                VStack(spacing: 8) {
+                    Text("Scene Items")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(selectedTab == .sceneItems ? .reverBlue : .softGraphite)
+                    
+                    if selectedTab == .sceneItems {
+                        Rectangle()
+                            .fill(Color.reverBlue)
+                            .frame(height: 3)
+                    } else {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(height: 3)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            
+            // Gift Cards Tab
+            Button(action: { selectedTab = .giftCards }) {
+                VStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Text("Gift Cards")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(selectedTab == .giftCards ? .reverBlue : .softGraphite)
+                        
+                        if !subscriptionService.isPremium {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.softGraphite.opacity(0.5))
+                        }
+                    }
+                    
+                    if selectedTab == .giftCards {
+                        Rectangle()
+                            .fill(Color.reverBlue)
+                            .frame(height: 3)
+                    } else {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(height: 3)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.top, 16)
+        .background(Color.white.opacity(0.9))
+    }
     
     private var pointsBalanceHeader: some View {
         VStack(spacing: 8) {

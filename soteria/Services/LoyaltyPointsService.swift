@@ -18,6 +18,7 @@ class LoyaltyPointsService: ObservableObject {
     @Published var lifetimePointsEarned: Int = 0
     @Published var purchasedItemIds: Set<String> = []
     @Published var transactionHistory: [LoyaltyTransaction] = []
+    @Published var isLoyaltyEnabled: Bool = false
     
     // MARK: - Constants
     private let pointsKey = "loyalty_points_total"
@@ -37,6 +38,30 @@ class LoyaltyPointsService: ObservableObject {
         loadPoints()
         loadPurchasedItems()
         loadTransactions()
+        checkLoyaltyAccess()
+    }
+    
+    // MARK: - Premium Access Control
+    
+    /// Check if loyalty features are available (Premium only)
+    func checkLoyaltyAccess() {
+        let wasPreviouslyEnabled = isLoyaltyEnabled
+        isLoyaltyEnabled = SubscriptionService.shared.isPremium
+        
+        if isLoyaltyEnabled && !wasPreviouslyEnabled {
+            print("✅ [Loyalty] Enabled - User upgraded to Premium")
+            // Clear missed points when upgrading
+            MissedPointsTracker.shared.clearMissedPoints()
+        } else if !isLoyaltyEnabled && wasPreviouslyEnabled {
+            print("⚠️ [Loyalty] Disabled - Premium subscription expired")
+        } else if !isLoyaltyEnabled {
+            print("🔒 [Loyalty] Disabled - Premium required")
+        }
+    }
+    
+    /// Computed property for easier access to current points (respects premium status)
+    var points: Int {
+        return isLoyaltyEnabled ? totalPoints : 0
     }
     
     // MARK: - Point Management
@@ -53,6 +78,14 @@ class LoyaltyPointsService: ObservableObject {
         // Apply streak bonus if applicable
         if hasStreak {
             pointsEarned = Int(Double(pointsEarned) * streakBonusMultiplier)
+        }
+        
+        // Check if user is premium
+        guard isLoyaltyEnabled else {
+            // Track missed points for free users
+            MissedPointsTracker.shared.trackMissedPoints(pointsEarned, action: "Saved $\(String(format: "%.2f", amount))")
+            print("🔒 [Loyalty] Cannot award \(pointsEarned) points - Premium required")
+            return
         }
         
         let description = hasStreak 
@@ -76,6 +109,12 @@ class LoyaltyPointsService: ObservableObject {
     
     /// Award bonus points for completing a goal
     func awardPointsForGoalCompletion(goalName: String = "Savings Goal") {
+        guard isLoyaltyEnabled else {
+            MissedPointsTracker.shared.trackMissedPoints(bonusPointsPerGoalCompleted, action: "Completed goal: \(goalName)")
+            print("🔒 [Loyalty] Cannot award goal bonus - Premium required")
+            return
+        }
+        
         let metadata = LoyaltyTransaction.TransactionMetadata(
             depositAmount: nil,
             itemId: nil,
@@ -135,6 +174,12 @@ class LoyaltyPointsService: ObservableObject {
     /// Award points from verified screenshot deposits
     /// Called by ScreenshotVerificationService after successful verification
     func addPointsManual(_ points: Int, confidence: Double = 0.0) {
+        guard isLoyaltyEnabled else {
+            MissedPointsTracker.shared.trackMissedPoints(points, action: "Verified manual deposit")
+            print("🔒 [Loyalty] Cannot award \(points) points from screenshot - Premium required")
+            return
+        }
+        
         let metadata = LoyaltyTransaction.TransactionMetadata(
             depositAmount: nil,
             itemId: nil,
@@ -162,6 +207,11 @@ class LoyaltyPointsService: ObservableObject {
     ///   - itemName: Display name of the item
     /// - Returns: True if purchase was successful
     func purchaseItem(cost: Int, itemId: String, itemName: String = "Scene Item") -> Bool {
+        guard isLoyaltyEnabled else {
+            print("🔒 [Loyalty] Cannot purchase item - Premium required")
+            return false
+        }
+        
         guard totalPoints >= cost else {
             print("❌ Loyalty: Insufficient points. Need \(cost), have \(totalPoints)")
             return false
@@ -201,6 +251,143 @@ class LoyaltyPointsService: ObservableObject {
     /// Check if user has purchased an item
     func hasPurchased(itemId: String) -> Bool {
         return purchasedItemIds.contains(itemId)
+    }
+    
+    // MARK: - Gift Card Redemptions
+    
+    /// Redeem loyalty points for a gift card (Premium only)
+    /// - Parameters:
+    ///   - giftCard: The gift card to redeem
+    ///   - userId: Current user ID
+    ///   - email: User's email for gift card delivery
+    /// - Returns: Redemption result with success/failure and details
+    func redeemGiftCard(giftCard: GiftCard, userId: String, email: String) async throws -> GiftCardRedemption {
+        // Check premium status
+        guard isLoyaltyEnabled else {
+            throw GiftCardRedemptionError.premiumRequired
+        }
+        
+        // Check points balance
+        guard totalPoints >= giftCard.pointsCost else {
+            throw GiftCardRedemptionError.insufficientPoints(needed: giftCard.pointsCost, available: totalPoints)
+        }
+        
+        // Call backend Lambda to process redemption via Tremendous
+        let redemption = try await callRedemptionAPI(
+            giftCard: giftCard,
+            userId: userId,
+            email: email
+        )
+        
+        // Deduct points locally
+        let metadata = LoyaltyTransaction.TransactionMetadata(
+            depositAmount: nil,
+            itemId: giftCard.id,
+            itemName: giftCard.name,
+            streakBonus: false,
+            goalCompleted: false,
+            verificationConfidence: nil,
+            source: "gift_card_redemption"
+        )
+        
+        addPoints(
+            -giftCard.pointsCost,
+            type: .spent,
+            description: "Redeemed \(giftCard.name)",
+            metadata: metadata
+        )
+        
+        print("🎁 [Loyalty] Redeemed \(giftCard.name) for \(giftCard.pointsCost) points")
+        
+        return redemption
+    }
+    
+    private func callRedemptionAPI(giftCard: GiftCard, userId: String, email: String) async throws -> GiftCardRedemption {
+        // TODO: Replace with your actual API Gateway endpoint
+        let endpoint = "https://YOUR_API_GATEWAY_URL/redeem-gift-card"
+        
+        guard let url = URL(string: endpoint) else {
+            throw GiftCardRedemptionError.invalidEndpoint
+        }
+        
+        let payload: [String: Any] = [
+            "userId": userId,
+            "giftCardId": giftCard.id,
+            "pointsToSpend": giftCard.pointsCost,
+            "email": email,
+            "brand": giftCard.brand,
+            "amount": giftCard.amount
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        // Add auth token if available
+        if let authService = try? AuthService() {
+            // Get current user's ID token
+            // Note: You'll need to expose getCurrentUserIdToken in AuthService
+            // request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw GiftCardRedemptionError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw GiftCardRedemptionError.serverError(code: httpResponse.statusCode)
+        }
+        
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw GiftCardRedemptionError.invalidResponse
+        }
+        
+        // Parse redemption response
+        let redemptionId = json["redemptionId"] as? String ?? UUID().uuidString
+        let redemptionLink = json["rewardLink"] as? String
+        let tremendousOrderId = json["tremendousOrderId"] as? String
+        
+        let redemption = GiftCardRedemption(
+            id: redemptionId,
+            userId: userId,
+            giftCardId: giftCard.id,
+            brand: giftCard.brand,
+            amount: giftCard.amount,
+            pointsSpent: giftCard.pointsCost,
+            redemptionDate: Date(),
+            redemptionCode: nil,
+            redemptionLink: redemptionLink,
+            status: .delivered,
+            tremendousOrderId: tremendousOrderId
+        )
+        
+        return redemption
+    }
+    
+    enum GiftCardRedemptionError: Error, LocalizedError {
+        case premiumRequired
+        case insufficientPoints(needed: Int, available: Int)
+        case invalidEndpoint
+        case invalidResponse
+        case serverError(code: Int)
+        
+        var errorDescription: String? {
+            switch self {
+            case .premiumRequired:
+                return "Premium subscription required to redeem gift cards"
+            case .insufficientPoints(let needed, let available):
+                return "Insufficient points. Need \(needed), have \(available)"
+            case .invalidEndpoint:
+                return "Invalid API endpoint"
+            case .invalidResponse:
+                return "Invalid response from server"
+            case .serverError(let code):
+                return "Server error (code: \(code))"
+            }
+        }
     }
     
     // MARK: - Persistence
