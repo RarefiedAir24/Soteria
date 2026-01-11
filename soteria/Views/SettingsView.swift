@@ -834,6 +834,66 @@ struct SettingsView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(Color.midnightSlate)
                         
+                        // Achievements
+                        NavigationLink(destination: AchievementsView()) {
+                            HStack {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.reverBlue.opacity(0.15), Color.purple.opacity(0.08)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 44, height: 44)
+                                    
+                                    Image(systemName: "trophy.fill")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [Color.reverBlue, Color.purple],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Achievements")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(Color.midnightSlate)
+                                    
+                                    Text("Unlock decorations & bonus points")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color.softGraphite)
+                                }
+                                
+                                Spacer()
+                                
+                                // Show pending count if any
+                                if AchievementsService.shared.pendingUnlockCount > 0 {
+                                    Text("\(AchievementsService.shared.pendingUnlockCount)")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(Color.orange)
+                                        .cornerRadius(12)
+                                }
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color.softGraphite.opacity(0.5))
+                            }
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Points History
                         NavigationLink(destination: LoyaltyHistoryView()) {
                             HStack {
                                 ZStack {

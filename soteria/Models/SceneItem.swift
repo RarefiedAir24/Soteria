@@ -41,22 +41,71 @@ struct SceneItem: Identifiable, Codable, Hashable {
     struct UnlockRequirement: Codable, Hashable {
         let type: RequirementType
         let value: Int
+        let bonusPoints: Int // Bonus points awarded when user chooses to unlock
+        let categoryFilter: String? // Optional: Only unlocks for specific goal categories
         
         enum RequirementType: String, Codable {
-            case lifetimePoints  // Total points earned (not current balance)
-            case goalsMet        // Number of goals completed
-            case totalSaved      // Total dollars saved
-            case none            // Available to everyone
+            case firstGoal           // Complete any first goal
+            case goalCategory        // Complete a goal in specific category
+            case totalSaved          // Total dollars saved across all goals
+            case goalsCompleted      // Number of goals completed
+            case savingsStreak       // Days of consistent saving
+            case toolActivated       // Specific savings tool activated
+            case giftCardRedeemed    // First gift card redeemed
+            case none                // Available to everyone
         }
         
-        func isMet(lifetimePoints: Int, goalsMet: Int, totalSaved: Double) -> Bool {
+        var description: String {
             switch type {
-            case .lifetimePoints:
-                return lifetimePoints >= value
-            case .goalsMet:
-                return goalsMet >= value
+            case .firstGoal:
+                return "Complete your first goal"
+            case .goalCategory:
+                return "Complete a \(categoryFilter ?? "specific") goal (min $\(value))"
+            case .totalSaved:
+                return "Save $\(value) total across all goals"
+            case .goalsCompleted:
+                return "Complete \(value) goal\(value == 1 ? "" : "s")"
+            case .savingsStreak:
+                return "Maintain a \(value)-day savings streak"
+            case .toolActivated:
+                return "Activate \(categoryFilter ?? "a savings tool")"
+            case .giftCardRedeemed:
+                return "Redeem your first gift card"
+            case .none:
+                return "Available immediately"
+            }
+        }
+        
+        func isMet(
+            goalsCompleted: Int,
+            totalSaved: Double,
+            savingsStreak: Int,
+            activatedTools: Set<String>,
+            giftCardsRedeemed: Int,
+            completedGoalCategory: String? = nil
+        ) -> Bool {
+            switch type {
+            case .firstGoal:
+                return goalsCompleted >= 1
+            case .goalCategory:
+                if let requiredCategory = categoryFilter,
+                   let completedCategory = completedGoalCategory {
+                    return completedCategory == requiredCategory && totalSaved >= Double(value)
+                }
+                return false
             case .totalSaved:
                 return Int(totalSaved) >= value
+            case .goalsCompleted:
+                return goalsCompleted >= value
+            case .savingsStreak:
+                return savingsStreak >= value
+            case .toolActivated:
+                if let requiredTool = categoryFilter {
+                    return activatedTools.contains(requiredTool)
+                }
+                return !activatedTools.isEmpty
+            case .giftCardRedeemed:
+                return giftCardsRedeemed >= 1
             case .none:
                 return true
             }
@@ -117,34 +166,49 @@ extension SceneItem {
             id: "squirrel",
             name: "Squirrel",
             description: "A busy squirrel collecting acorns",
-            pointCost: 150,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "🐿️", // Full body chipmunk/squirrel
             position: .tree,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 500)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .goalsCompleted,
+                value: 3,
+                bonusPoints: 4000, // Was 400, now 4000 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "dog",
             name: "Dog",
             description: "A loyal pup watching your savings grow",
-            pointCost: 200,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "🐕", // Full body dog
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 500)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .totalSaved,
+                value: 500,
+                bonusPoints: 3000, // Was 300, now 3000 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "cat",
             name: "Cat",
             description: "A curious cat lounging by your tree",
-            pointCost: 180,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "🐈", // Full body cat
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 300)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .firstGoal,
+                value: 1,
+                bonusPoints: 2000, // Was 200, now 2000 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "butterfly",
@@ -152,7 +216,7 @@ extension SceneItem {
             description: "Colorful butterflies flutter around",
             pointCost: 75,
             category: .animal,
-            iconName: "🦋", // Full butterfly
+            iconName: "butterfly", // Custom asset (not emoji)
             position: .sky,
             size: .small,
             unlockRequirement: nil
@@ -172,23 +236,33 @@ extension SceneItem {
             id: "parrot",
             name: "Parrot",
             description: "A colorful parrot perched in your tree",
-            pointCost: 250,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "🦜", // Full body parrot
             position: .tree,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 1)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .firstGoal,
+                value: 1,
+                bonusPoints: 2000, // Was 200, now 2000 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "hedgehog",
             name: "Hedgehog",
             description: "A cute hedgehog exploring the grass",
-            pointCost: 180,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "🦔", // Full body hedgehog
             position: .ground,
             size: .small,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 200)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .totalSaved,
+                value: 200,
+                bonusPoints: 1500, // Was 150, now 1500 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "bee",
@@ -215,35 +289,45 @@ extension SceneItem {
         SceneItem(
             id: "turtle",
             name: "Turtle",
-            description: "A wise turtle moving steadily forward",
-            pointCost: 150,
+            description: "A wise turtle moving steadily toward your goals",
+            pointCost: 0, // FREE when unlocked
             category: .animal,
-            iconName: "🐢", // Full body turtle
+            iconName: "turtle", // Custom turtle icon
             position: .ground,
-            size: .small,
-            unlockRequirement: nil
+            size: .medium,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .savingsStreak, value: 7, bonusPoints: 3500, categoryFilter: nil)
         ),
         SceneItem(
             id: "cow",
             name: "Cow",
             description: "A friendly cow grazing in your scene",
-            pointCost: 250,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "cow", // Spotted cow custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 1000)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .totalSaved,
+                value: 1000,
+                bonusPoints: 5000, // Was 500, now 5000 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "deer",
             name: "Deer",
             description: "A graceful spotted deer with antlers",
-            pointCost: 300,
+            pointCost: 0, // FREE when unlocked
             category: .animal,
             iconName: "deer", // Spotted deer custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 1500)
+            unlockRequirement: SceneItem.UnlockRequirement(
+                type: .totalSaved,
+                value: 1500,
+                bonusPoints: 7500, // Was 750, now 7500 (10x)
+                categoryFilter: nil
+            )
         ),
         SceneItem(
             id: "horse",
@@ -254,7 +338,7 @@ extension SceneItem {
             iconName: "horse", // Orange horse custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 2000)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 2000, bonusPoints: 10000, categoryFilter: nil)
         ),
         SceneItem(
             id: "bull",
@@ -265,7 +349,7 @@ extension SceneItem {
             iconName: "bull", // Brown bull custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 2)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 2, bonusPoints: 10000, categoryFilter: nil)
         ),
         SceneItem(
             id: "llama",
@@ -276,7 +360,7 @@ extension SceneItem {
             iconName: "llama", // Coral llama custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 3)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 3, bonusPoints: 15000, categoryFilter: nil)
         ),
         SceneItem(
             id: "buffalo",
@@ -287,7 +371,7 @@ extension SceneItem {
             iconName: "buffalo", // Brown buffalo custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 5000)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 5000, bonusPoints: 25000, categoryFilter: nil)
         ),
         SceneItem(
             id: "pig",
@@ -298,7 +382,7 @@ extension SceneItem {
             iconName: "pig", // Pink pig custom icon
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 600)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 600, bonusPoints: 3000, categoryFilter: nil)
         ),
         SceneItem(
             id: "donkey",
@@ -309,7 +393,7 @@ extension SceneItem {
             iconName: "donkey", // Gray donkey custom icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 1)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 1, bonusPoints: 2000, categoryFilter: nil)
         ),
         SceneItem(
             id: "goat",
@@ -320,7 +404,7 @@ extension SceneItem {
             iconName: "goat", // White goat custom icon
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 800)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 800, bonusPoints: 4000, categoryFilter: nil)
         ),
         SceneItem(
             id: "sheep",
@@ -331,7 +415,7 @@ extension SceneItem {
             iconName: "sheep", // Fluffy sheep custom icon
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 500)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 500, bonusPoints: 2500, categoryFilter: nil)
         ),
         SceneItem(
             id: "duck",
@@ -342,7 +426,7 @@ extension SceneItem {
             iconName: "duck", // Yellow duck custom icon
             position: .ground,
             size: .small,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 300)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 300, bonusPoints: 1500, categoryFilter: nil)
         ),
         SceneItem(
             id: "snail",
@@ -375,7 +459,7 @@ extension SceneItem {
             iconName: "hen", // Orange hen custom icon
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 200)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 200, bonusPoints: 1000, categoryFilter: nil)
         ),
         SceneItem(
             id: "rooster",
@@ -386,7 +470,51 @@ extension SceneItem {
             iconName: "rooster", // Yellow/green rooster custom icon
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 400)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 400, bonusPoints: 2000, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "bear",
+            name: "Bear",
+            description: "A strong bear protecting your savings",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "bear", // Brown bear custom icon
+            position: .ground,
+            size: .large,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 1000, bonusPoints: 5000, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "fox",
+            name: "Fox",
+            description: "A clever fox watching over your tree",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "fox", // Orange fox custom icon
+            position: .ground,
+            size: .medium,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 4, bonusPoints: 4500, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "owl",
+            name: "Owl",
+            description: "A wise owl perched in your tree",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "owl", // Brown owl custom icon
+            position: .tree,
+            size: .medium,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .savingsStreak, value: 14, bonusPoints: 6000, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "moose",
+            name: "Moose",
+            description: "A majestic moose standing tall",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "moose", // Brown moose custom icon
+            position: .ground,
+            size: .large,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 2000, bonusPoints: 8000, categoryFilter: nil)
         ),
         
         // MARK: - Plants
@@ -432,7 +560,7 @@ extension SceneItem {
             iconName: "🌹",
             position: .ground,
             size: .small,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 200)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 200, bonusPoints: 1000, categoryFilter: nil)
         ),
         SceneItem(
             id: "cactus",
@@ -465,7 +593,7 @@ extension SceneItem {
             iconName: "🍀",
             position: .ground,
             size: .small,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 1)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 1, bonusPoints: 2000, categoryFilter: nil)
         ),
         
         // MARK: - Decorations
@@ -489,7 +617,7 @@ extension SceneItem {
             iconName: "🌈",
             position: .sky,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .lifetimePoints, value: 1000)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 1000, bonusPoints: 5000, categoryFilter: nil)
         ),
         SceneItem(
             id: "shooting_star",
@@ -500,7 +628,7 @@ extension SceneItem {
             iconName: "💫",
             position: .sky,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 3)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 3, bonusPoints: 15000, categoryFilter: nil)
         ),
         SceneItem(
             id: "fireflies",
@@ -511,7 +639,7 @@ extension SceneItem {
             iconName: "✨",
             position: .sky,
             size: .small,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 500)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 500, bonusPoints: 2500, categoryFilter: nil)
         ),
         SceneItem(
             id: "gem",
@@ -522,7 +650,7 @@ extension SceneItem {
             iconName: "💎",
             position: .ground,
             size: .small,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 2000)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 2000, bonusPoints: 10000, categoryFilter: nil)
         ),
         SceneItem(
             id: "trophy",
@@ -533,7 +661,7 @@ extension SceneItem {
             iconName: "🏆",
             position: .ground,
             size: .medium,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 5)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 5, bonusPoints: 25000, categoryFilter: nil)
         ),
         
         // MARK: - Premium Items
@@ -546,40 +674,73 @@ extension SceneItem {
             iconName: "🦅", // Full body eagle
             position: .tree,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 5)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 5, bonusPoints: 25000, categoryFilter: nil)
         ),
         SceneItem(
-            id: "unicorn",
-            name: "Unicorn",
-            description: "A magical unicorn for legendary savers",
-            pointCost: 2000,
+            id: "panda",
+            name: "Panda",
+            description: "A peaceful panda relaxing by your tree",
+            pointCost: 0, // FREE when unlocked
             category: .animal,
-            iconName: "🦄", // Full body unicorn
+            iconName: "panda", // Custom panda icon
             position: .ground,
             size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 10000)
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 1500, bonusPoints: 7000, categoryFilter: nil)
         ),
         SceneItem(
-            id: "dragon",
-            name: "Dragon",
-            description: "A friendly dragon guards your wealth",
-            pointCost: 3000,
+            id: "cardinal",
+            name: "Cardinal",
+            description: "A bright red cardinal perched in your tree",
+            pointCost: 0, // FREE when unlocked
             category: .animal,
-            iconName: "🐉", // Full body dragon
+            iconName: "cardinal", // Custom cardinal icon
             position: .tree,
-            size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 25000)
+            size: .small,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 2, bonusPoints: 3000, categoryFilter: nil)
         ),
         SceneItem(
-            id: "lion",
-            name: "Lion",
-            description: "The king of the savanna joins your scene",
-            pointCost: 1500,
+            id: "hummingbird",
+            name: "Hummingbird",
+            description: "A tiny hummingbird hovering near flowers",
+            pointCost: 0, // FREE when unlocked
             category: .animal,
-            iconName: "🦁", // Full body lion
+            iconName: "hummingbird", // Custom hummingbird icon
+            position: .sky,
+            size: .small,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .savingsStreak, value: 10, bonusPoints: 4000, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "eagle",
+            name: "Eagle",
+            description: "A majestic eagle soaring above",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "eagle", // Custom eagle icon
+            position: .sky,
+            size: .medium,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .totalSaved, value: 3000, bonusPoints: 10000, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "frog",
+            name: "Frog",
+            description: "A cheerful frog hopping around your tree",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "frog", // Custom frog icon
             position: .ground,
-            size: .large,
-            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsMet, value: 3)
+            size: .small,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .savingsStreak, value: 5, bonusPoints: 2500, categoryFilter: nil)
+        ),
+        SceneItem(
+            id: "oriole",
+            name: "Oriole",
+            description: "A bright orange oriole singing in your tree",
+            pointCost: 0, // FREE when unlocked
+            category: .animal,
+            iconName: "oriole", // Custom oriole icon
+            position: .tree,
+            size: .small,
+            unlockRequirement: SceneItem.UnlockRequirement(type: .goalsCompleted, value: 3, bonusPoints: 3500, categoryFilter: nil)
         ),
     ]
     
@@ -589,12 +750,14 @@ extension SceneItem {
     }
     
     /// Get unlocked items based on user progress
-    static func availableItems(lifetimePoints: Int, goalsMet: Int, totalSaved: Double) -> [SceneItem] {
+    static func availableItems(goalsCompleted: Int, totalSaved: Double, savingsStreak: Int, activatedTools: Set<String>, giftCardsRedeemed: Int) -> [SceneItem] {
         return catalog.filter { item in
             item.unlockRequirement?.isMet(
-                lifetimePoints: lifetimePoints,
-                goalsMet: goalsMet,
-                totalSaved: totalSaved
+                goalsCompleted: goalsCompleted,
+                totalSaved: totalSaved,
+                savingsStreak: savingsStreak,
+                activatedTools: activatedTools,
+                giftCardsRedeemed: giftCardsRedeemed
             ) ?? true
         }
     }

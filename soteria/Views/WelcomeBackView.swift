@@ -64,9 +64,13 @@ struct WelcomeBackView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                if let goal = oldestGoal {
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Top padding for swipe hint
+                    Color.clear.frame(height: 50)
+                    
+                    if let goal = oldestGoal {
                     VStack(spacing: 24) {
                         // Header with icon
                         VStack(spacing: 12) {
@@ -297,8 +301,49 @@ struct WelcomeBackView: View {
                         .padding(.bottom, 20)
                     }
                 }
+            } // End VStack
+            } // End ScrollView
+            
+            // Swipe down indicator - Floating at top
+            VStack(spacing: 6) {
+                // Drag handle
+                Capsule()
+                    .fill(Color.softGraphite.opacity(0.4))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 8)
+                
+                // Animated down arrow with text
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.reverBlue)
+                    
+                    Text("Swipe down to see options")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.midnightSlate)
+                    
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.reverBlue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(Color.reverBlue.opacity(0.1))
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                )
             }
-        }
+            .frame(maxWidth: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [Color.mistGray, Color.mistGray.opacity(0.8), Color.clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 80)
+            )
+        } // End ZStack
         .safeAreaInset(edge: .top, spacing: 0) {
             // Reserve space for sheet drag indicator in compact view
             Color.clear.frame(height: 8)

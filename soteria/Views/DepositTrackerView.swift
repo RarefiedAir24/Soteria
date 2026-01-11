@@ -198,30 +198,47 @@ struct DepositTrackerView: View {
                 .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 24) {
-                    // Header Stats Card
-                    headerStatsCard
-                    
-                    // Period Selector
-                    periodSelector
-                    
-                    // Chart Visualization
-                    if !chartData.isEmpty {
-                        chartCard
+                VStack(spacing: 0) {
+                    // Slide-to-close indicator
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.softGraphite.opacity(0.3))
+                            .frame(width: 36, height: 5)
+                            .padding(.top, 12)
+                        
+                        Text("Swipe down to close")
+                            .font(.system(size: 13))
+                            .foregroundColor(.softGraphite.opacity(0.7))
+                            .padding(.bottom, 8)
                     }
+                    .frame(maxWidth: .infinity)
+                    .background(Color.mistGray)
                     
-                    // Summary Stats
-                    summaryStatsCard
-                    
-                    // Deposit List
-                    if !filteredDeposits.isEmpty {
-                        depositListCard
-                    } else {
-                        emptyStateCard
+                    VStack(spacing: 24) {
+                        // Header Stats Card
+                        headerStatsCard
+                        
+                        // Period Selector
+                        periodSelector
+                        
+                        // Chart Visualization
+                        if !chartData.isEmpty {
+                            chartCard
+                        }
+                        
+                        // Summary Stats
+                        summaryStatsCard
+                        
+                        // Deposit List
+                        if !filteredDeposits.isEmpty {
+                            depositListCard
+                        } else {
+                            emptyStateCard
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 20)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 20)
             }
         }
         .navigationTitle("Deposit Tracker")

@@ -26,24 +26,40 @@ struct DecisionWindowsView: View {
                 .ignoresSafeArea()
             
             ScrollView {
-                Color.clear
-                    .frame(height: 60)
-                
-                VStack(spacing: 24) {
-                    // Header Description
-                    // NOTE: User-facing name is "Decision Notifications" but internal code uses "Decision Windows"
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Decision Notifications")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.midnightSlate)
+                VStack(spacing: 0) {
+                    // Slide-to-close indicator
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.softGraphite.opacity(0.3))
+                            .frame(width: 36, height: 5)
+                            .padding(.top, 12)
                         
-                        Text("Set intentional moments to pause and save. These are time-based prompts that help you make conscious savings decisions.")
-                            .font(.system(size: 14))
-                            .foregroundColor(.softGraphite)
-                            .lineSpacing(4)
+                        Text("Swipe down to close")
+                            .font(.system(size: 13))
+                            .foregroundColor(.softGraphite.opacity(0.7))
+                            .padding(.bottom, 8)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.cloudWhite)
+                    
+                    Color.clear
+                        .frame(height: 20)
+                    
+                    VStack(spacing: 24) {
+                        // Header Description
+                        // NOTE: User-facing name is "Decision Notifications" but internal code uses "Decision Windows"
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Decision Notifications")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.midnightSlate)
+                            
+                            Text("Set intentional moments to pause and save. These are time-based prompts that help you make conscious savings decisions.")
+                                .font(.system(size: 14))
+                                .foregroundColor(.softGraphite)
+                                .lineSpacing(4)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
                     
                     // AI Timing Recommendations
                     if !aiService.timingRecommendations.isEmpty {
@@ -277,7 +293,8 @@ struct DecisionWindowsView: View {
                         }
                         .padding(.horizontal, 20)
                     }
-                }
+                } // Close VStack(spacing: 24)
+                } // Close VStack(spacing: 0) for slide indicator
             }
         }
         // Separate sheet for editing existing windows - use item: to ensure window is available

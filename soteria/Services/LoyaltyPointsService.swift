@@ -29,8 +29,8 @@ class LoyaltyPointsService: ObservableObject {
     
     // MARK: - Point Earning Rates
     // ⚠️ TUNING PARAMETERS: Adjust these to control point economy
-    private let pointsPerDollarSaved = 1.0        // Base rate: $1 saved = 1 point
-    private let bonusPointsPerGoalCompleted = 500 // Bonus for completing a goal
+    private let pointsPerDollarSaved = 10.0       // Base rate: $1 saved = 10 points (10x more generous!)
+    private let bonusPointsPerGoalCompleted = 5000 // Bonus for completing a goal (10x increase)
     private let streakBonusMultiplier = 1.5       // 50% bonus for consistent saving
     
     // MARK: - Initialization
@@ -62,6 +62,75 @@ class LoyaltyPointsService: ObservableObject {
     /// Computed property for easier access to current points (respects premium status)
     var points: Int {
         return isLoyaltyEnabled ? totalPoints : 0
+    }
+    
+    // MARK: - Smart Rollover Policy
+    
+    /// Points status for display and logic
+    enum PointsStatus: String {
+        case active   // Premium user, can earn & redeem
+        case frozen   // Canceled premium, points preserved but locked
+        case none     // Free user, never had points
+        
+        var displayText: String {
+            switch self {
+            case .active:
+                return "Active"
+            case .frozen:
+                return "Frozen - Upgrade to unlock"
+            case .none:
+                return "No points"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .active:
+                return "checkmark.circle.fill"
+            case .frozen:
+                return "lock.fill"
+            case .none:
+                return "minus.circle"
+            }
+        }
+    }
+    
+    /// Get current points status
+    func getPointsStatus() -> (total: Int, status: PointsStatus) {
+        let total = totalPoints
+        
+        if isLoyaltyEnabled {
+            // Premium user - points are active
+            return (total, .active)
+        } else if total > 0 {
+            // Non-premium user with accumulated points - frozen
+            return (total, .frozen)
+        } else {
+            // No points at all
+            return (0, .none)
+        }
+    }
+    
+    /// Check if user can earn new points
+    func canEarnPoints() -> Bool {
+        return isLoyaltyEnabled
+    }
+    
+    /// Check if user can redeem points
+    func canRedeemPoints() -> Bool {
+        return isLoyaltyEnabled && totalPoints > 0
+    }
+    
+    /// Get frozen points message for UI
+    func getFrozenPointsMessage() -> String? {
+        let status = getPointsStatus()
+        
+        if status.status == .frozen {
+            let giftCardValue = Double(status.total) / 500.0 // 2,500 pts = $5
+            return "You have \(status.total) points (\(String(format: "$%.2f", giftCardValue)) in gift cards) waiting! Upgrade to Premium to unlock them."
+        }
+        
+        return nil
     }
     
     // MARK: - Point Management

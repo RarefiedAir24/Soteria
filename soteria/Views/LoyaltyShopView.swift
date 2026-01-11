@@ -267,9 +267,11 @@ struct LoyaltyShopView: View {
     
     private func isUnlocked(_ item: SceneItem) -> Bool {
         return item.unlockRequirement?.isMet(
-            lifetimePoints: loyaltyService.lifetimePointsEarned,
-            goalsMet: goalsCompleted,
-            totalSaved: totalSaved
+            goalsCompleted: goalsCompleted,
+            totalSaved: totalSaved,
+            savingsStreak: 0, // TODO: Track savings streak
+            activatedTools: [], // TODO: Track activated tools
+            giftCardsRedeemed: 0 // TODO: Track gift cards redeemed
         ) ?? true
     }
     
@@ -441,12 +443,20 @@ struct ItemCard: View {
     
     private func requirementDescription(_ req: SceneItem.UnlockRequirement) -> String {
         switch req.type {
-        case .lifetimePoints:
-            return "Earn \(req.value) pts"
-        case .goalsMet:
-            return "Complete \(req.value) goal\(req.value == 1 ? "" : "s")"
         case .totalSaved:
             return "Save $\(req.value)"
+        case .goalsCompleted:
+            return "Complete \(req.value) goal\(req.value == 1 ? "" : "s")"
+        case .firstGoal:
+            return "Complete your first goal"
+        case .goalCategory:
+            return "Complete a \(req.categoryFilter ?? "specific") goal"
+        case .savingsStreak:
+            return "\(req.value) day saving streak"
+        case .toolActivated:
+            return "Activate \(req.categoryFilter ?? "savings tool")"
+        case .giftCardRedeemed:
+            return "Redeem your first gift card"
         case .none:
             return ""
         }

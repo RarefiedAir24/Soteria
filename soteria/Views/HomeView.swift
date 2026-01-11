@@ -25,6 +25,7 @@ private func getScreenHeight() -> CGFloat {
 struct HomeView: View {
     @EnvironmentObject var authService: AuthService
     @EnvironmentObject var subscriptionService: SubscriptionService
+    @StateObject private var tutorialManager = DecorationEditTutorialManager.shared
     
     // SIMPLIFIED: Reduced @State properties from 20+ to 7 essential ones
     // Essential metrics (load immediately from fast services)
@@ -89,10 +90,15 @@ struct HomeView: View {
     @State private var showHomeScreenTutorial = false
     @State private var showLoyaltyShop = false
     @State private var showSceneEditor = false
+    @State private var showAchievementUnlockOffer: AchievementsService.PendingUnlock? = nil
     @State private var notificationCount: Int = 0
     @State private var badgePulse: Bool = false
     @AppStorage("last_sign_in_timestamp") private var lastSignInTimestamp: Double = 0
     @AppStorage("welcome_back_shown_for_session") private var welcomeBackShownForSession: Bool = false
+    
+    // Tree value card animation
+    @State private var animateShimmer = false
+    @State private var showDepositTracker = false
     
     // Task tracking for cancellation (prevent memory leaks)
     @State private var dataLoadingTask: Task<Void, Never>? = nil
@@ -224,59 +230,186 @@ struct HomeView: View {
                         }
                     }
                     
-                    // Money Tree Visualization with Value Overlay
-                    ZStack(alignment: .bottom) {
-                        MoneyTreeView(
-                            totalSaved: totalSaved,
-                            activeGoal: activeGoal,
-                            allGoals: allGoals,
-                            onGoalLeafTapped: { tappedGoal in
-                                print("🏠 [HomeView] Goal leaf tapped: \(tappedGoal.name), ID: \(tappedGoal.id)")
-                                print("🏠 [HomeView] Current allGoals count: \(allGoals.count)")
-                                // Find the goal in allGoals by ID to ensure we have the latest version
-                                if let foundGoal = allGoals.first(where: { $0.id == tappedGoal.id }) {
-                                    print("🏠 [HomeView] Found goal in allGoals: \(foundGoal.name)")
-                                    selectedGoalForDetails = foundGoal
-                                    showGoalDetails = true
-                                } else {
-                                    print("⚠️ [HomeView] Goal not found in allGoals, using tapped goal directly")
-                                    // Fallback: use the tapped goal directly
-                                    selectedGoalForDetails = tappedGoal
-                                    showGoalDetails = true
+                    // Money Tree Visualization
+                    VStack(spacing: 16) {
+                        // Make entire tree tappable to edit scene
+                        Button(action: {
+                            showSceneEditor = true
+                            // Mark that user has discovered the edit feature
+                            UserDefaults.standard.set(true, forKey: "hasDiscoveredSceneEdit")
+                        }) {
+                            MoneyTreeView(
+                                totalSaved: totalSaved,
+                                activeGoal: activeGoal,
+                                allGoals: allGoals,
+                                onGoalLeafTapped: { tappedGoal in
+                                    print("🏠 [HomeView] Goal leaf tapped: \(tappedGoal.name), ID: \(tappedGoal.id)")
+                                    print("🏠 [HomeView] Current allGoals count: \(allGoals.count)")
+                                    // Find the goal in allGoals by ID to ensure we have the latest version
+                                    if let foundGoal = allGoals.first(where: { $0.id == tappedGoal.id }) {
+                                        print("🏠 [HomeView] Found goal in allGoals: \(foundGoal.name)")
+                                        selectedGoalForDetails = foundGoal
+                                        showGoalDetails = true
+                                    } else {
+                                        print("⚠️ [HomeView] Goal not found in allGoals, using tapped goal directly")
+                                        // Fallback: use the tapped goal directly
+                                        selectedGoalForDetails = tappedGoal
+                                        showGoalDetails = true
+                                    }
                                 }
-                            }
-                        )
+                            )
+                            .overlay(
+                                // LED chase effect border (only if never edited before)
+                                Group {
+                                    if !UserDefaults.standard.bool(forKey: "hasDiscoveredSceneEdit") {
+                                        LEDChaseEffect()
+                                    }
+                                }
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle()) // Prevents button styling on tree
                         
-                        // Tree Value Overlay - Shows current savings and deposit CTA
+                        // Tree Value & Deposit CTA - Below the tree
                         VStack(spacing: 12) {
-                            // Current tree value
-                            VStack(spacing: 4) {
-                                Text("Tree Value")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                Text(formattedTotalSaved)
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                            }
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.black.opacity(0.6))
-                                    .blur(radius: 10)
-                            )
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.green.opacity(0.8), Color.green.opacity(0.6)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
+                            // Impressive Tree Value Card with Glass Morphism - TAPPABLE!
+                            Button(action: {
+                                showDepositTracker = true
+                            }) {
+                                ZStack {
+                                    // Background gradient
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color(red: 0.2, green: 0.8, blue: 0.5),  // Vibrant green
+                                                    Color(red: 0.1, green: 0.6, blue: 0.9)   // Electric blue
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
                                         )
-                                    )
-                            )
+                                        .shadow(color: Color.green.opacity(0.4), radius: 20, x: 0, y: 10)
+                                    
+                                    // Shimmer overlay (animated)
+                                    GeometryReader { geometry in
+                                        LinearGradient(
+                                            colors: [
+                                                Color.white.opacity(0.0),
+                                                Color.white.opacity(0.3),
+                                                Color.white.opacity(0.0)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        .frame(width: geometry.size.width * 0.3)
+                                        .offset(x: animateShimmer ? geometry.size.width : -geometry.size.width * 0.3)
+                                        .animation(
+                                            Animation.linear(duration: 2.5).repeatForever(autoreverses: false),
+                                            value: animateShimmer
+                                        )
+                                        .onAppear {
+                                            animateShimmer = true
+                                        }
+                                    }
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    
+                                    // Content
+                                    VStack(spacing: 8) {
+                                        // Icon + Label with tap indicator
+                                        HStack(spacing: 8) {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(Color.white.opacity(0.2))
+                                                    .frame(width: 32, height: 32)
+                                                
+                                                Image(systemName: "tree.fill")
+                                                    .font(.system(size: 16, weight: .semibold))
+                                                    .foregroundColor(.white)
+                                            }
+                                            
+                                            Text("Your Savings")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(.white.opacity(0.9))
+                                                .textCase(.uppercase)
+                                                .tracking(1.2)
+                                            
+                                            Spacer()
+                                            
+                                            // Tap indicator - More visible
+                                            HStack(spacing: 4) {
+                                                Text("View Details")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.white)
+                                                
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 11, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                Capsule()
+                                                    .fill(Color.white.opacity(0.25))
+                                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                                            )
+                                        }
+                                        
+                                        // Big impressive number
+                                        HStack(spacing: 4) {
+                                            Text(formattedTotalSaved)
+                                                .font(.system(size: 44, weight: .bold, design: .rounded))
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2)
+                                            
+                                            // Celebration badges for milestones
+                                            if totalSaved >= 1000 {
+                                                Text("🎉")
+                                                    .font(.system(size: 24))
+                                                    .offset(y: -8)
+                                            }
+                                        }
+                                        
+                                        // Motivational subtitle
+                                        if let activeGoal = activeGoal {
+                                            let progress = (activeGoal.currentAmount / activeGoal.targetAmount) * 100
+                                            Text("\(Int(progress))% toward \(activeGoal.name)")
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                        } else {
+                                            Text("Keep growing! 🌱")
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                        }
+                                    }
+                                    .padding(.vertical, 20)
+                                    .padding(.horizontal, 24)
+                                }
+                                .frame(height: 140)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            // Subtle edit hint (only if never edited before)
+                            if !UserDefaults.standard.bool(forKey: "hasDiscoveredSceneEdit") {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "hand.tap.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.purple.opacity(0.7))
+                                    
+                                    Text("Tap your tree above to customize with animals & decorations")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.softGraphite.opacity(0.8))
+                                        .italic()
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.purple.opacity(0.08))
+                                )
+                                .transition(.scale.combined(with: .opacity))
+                            }
                             
                             // Deposit CTA Button
                             Button(action: {
@@ -302,12 +435,21 @@ struct HomeView: View {
                                 .shadow(color: Color.blue.opacity(0.4), radius: 8, x: 0, y: 4)
                             }
                         }
-                        .padding(.bottom, 20)
                     }
                 }
                 .padding()
             }
+            
+            // Arrow Pad Overlay (appears BELOW tree when editing decorations)
+            // REMOVED FROM HERE - moved to overlay on entire view
+            
             .padding(.horizontal, .spacingCard)
+            
+            // Savings Tools Card (Premium Only - if no tools activated)
+            if subscriptionService.isPremium {
+                SavingsToolsHomeCard()
+                    .environmentObject(subscriptionService)
+            }
             
             // Streak Card
             ReverCard {
@@ -353,7 +495,7 @@ struct HomeView: View {
     @ViewBuilder
     private var savingsReminderCard: some View {
         ReverCard {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     ZStack {
                         Circle()
@@ -370,9 +512,17 @@ struct HomeView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.midnightSlate)
                         
-                        Text("Set up time-based savings prompts")
-                            .font(.system(size: 14))
-                            .foregroundColor(.softGraphite)
+                        // Quick glance at active notifications
+                        let activeWindows = DecisionWindowsService.shared.windows.filter { $0.isEnabled }
+                        if activeWindows.isEmpty {
+                            Text("Set up time-based savings prompts")
+                                .font(.system(size: 14))
+                                .foregroundColor(.softGraphite)
+                        } else {
+                            Text("\(activeWindows.count) active reminder\(activeWindows.count == 1 ? "" : "s")")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.green)
+                        }
                     }
                     
                     Spacer()
@@ -380,6 +530,70 @@ struct HomeView: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.softGraphite)
+                }
+                
+                // Show preview of next 2 active notifications
+                let activeWindows = DecisionWindowsService.shared.windows.filter { $0.isEnabled }
+                if !activeWindows.isEmpty {
+                    Divider()
+                        .padding(.vertical, 4)
+                    
+                    VStack(spacing: 8) {
+                        ForEach(activeWindows.prefix(2)) { window in
+                            HStack(spacing: 12) {
+                                // Time indicator
+                                VStack(spacing: 2) {
+                                    Text(formatTime(window.time))
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(.reverBlue)
+                                    
+                                    Text(window.daysOfWeek.count == 7 ? "Daily" : "\(window.daysOfWeek.count) days")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.softGraphite)
+                                }
+                                .frame(width: 60)
+                                
+                                // Window name
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(window.name)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.midnightSlate)
+                                        .lineLimit(1)
+                                    
+                                    // Next occurrence
+                                    if let nextOccurrence = getNextOccurrence(for: window) {
+                                        Text("Next: \(formatNextOccurrence(nextOccurrence))")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.softGraphite)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                // Active badge
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 8, height: 8)
+                            }
+                            .padding(.vertical, 4)
+                            
+                            if window.id != activeWindows.prefix(2).last?.id {
+                                Divider()
+                            }
+                        }
+                        
+                        // Show more indicator
+                        if activeWindows.count > 2 {
+                            HStack {
+                                Spacer()
+                                Text("+\(activeWindows.count - 2) more")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.reverBlue)
+                                Spacer()
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
                 }
             }
             .padding()
@@ -391,6 +605,64 @@ struct HomeView: View {
         }
     }
     
+    // MARK: - Helper functions for Decision Notifications card
+    
+    private func formatTime(_ timeComponents: DateComponents) -> String {
+        let hour = timeComponents.hour ?? 0
+        let minute = timeComponents.minute ?? 0
+        
+        let period = hour >= 12 ? "PM" : "AM"
+        let displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+        
+        return String(format: "%d:%02d %@", displayHour, minute, period)
+    }
+    
+    private func getNextOccurrence(for window: DecisionWindow) -> Date? {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Find next day this window will trigger
+        for daysAhead in 0..<7 {
+            guard let checkDate = calendar.date(byAdding: .day, value: daysAhead, to: now) else { continue }
+            let weekday = calendar.component(.weekday, from: checkDate)
+            
+            if window.daysOfWeek.contains(weekday) {
+                // Combine the time from window with the check date
+                let hour = window.time.hour ?? 0
+                let minute = window.time.minute ?? 0
+                
+                if let nextOccurrence = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: checkDate) {
+                    // Only return if it's in the future
+                    if nextOccurrence > now {
+                        return nextOccurrence
+                    }
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    private func formatNextOccurrence(_ date: Date) -> String {
+        let calendar = Calendar.current
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInTomorrow(date) {
+            // Show "Tomorrow (Day, Mon DD)"
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE, MMM d" // e.g., "Mon, Jan 13"
+            return "Tomorrow (\(formatter.string(from: date)))"
+        } else {
+            // Show day name and date for other days
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE, MMM d" // e.g., "Monday, Jan 13"
+            return formatter.string(from: date)
+        }
+    }
+    
+    // COMMENTED OUT: Deposit tracker card info now accessible by tapping the tree value card
+    /*
     @ViewBuilder
     private var depositTrackerCard: some View {
         NavigationLink(destination: DepositTrackerView()) {
@@ -536,6 +808,7 @@ struct HomeView: View {
             .padding(.horizontal, .spacingCard)
         }
     }
+    */
     
     
     // Helper function to determine if user is a beta tester/TestFlight user
@@ -948,6 +1221,20 @@ struct HomeView: View {
                     }
                 }
             }
+            
+            // Setup achievement unlock notification listener
+            NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("NewAchievementAvailable"),
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let pendingUnlock = notification.object as? AchievementsService.PendingUnlock {
+                    // Show unlock offer after a brief delay (to not interrupt goal completion celebration)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        showAchievementUnlockOffer = pendingUnlock
+                    }
+                }
+            }
         }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("AvatarUpdated"))) { _ in
                 self.loadAvatar()
@@ -1051,6 +1338,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showPurchaseIntentHistory) {
                 PurchaseIntentHistoryView()
+            }
+            .sheet(isPresented: $showDepositTracker) {
+                DepositTrackerView()
             }
             .fullScreenCover(isPresented: $showGoalCompletionCelebration) {
                 if let goal = self.completedGoal {
@@ -1164,12 +1454,25 @@ struct HomeView: View {
             .sheet(isPresented: $showNotificationCenter) {
                 NotificationCenterView()
             }
+            .sheet(item: $showAchievementUnlockOffer) { pendingUnlock in
+                AchievementUnlockOfferView(
+                    pendingUnlock: pendingUnlock,
+                    isPresented: Binding(
+                        get: { showAchievementUnlockOffer != nil },
+                        set: { if !$0 { showAchievementUnlockOffer = nil } }
+                    )
+                )
+            }
             .overlay {
                 if showMetaYellowCardCelebration {
                     MetaYellowCardCelebrationView(isPresented: $showMetaYellowCardCelebration)
                         .transition(.opacity.combined(with: .scale))
                         .zIndex(1000)
                 }
+                
+                // Decoration Edit Tutorial (full-screen, not constrained)
+                DecorationEditTutorialOverlay()
+                    .zIndex(999)
                 
                 // Home Screen Tutorial
                 TutorialPopup(
@@ -1185,27 +1488,6 @@ struct HomeView: View {
                     HStack {
                         Spacer()
                         VStack(spacing: 12) {
-                            // Scene Edit Button
-                            Button(action: {
-                                showSceneEditor = true
-                            }) {
-                                Image(systemName: "paintbrush.fill")
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 56, height: 56)
-                                    .background(
-                                        Circle()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [Color.purple, Color.purple.opacity(0.8)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
-                                    )
-                                    .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
-                            }
-                            
                             // Loyalty Shop Button
                             LoyaltyShopButton(showShop: $showLoyaltyShop)
                         }
@@ -1223,6 +1505,8 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showLoyaltyShop) {
                 LoyaltyShopView()
+                    .environmentObject(authService)
+                    .environmentObject(subscriptionService)
             }
             .sheet(isPresented: $showSceneEditor) {
                 SceneEditorView()
@@ -1272,25 +1556,27 @@ struct HomeView: View {
             Color.mistGray
                 .ignoresSafeArea()
             
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Spacer for fixed header - filled with banner color
-                    usernameBannerBackgroundGradient
-                        .frame(height: 60)
-                    
-                    // Username/Avatar Banner (scrolls with content)
-                    usernameAvatarBanner
-                    
-                    // Content spacing
-                    VStack(spacing: .spacingSection) {
-                        // Essential Metrics (Load immediately - always shows, even with 0 values)
-                        self.essentialMetricsCard
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Spacer for fixed header - filled with banner color
+                        usernameBannerBackgroundGradient
+                            .frame(height: 60)
                         
-                        // Savings Reminder Card (Core Feature - Show prominently)
-                        self.savingsReminderCard
+                        // Username/Avatar Banner (scrolls with content)
+                        usernameAvatarBanner
                         
-                        // Deposit Tracker Card (Core Feature - Show prominently)
-                        self.depositTrackerCard
+                        // Content spacing
+                        VStack(spacing: .spacingSection) {
+                            // Essential Metrics (Load immediately - always shows, even with 0 values)
+                            self.essentialMetricsCard
+                            
+                            // Savings Reminder Card (Core Feature - Show prominently)
+                            self.savingsReminderCard
+                                .id("treeSection") // Anchor for auto-scroll
+                        
+                        // Deposit Tracker Card - COMMENTED OUT (now accessible via tappable tree value card)
+                        // self.depositTrackerCard
                         
                         // Store CTA Card (Show for all users - different content for premium)
                         self.storeCTACard
@@ -1339,14 +1625,6 @@ struct HomeView: View {
                 }
             )
             .coordinateSpace(name: "scroll")
-            
-            // Premium Header (fixed at top)
-            PremiumHeaderView(
-                title: "SOTERIA",
-                subscriptionService: subscriptionService,
-                userEmail: userEmail
-            )
-            
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
                 // When at top, minY should be around the padding value (110 or 90)
                 // When scrolling UP (dragging bottom to top), content moves up, minY becomes negative
@@ -1364,8 +1642,26 @@ struct HomeView: View {
                 // Track premium card position
                 cardPosition = value
             }
-            
-            // Header removed - no rose gold strip on home page
+            .onChange(of: tutorialManager.selectedItemId) { _, newValue in
+                // Auto-scroll to tree when editing starts
+                if newValue != nil {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        scrollProxy.scrollTo("treeSection", anchor: .top)
+                    }
+                }
+            }
+        } // End ScrollViewReader
+        
+        // Premium Header (fixed at top, OUTSIDE ScrollViewReader)
+        PremiumHeaderView(
+            title: "SOTERIA",
+            subscriptionService: subscriptionService,
+            userEmail: userEmail
+        )
+        } // End ZStack
+        .overlay(alignment: .bottom) {
+            // Arrow Pad Overlay - FLOATING at bottom of screen (outside ScrollView)
+            HomeArrowPadOverlay()
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView()
@@ -2854,6 +3150,119 @@ struct InsightsCardView: View {
 
 #Preview {
     HomeView()
+}
+
+// MARK: - LED Chase Effect
+
+struct LEDChaseEffect: View {
+    @State private var rotation: Double = 0
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Solid border
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.purple.opacity(0.6),
+                                Color.blue.opacity(0.6)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 3
+                    )
+                
+                // Chasing light overlay
+                ChasingLight(rotation: rotation, cornerRadius: 16)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                Color.purple,
+                                Color.white,
+                                Color.purple,
+                                Color.clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+            }
+            .onAppear {
+                withAnimation(
+                    Animation.linear(duration: 2.5).repeatForever(autoreverses: false)
+                ) {
+                    rotation = 1.0
+                }
+            }
+        }
+    }
+}
+
+struct ChasingLight: Shape {
+    var rotation: Double
+    let cornerRadius: CGFloat
+    
+    var animatableData: Double {
+        get { rotation }
+        set { rotation = newValue }
+    }
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        // Calculate the perimeter of the rounded rectangle
+        let width = rect.width
+        let height = rect.height
+        let perimeter = (width + height) * 2
+        
+        // The light travels a segment (20% of perimeter)
+        let segmentLength = perimeter * 0.2
+        let startDistance = perimeter * rotation
+        
+        // Create a path that follows the border
+        path.move(to: tracePoint(at: startDistance, width: width, height: height, cornerRadius: cornerRadius))
+        
+        // Draw the light segment
+        let steps = 50
+        for i in 1...steps {
+            let distance = startDistance + (segmentLength * Double(i) / Double(steps))
+            let point = tracePoint(at: distance.truncatingRemainder(dividingBy: perimeter), width: width, height: height, cornerRadius: cornerRadius)
+            path.addLine(to: point)
+        }
+        
+        return path
+    }
+    
+    private func tracePoint(at distance: Double, width: CGFloat, height: CGFloat, cornerRadius: CGFloat) -> CGPoint {
+        // Trace along the border: top → right → bottom → left
+        let adjustedDistance = distance.truncatingRemainder(dividingBy: (width + height) * 2)
+        
+        if adjustedDistance < width {
+            // Top edge
+            return CGPoint(x: adjustedDistance, y: 0)
+        } else if adjustedDistance < width + height {
+            // Right edge
+            return CGPoint(x: width, y: adjustedDistance - width)
+        } else if adjustedDistance < width * 2 + height {
+            // Bottom edge
+            return CGPoint(x: width - (adjustedDistance - width - height), y: height)
+        } else {
+            // Left edge
+            return CGPoint(x: 0, y: height - (adjustedDistance - width * 2 - height))
+        }
+    }
+}
+
+struct LEDDot: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.addEllipse(in: rect)
+        }
+    }
 }
 
 // MARK: - Scroll Offset Preference Key

@@ -69,6 +69,31 @@ struct LoyaltyHistoryView: View {
             .reduce(0) { $0 + $1.points })
     }
     
+    // Gift card specific stats
+    private var giftCardTransactions: [LoyaltyTransaction] {
+        loyaltyService.transactionHistory.filter { transaction in
+            transaction.metadata?.source == "gift_card_redemption"
+        }
+    }
+    
+    private var totalGiftCardsRedeemed: Int {
+        giftCardTransactions.count
+    }
+    
+    private var totalGiftCardValue: Double {
+        giftCardTransactions.reduce(0.0) { total, transaction in
+            // Points spent / 500 = dollar value (assuming 500 pts = $1)
+            total + (Double(abs(transaction.points)) / 500.0)
+        }
+    }
+    
+    private var favoriteBrand: String? {
+        let brands = giftCardTransactions.compactMap { $0.metadata?.itemName }
+        let brandCounts = Dictionary(grouping: brands, by: { $0 })
+            .mapValues { $0.count }
+        return brandCounts.max(by: { $0.value < $1.value })?.key
+    }
+    
     var body: some View {
         ZStack {
             // Background
@@ -82,6 +107,11 @@ struct LoyaltyHistoryView: View {
                     
                     // Quick Stats Grid
                     quickStatsGrid
+                    
+                    // Gift Card Analytics (if user has redeemed any)
+                    if totalGiftCardsRedeemed > 0 {
+                        giftCardAnalyticsSection
+                    }
                     
                     // Filter Pills
                     filterPills
@@ -213,6 +243,111 @@ struct LoyaltyHistoryView: View {
                 subtitle: "Transactions"
             )
         }
+    }
+    
+    // MARK: - Gift Card Analytics Section
+    
+    private var giftCardAnalyticsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section Header
+            HStack {
+                Image(systemName: "giftcard.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.purple, Color.purple.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text("Gift Card Rewards")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.midnightSlate)
+                
+                Spacer()
+            }
+            
+            // Analytics Cards
+            VStack(spacing: 12) {
+                // Row 1: Cards Redeemed & Total Value
+                HStack(spacing: 12) {
+                    // Cards Redeemed
+                    GiftCardStatCard(
+                        icon: "checkmark.circle.fill",
+                        iconColor: .green,
+                        title: "Redeemed",
+                        value: "\(totalGiftCardsRedeemed)",
+                        subtitle: totalGiftCardsRedeemed == 1 ? "Gift Card" : "Gift Cards"
+                    )
+                    
+                    // Total Value
+                    GiftCardStatCard(
+                        icon: "dollarsign.circle.fill",
+                        iconColor: .orange,
+                        title: "Total Value",
+                        value: "$\(String(format: "%.0f", totalGiftCardValue))",
+                        subtitle: "Redeemed"
+                    )
+                }
+                
+                // Row 2: Favorite Brand & Recent Activity
+                HStack(spacing: 12) {
+                    // Favorite Brand
+                    if let brand = favoriteBrand {
+                        GiftCardStatCard(
+                            icon: "star.fill",
+                            iconColor: .yellow,
+                            title: "Favorite",
+                            value: extractBrandName(from: brand),
+                            subtitle: "Top Brand"
+                        )
+                    }
+                    
+                    // Points Used
+                    GiftCardStatCard(
+                        icon: "arrow.up.circle.fill",
+                        iconColor: .red,
+                        title: "Points Used",
+                        value: "\(giftCardTransactions.reduce(0) { $0 + abs($1.points) })",
+                        subtitle: "Total"
+                    )
+                }
+            }
+            .padding(16)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.white)
+                    
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.purple.opacity(0.05),
+                                    Color.purple.opacity(0.02)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        }
+    }
+    
+    private func extractBrandName(from fullName: String) -> String {
+        // Extract brand from "$25 Amazon Gift Card" → "Amazon"
+        let components = fullName.components(separatedBy: " ")
+        if components.count >= 2 {
+            return components[1] // Usually 2nd word is brand
+        }
+        return fullName
     }
     
     // MARK: - Filter Pills
@@ -632,6 +767,51 @@ struct ScaleButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .animation(.spring(response: 0.3), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Gift Card Stat Card Component
+
+struct GiftCardStatCard: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let value: String
+    let subtitle: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Icon
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(iconColor)
+            
+            // Value
+            Text(value)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.midnightSlate)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            
+            // Title & Subtitle
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.softGraphite)
+                
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundColor(.softGraphite.opacity(0.7))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.softGraphite.opacity(0.1), lineWidth: 1)
+        )
     }
 }
 

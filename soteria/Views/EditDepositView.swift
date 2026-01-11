@@ -2,7 +2,8 @@
 //  EditDepositView.swift
 //  soteria
 //
-//  Edit deposit screenshot and reference ID
+//  Edit deposit reference ID and view verification status
+//  NOTE: Screenshot upload is NOT allowed here for security (prevents fraud)
 //
 
 import SwiftUI
@@ -12,15 +13,8 @@ struct EditDepositView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject private var plaidService = PlaidService.shared
     
-    @State private var depositScreenshot: UIImage? = nil
     @State private var referenceId: String
     @State private var isSaving = false
-    @State private var showImagePicker = false
-    @State private var showImageSourceActionSheet = false
-    @State private var imagePickerSourceType: UIImagePickerController.SourceType = .photoLibrary
-    
-    private let screenshotService = DepositScreenshotService.shared
-    private let apiService = DepositScreenshotAPIService.shared
     
     init(deposit: SavingsDeposit) {
         self.deposit = deposit
@@ -63,16 +57,16 @@ struct EditDepositView: View {
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.midnightSlate)
                             
-                            TextField("e.g., Transaction #12345", text: $referenceId)
+                            TextField("e.g., DEP-550E840", text: $referenceId)
                                 .font(.system(size: 14))
                                 .foregroundColor(.midnightSlate)
                                 .padding(14)
                                 .background(Color.dreamMist)
                                 .cornerRadius(10)
-                                .autocapitalization(.none)
+                                .autocapitalization(.allCharacters)
                                 .disableAutocorrection(true)
                             
-                            Text("Optional: Enter a reference ID from your bank records")
+                            Text("Edit your deposit reference ID for tracking")
                                 .font(.system(size: 12))
                                 .foregroundColor(.softGraphite)
                         }
@@ -83,85 +77,26 @@ struct EditDepositView: View {
                         )
                         .padding(.horizontal, 20)
                         
-                        // Screenshot Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Receipt/Screenshot")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.midnightSlate)
-                            
-                            if let screenshot = depositScreenshot {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(uiImage: screenshot)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(height: 200)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    
-                                    Button(action: {
-                                        depositScreenshot = nil
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(.white)
-                                            .background(Color.black.opacity(0.5))
-                                            .clipShape(Circle())
-                                    }
-                                    .padding(8)
-                                }
-                            } else {
-                                Button(action: {
-                                    showImageSourceActionSheet = true
-                                }) {
-                                    HStack {
-                                        Image(systemName: "camera.fill")
-                                            .font(.system(size: 18))
-                                        Text("Add Screenshot or Photo")
-                                            .font(.system(size: 14, weight: .medium))
-                                    }
-                                    .foregroundColor(.reverBlue)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.reverBlue.opacity(0.1))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(Color.reverBlue.opacity(0.3), lineWidth: 1)
-                                            )
-                                    )
-                                }
-                            }
-                            
-                            Text("Optional: Add a screenshot or photo of your receipt")
-                                .font(.system(size: 12))
-                                .foregroundColor(.softGraphite)
-                        }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.cloudWhite)
-                        )
-                        .padding(.horizontal, 20)
+                        // Screenshot Verification Status (Read-Only)
+                        screenshotVerificationSection
                         
                         // Save Button
-                        Button(action: {
-                            saveChanges()
-                        }) {
+                        Button(action: saveChanges) {
                             HStack {
                                 if isSaving {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 18))
                                 }
                                 
                                 Text(isSaving ? "Saving..." : "Save Changes")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.system(size: 16, weight: .semibold))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
+                            .padding(.vertical, 16)
                             .background(
                                 LinearGradient(
                                     colors: [Color.reverBlueLight, Color.reverBlueDark],
@@ -169,11 +104,11 @@ struct EditDepositView: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .cornerRadius(16)
+                            .cornerRadius(12)
                         }
                         .disabled(isSaving)
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 30)
                     }
                 }
             }
@@ -184,80 +119,159 @@ struct EditDepositView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(.reverBlue)
-                }
-            }
-            .onAppear {
-                loadScreenshot()
-            }
-            .confirmationDialog("Choose Photo", isPresented: $showImageSourceActionSheet, titleVisibility: .visible) {
-                Button("Take Photo") {
-                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                        imagePickerSourceType = .camera
-                        showImagePicker = true
-                    }
-                }
-                
-                Button("Choose from Library") {
-                    imagePickerSourceType = .photoLibrary
-                    showImagePicker = true
-                }
-                
-                if depositScreenshot != nil {
-                    Button("Remove Photo", role: .destructive) {
-                        depositScreenshot = nil
-                    }
-                }
-                
-                Button("Cancel", role: .cancel) { }
-            }
-            .sheet(isPresented: $showImagePicker) {
-                ImagePicker(sourceType: imagePickerSourceType) { image in
-                    depositScreenshot = image
+                    .foregroundColor(.softGraphite)
                 }
             }
         }
     }
     
-    private func loadScreenshot() {
-        depositScreenshot = screenshotService.loadScreenshot(for: deposit.id) ?? 
-                            screenshotService.loadScreenshotFromUserDefaults(for: deposit.id)
+    // MARK: - Screenshot Verification Status (Read-Only)
+    
+    @ViewBuilder
+    private var screenshotVerificationSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Screenshot Verification")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.midnightSlate)
+            
+            // Get verification metadata
+            let verificationMeta = EphemeralScreenshotService.shared.getVerificationMetadata(for: deposit.id)
+            
+            if let meta = verificationMeta {
+                if meta.isVerified {
+                    // Verified Status
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.shield.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.green)
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Verified at time of deposit")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.green)
+                            
+                            Text("Confidence: \(Int(meta.confidence * 100))%")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.softGraphite)
+                            
+                            Text("Verified: \(formatDate(meta.verifiedAt))")
+                                .font(.system(size: 12))
+                                .foregroundColor(.softGraphite.opacity(0.7))
+                            
+                            if let extractedAmount = meta.extractedAmount {
+                                Text("Detected amount: \(formatCurrency(extractedAmount))")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.softGraphite.opacity(0.7))
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green.opacity(0.1))
+                    )
+                } else {
+                    // Failed Verification
+                    HStack(spacing: 12) {
+                        Image(systemName: "xmark.shield.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.orange)
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Verification failed at upload")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.orange)
+                            
+                            Text("No loyalty points awarded")
+                                .font(.system(size: 13))
+                                .foregroundColor(.softGraphite)
+                            
+                            Text("Reason: \(meta.reason)")
+                                .font(.system(size: 12))
+                                .foregroundColor(.softGraphite.opacity(0.7))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.orange.opacity(0.1))
+                    )
+                }
+            } else {
+                // No Screenshot Provided
+                HStack(spacing: 12) {
+                    Image(systemName: "photo.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.gray)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("No screenshot provided")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.softGraphite)
+                        
+                        Text("No loyalty points awarded")
+                            .font(.system(size: 13))
+                            .foregroundColor(.softGraphite.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.1))
+                )
+            }
+            
+            // Security Notice
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.purple)
+                
+                Text("For security, screenshots cannot be added after deposit is recorded. This prevents fraud and protects your account.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.softGraphite.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.purple.opacity(0.05))
+            )
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.cloudWhite)
+        )
+        .padding(.horizontal, 20)
     }
+    
+    // MARK: - Helper Functions
     
     private func saveChanges() {
         isSaving = true
         
-        // Update screenshot if changed
-        if let screenshot = depositScreenshot {
-            // Save new screenshot
-            if screenshotService.saveScreenshot(screenshot, for: deposit.id) != nil {
-                screenshotService.saveScreenshotToUserDefaults(screenshot, for: deposit.id)
-            }
-        } else {
-            // Remove screenshot if deleted
-            screenshotService.deleteScreenshot(for: deposit.id)
-            UserDefaults.standard.removeObject(forKey: "deposit_screenshot_\(deposit.id)")
-        }
-        
-        // Update deposit in history with new reference ID
-        // Note: Since SavingsDeposit is a struct with let properties, we can't modify it directly
-        // We'll need to replace it in the array. However, saveState() is private.
-        // For now, we'll update the reference ID by replacing the deposit in the array
-        // The screenshot path is already updated via the screenshot service
+        // Update deposit in history
         if let index = plaidService.depositHistory.firstIndex(where: { $0.id == deposit.id }) {
-            // Create updated deposit
-            let updatedDeposit = SavingsDeposit(
-                amount: deposit.amount,
-                type: deposit.type,
-                goalId: deposit.goalId,
-                source: deposit.source,
-                screenshotPath: depositScreenshot != nil ? deposit.id : nil,
+            var updatedDeposit = deposit
+            // Create new deposit with updated referenceId
+            let newDeposit = SavingsDeposit(
+                amount: updatedDeposit.amount,
+                type: updatedDeposit.type,
+                goalId: updatedDeposit.goalId,
+                source: updatedDeposit.source,
+                screenshotPath: updatedDeposit.screenshotPath,
                 referenceId: referenceId.isEmpty ? nil : referenceId,
-                id: deposit.id
+                id: updatedDeposit.id
             )
-            
-            // Replace in array
-            plaidService.depositHistory[index] = updatedDeposit
+            plaidService.depositHistory[index] = newDeposit
             
             // Save to UserDefaults manually (since saveState() is private)
             if let encoded = try? JSONEncoder().encode(plaidService.depositHistory) {
@@ -265,8 +279,11 @@ struct EditDepositView: View {
             }
         }
         
-        isSaving = false
-        dismiss()
+        // Dismiss after short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            isSaving = false
+            dismiss()
+        }
     }
     
     private func formatCurrency(_ amount: Double) -> String {
@@ -284,3 +301,10 @@ struct EditDepositView: View {
     }
 }
 
+#Preview {
+    EditDepositView(deposit: SavingsDeposit(
+        amount: 100.0,
+        type: .manual,
+        referenceId: "DEP-550E840"
+    ))
+}

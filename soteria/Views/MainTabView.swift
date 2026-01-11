@@ -10,6 +10,8 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var authService: AuthService  // Get from parent environment
+    @StateObject private var unlockCoordinator = UnlockFlowCoordinator.shared
+    @StateObject private var goalsService = GoalsService.shared
     @State private var selectedTab = 0
     @State private var showMonthlyGoalPrompt = false
     
@@ -136,6 +138,34 @@ struct MainTabView: View {
             )
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(item: $unlockCoordinator.currentFlow) { flow in
+            switch flow {
+            case .celebration(let item, let bonusPoints):
+                UnlockCelebrationView(
+                    item: item,
+                    bonusPoints: bonusPoints,
+                    onContinue: {
+                        // Navigate to placement tutorial
+                        unlockCoordinator.showPlacementTutorial(for: item)
+                    }
+                )
+                
+            case .placementTutorial(let item):
+                AnimalPlacementView(
+                    item: item,
+                    totalSaved: goalsService.totalSavedAcrossGoals,
+                    activeGoal: goalsService.activeGoal,
+                    allGoals: goalsService.goals,
+                    onComplete: {
+                        unlockCoordinator.completePlacement()
+                    },
+                    showTutorial: true
+                )
+                
+            case .completed:
+                EmptyView()
+            }
         }
         .preferredColorScheme(.light)
     }

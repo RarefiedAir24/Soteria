@@ -12,6 +12,8 @@ struct DepositOptionsView: View {
     @ObservedObject private var plaidService = PlaidService.shared
     @ObservedObject private var goalsService = GoalsService.shared
     
+    @State private var animatedOffset: CGFloat = 0
+    
     let onPlaidDeposit: () -> Void
     let onManualDeposit: () -> Void
     
@@ -64,81 +66,80 @@ struct DepositOptionsView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
-                .padding(.bottom, 30)
+                .padding(.bottom, 16)
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Description
-                        Text("Choose how you'd like to add to your savings")
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.softGraphite)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                        
-                        // Deposit Options
-                        VStack(spacing: 16) {
-                            // Plaid Transfer Option (if connected)
-                            if hasPlaidConnection && hasCheckingAccount {
-                                DepositOptionCard(
-                                    title: "Transfer from Bank",
-                                    subtitle: hasSavingsAccount 
-                                        ? "Move money from checking to savings" 
-                                        : "Track virtual savings",
-                                    icon: "arrow.right.circle.fill",
-                                    iconColor: .reverBlue,
-                                    isAvailable: true
-                                ) {
-                                    onPlaidDeposit()
-                                }
+                // Description
+                Text("Choose how you'd like to add to your savings")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.softGraphite)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
+                
+                // Deposit Options (Fixed - NOT in ScrollView)
+                VStack(spacing: 16) {
+                    // Plaid Transfer Option (if connected)
+                    if hasPlaidConnection && hasCheckingAccount {
+                        DepositOptionCard(
+                            title: "Transfer from Bank",
+                            subtitle: hasSavingsAccount 
+                                ? "Move money from checking to savings" 
+                                : "Track virtual savings",
+                            icon: "arrow.right.circle.fill",
+                            iconColor: .reverBlue,
+                            isAvailable: true
+                        ) {
+                            onPlaidDeposit()
+                        }
+                    }
+                    
+                    // Manual Deposit Option (always available)
+                    DepositOptionCard(
+                        title: "Manual Entry",
+                        subtitle: "Record cash or deposits made outside the app",
+                        icon: "dollarsign.circle.fill",
+                        iconColor: .reverBlue,
+                        isAvailable: true
+                    ) {
+                        onManualDeposit()
+                    }
+                    
+                    // Info if no Plaid connection
+                    if !hasPlaidConnection {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.softGraphite)
+                                Text("Connect your bank account in Settings to enable transfers")
+                                    .font(.system(size: 14, weight: .regular))
+                                    .foregroundColor(.softGraphite)
                             }
                             
-                            // Manual Deposit Option (always available)
-                            DepositOptionCard(
-                                title: "Manual Entry",
-                                subtitle: "Record cash or deposits made outside the app",
-                                icon: "dollarsign.circle.fill",
-                                iconColor: .reverBlue,
-                                isAvailable: true
-                            ) {
-                                onManualDeposit()
-                            }
-                            
-                            // Info if no Plaid connection
-                            if !hasPlaidConnection {
-                                VStack(spacing: 8) {
-                                    HStack {
-                                        Image(systemName: "info.circle")
-                                            .font(.system(size: 16))
-                                            .foregroundColor(.softGraphite)
-                                        Text("Connect your bank account in Settings to enable transfers")
-                                            .font(.system(size: 14, weight: .regular))
-                                            .foregroundColor(.softGraphite)
-                                    }
-                                    
-                                    Button(action: {
-                                        dismiss()
-                                        // Navigate to settings - this will be handled by the parent
-                                        NotificationCenter.default.post(
-                                            name: NSNotification.Name("NavigateToPlaidSettings"),
-                                            object: nil
-                                        )
-                                    }) {
-                                        Text("Go to Settings")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.reverBlue)
-                                    }
-                                }
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.dreamMist)
+                            Button(action: {
+                                dismiss()
+                                // Navigate to settings - this will be handled by the parent
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("NavigateToPlaidSettings"),
+                                    object: nil
                                 )
+                            }) {
+                                Text("Go to Settings")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.reverBlue)
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.dreamMist)
+                        )
                     }
-                    .padding(.vertical, 20)
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+                
+                Spacer()
             }
         }
     }

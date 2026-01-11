@@ -27,21 +27,13 @@ struct TutorialPopup: View {
                 
                 // Popup content
                 VStack(spacing: 0) {
-                    // Header with title and close button
+                    // Header with title (no close button - use "Got it!" at bottom)
                     HStack {
                         Text(title)
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.midnightSlate)
                         
                         Spacer()
-                        
-                        Button(action: {
-                            dismiss()
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.softGraphite)
-                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)

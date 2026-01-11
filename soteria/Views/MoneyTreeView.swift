@@ -646,8 +646,12 @@ struct PurchasedSceneItems: View {
     let geometry: GeometryProxy
     let isEditMode: Bool
     @StateObject private var sceneManager = SceneManager.shared
+    @StateObject private var tutorialManager = DecorationEditTutorialManager.shared
+    @State private var triggerExitDragMode: Bool = false // Signal to exit drag mode
+    @AppStorage("hide_animal_edit_tutorial_forever") private var hideTutorialForever = false
     
     var body: some View {
+        // Just the scene items - NO arrow pad here (it will be in HomeView)
         ZStack {
             // Display all placed items
             ForEach(sceneManager.visiblePlacements) { placement in
@@ -656,9 +660,29 @@ struct PurchasedSceneItems: View {
                         item: item,
                         placement: placement,
                         geometry: geometry,
-                        isEditMode: isEditMode
+                        isEditMode: isEditMode,
+                        shouldExitDragMode: triggerExitDragMode,
+                        isSelected: tutorialManager.selectedItemId == placement.id,
+                        onEnterDragMode: {
+                            // Request tutorial if not hidden forever
+                            if !hideTutorialForever {
+                                tutorialManager.requestTutorial(for: placement.id)
+                            } else {
+                                // No tutorial, just set selected item
+                                tutorialManager.selectedItemId = placement.id
+                            }
+                        },
+                        onExitDragMode: {
+                            tutorialManager.exitEditMode()
+                        }
                     )
                 }
+            }
+        }
+        .onChange(of: tutorialManager.selectedItemId) { oldValue, newValue in
+            if newValue == nil {
+                // Signal all items to exit drag mode
+                triggerExitDragMode.toggle()
             }
         }
     }
@@ -670,6 +694,10 @@ struct DraggableSceneItemView: View {
     let placement: SceneItemPlacement
     let geometry: GeometryProxy
     let isEditMode: Bool
+    let shouldExitDragMode: Bool // Watch this to exit drag mode
+    let isSelected: Bool // Whether this item is currently selected for editing
+    var onEnterDragMode: (() -> Void)? = nil
+    var onExitDragMode: (() -> Void)? = nil
     
     @StateObject private var sceneManager = SceneManager.shared
     @StateObject private var themeService = TimeBasedThemeService.shared
@@ -678,42 +706,40 @@ struct DraggableSceneItemView: View {
     @State private var isInDragMode = false // Local drag mode enabled by long press
     
     var body: some View {
-        SceneItemIcon(item: item, tintColor: colorForItem)
-            .scaleEffect(x: placement.isFlipped ? -1 : 1, y: 1) // Flip horizontally if isFlipped
-            .scaleEffect(dragOffset != .zero ? 1.2 : (isAnimating && !isEditMode ? 1.1 : 1.0))
-            .animation(
-                isEditMode ? nil : Animation.easeInOut(duration: 2.0)
-                    .repeatForever(autoreverses: true)
-                    .delay(Double.random(in: 0...1)),
-                value: isAnimating
-            )
-            .offset(x: absoluteXPosition, y: absoluteYPosition)
-            .opacity(dragOffset != .zero ? 0.8 : (isEditMode || isInDragMode ? 0.9 : itemOpacity))
-            .overlay(
-                // Drag mode indicator
-                Group {
-                    if isEditMode || isInDragMode {
-                        Circle()
-                            .stroke(Color.blue, lineWidth: 2)
-                            .frame(width: item.fontSizeForIcon + 10, height: item.fontSizeForIcon + 10)
-                        
-                        // Exit drag mode button
-                        if isInDragMode {
-                            Button(action: {
-                                withAnimation {
-                                    isInDragMode = false
-                                }
-                            }) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.green)
-                                    .background(Circle().fill(Color.white))
-                            }
-                            .offset(x: item.fontSizeForIcon / 2 + 15, y: -item.fontSizeForIcon / 2 - 15)
-                        }
-                    }
-                }
-            )
+        ZStack {
+            // Blue selection border (behind icon, same position)
+            if isSelected {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.blue, Color.cyan],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 4
+                    )
+                    .frame(
+                        width: item.fontSizeForIcon + 24,
+                        height: item.fontSizeForIcon + 24
+                    )
+                    .shadow(color: .blue.opacity(0.6), radius: 10, x: 0, y: 0)
+                    .offset(x: absoluteXPosition, y: absoluteYPosition)
+                    .animation(.easeInOut(duration: 0.3), value: isSelected)
+            }
+            
+            // Icon (on top of border)
+            SceneItemIcon(item: item, tintColor: colorForItem)
+                .scaleEffect(x: placement.isFlipped ? -1 : 1, y: 1) // Flip horizontally if isFlipped
+                .scaleEffect(dragOffset != .zero ? 1.2 : (isAnimating && !isEditMode ? 1.1 : 1.0))
+                .animation(
+                    isEditMode ? nil : Animation.easeInOut(duration: 2.0)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double.random(in: 0...1)),
+                    value: isAnimating
+                )
+                .offset(x: absoluteXPosition, y: absoluteYPosition)
+                .opacity(dragOffset != .zero ? 0.8 : (isEditMode || isInDragMode ? 0.9 : itemOpacity))
+        }
             .onTapGesture {
                 // Quick tap to flip orientation
                 if !isInDragMode && !isEditMode {
@@ -724,6 +750,7 @@ struct DraggableSceneItemView: View {
                 // Long press to enable drag mode
                 withAnimation {
                     isInDragMode = true
+                    onEnterDragMode?()
                 }
             }
             .gesture(
@@ -740,14 +767,20 @@ struct DraggableSceneItemView: View {
                         sceneManager.updateItemPosition(placement.id, to: newPosition)
                         dragOffset = .zero
                         
-                        // Auto-exit drag mode after positioning
-                        withAnimation {
-                            isInDragMode = false
-                        }
+                        // Don't auto-exit drag mode anymore - let arrow pad handle it
+                        // User can use arrow pad for fine-tuning after drag
                     } : nil
             )
             .onAppear {
                 isAnimating = true
+            }
+            .onChange(of: shouldExitDragMode) { _, _ in
+                // Exit drag mode when parent signals
+                if isInDragMode {
+                    withAnimation {
+                        isInDragMode = false
+                    }
+                }
             }
     }
     
@@ -805,5 +838,141 @@ struct DraggableSceneItemView: View {
             return isNight ? Color(red: 0.2, green: 0.35, blue: 0.25) :
                    Color(red: 0.3, green: 0.7, blue: 0.3)
         }
+    }
+}
+
+// MARK: - Animal Edit Tutorial Modal
+struct AnimalEditTutorialModal: View {
+    let onDismiss: () -> Void
+    @Binding var dontShowAgain: Bool
+    
+    var body: some View {
+        ZStack {
+            // Dark overlay - full screen
+            Color.black.opacity(0.85)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    // Prevent dismissal by tapping outside
+                }
+            
+            // Tutorial card - centered, not constrained
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 16) {
+                    Image(systemName: "hand.point.up.left.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.white)
+                    
+                    Text("How to Move Decorations")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Precisely position your items")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                
+                // Instructions in cards
+                VStack(spacing: 16) {
+                    TutorialInstructionCard(
+                        icon: "arrow.up.arrow.down.arrow.left.arrow.right",
+                        title: "Use Arrow Pad",
+                        description: "Tap ⬆️⬇️⬅️➡️ arrows to move 10px at a time"
+                    )
+                    
+                    TutorialInstructionCard(
+                        icon: "hand.draw",
+                        title: "Or Drag",
+                        description: "Drag the item for rough positioning"
+                    )
+                    
+                    TutorialInstructionCard(
+                        icon: "arrow.left.arrow.right",
+                        title: "Quick Tap to Flip",
+                        description: "Quick tap to flip orientation ↔️"
+                    )
+                    
+                    TutorialInstructionCard(
+                        icon: "checkmark.circle.fill",
+                        title: "Done Locks Position",
+                        description: "Tap 'Done' to finalize"
+                    )
+                }
+                .padding(.horizontal, 24)
+                
+                // Don't show again checkbox
+                Button(action: {
+                    dontShowAgain.toggle()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: dontShowAgain ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 24))
+                            .foregroundColor(dontShowAgain ? .reverBlue : .white.opacity(0.6))
+                        
+                        Text("Don't show this again")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.vertical, 16)
+                }
+                
+                // Got it button
+                Button(action: {
+                    withAnimation {
+                        onDismiss()
+                    }
+                }) {
+                    Text("Got it!")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: 320)
+                        .padding(.vertical, 18)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.reverBlueLight, Color.reverBlueDark],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(16)
+                        .shadow(color: .reverBlue.opacity(0.6), radius: 20, x: 0, y: 10)
+                }
+            }
+            .padding(.horizontal, 32)
+        }
+    }
+}
+
+// Simplified instruction card for tutorial
+struct TutorialInstructionCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Icon
+            Image(systemName: icon)
+                .font(.system(size: 28))
+                .foregroundColor(.reverBlue)
+                .frame(width: 50)
+            
+            // Text
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text(description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.white.opacity(0.15))
+        )
     }
 }

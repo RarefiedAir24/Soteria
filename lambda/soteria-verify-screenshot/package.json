@@ -1,15 +1,15 @@
 {
   "name": "soteria-verify-screenshot",
-  "version": "1.0.0",
-  "description": "AWS Lambda function to verify deposit screenshots using Textract",
+  "version": "2.0.0",
+  "description": "Screenshot verification with Phase 1 + Phase 2 enhancements",
   "main": "index.js",
   "scripts": {
-    "deploy": "node deploy.js"
+    "test": "node test-event.json"
   },
   "dependencies": {
-    "aws-sdk": "^2.1693.0"
+    "sharp": "^0.33.5",
+    "sharp-phash": "^2.2.0"
   },
-  "devDependencies": {
-    "archiver": "^6.0.2"
-  }
+  "author": "",
+  "license": "ISC"
 }

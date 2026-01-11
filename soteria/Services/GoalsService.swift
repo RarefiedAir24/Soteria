@@ -387,6 +387,11 @@ class GoalsService: ObservableObject {
                 goals[index] = updatedGoal
                 goalsToArchive.append(updatedGoal)
                 updated = true
+                
+                // Check for achievement unlocks (goal-driven decorations)
+                Task { @MainActor in
+                    await checkForAchievementUnlocks()
+                }
             }
             // Check if goal passed target date without being achieved
             // BUT: Don't archive goals that were just created (within last 10 seconds)
@@ -1202,6 +1207,32 @@ class GoalsService: ObservableObject {
             // Log error but don't fail - UserDefaults is the source of truth
             print("⚠️ [GoalsService] Failed to restore goals from AWS: \(error.localizedDescription)")
         }
+    }
+    
+    // MARK: - Achievement Integration
+    
+    /// Check for achievement unlocks after goal completion
+    @MainActor
+    func checkForAchievementUnlocks() {
+        let completedCount = goals.filter { $0.status == .achieved }.count + archivedGoals.filter { $0.status == .achieved }.count
+        let totalSaved = goals.reduce(0) { $0 + $1.currentAmount } + archivedGoals.reduce(0) { $0 + $1.currentAmount }
+        
+        // TODO: Get actual savings streak and activated tools
+        let savingsStreak = 0 // Placeholder
+        let activatedTools: Set<String> = [] // Placeholder
+        let giftCardsRedeemed = 0 // Placeholder
+        
+        AchievementsService.shared.checkForNewUnlocks(
+            goalsCompleted: completedCount,
+            totalSaved: totalSaved,
+            savingsStreak: savingsStreak,
+            activatedTools: activatedTools,
+            giftCardsRedeemed: giftCardsRedeemed,
+            completedGoalCategory: nil, // Can pass goal category if needed
+            triggerType: "goal_completed"
+        )
+        
+        print("🏆 [GoalsService] Checked for achievements: \(completedCount) goals, $\(Int(totalSaved)) saved")
     }
 }
 
