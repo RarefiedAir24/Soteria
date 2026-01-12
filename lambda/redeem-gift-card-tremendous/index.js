@@ -20,40 +20,40 @@ const REDEMPTIONS_TABLE = process.env.REDEMPTIONS_TABLE || 'soteria-gift-card-re
 const MONTHLY_CAPS_TABLE = process.env.MONTHLY_CAPS_TABLE || 'soteria-monthly-redemption-caps';
 
 // Product mapping: Soteria gift card IDs → Tremendous product IDs
-// TODO: Update these after Wednesday call to confirm actual product IDs
+// ✅ CONFIRMED via API testing Jan 12, 2026
 const PRODUCT_MAP = {
-  // Amazon
-  'amazon_5': 'AMAZON',
-  'amazon_10': 'AMAZON',
-  'amazon_25': 'AMAZON',
-  'amazon_50': 'AMAZON',
-  'amazon_100': 'AMAZON',
+  // Amazon - Product ID: OKMHM2X2OHYV
+  'amazon_5': 'OKMHM2X2OHYV',
+  'amazon_10': 'OKMHM2X2OHYV',
+  'amazon_25': 'OKMHM2X2OHYV',
+  'amazon_50': 'OKMHM2X2OHYV',
+  'amazon_100': 'OKMHM2X2OHYV',
   
-  // Visa
-  'visa_5': 'VISA',
-  'visa_10': 'VISA',
-  'visa_25': 'VISA',
-  'visa_50': 'VISA',
-  'visa_100': 'VISA',
+  // Visa (Virtual) - Product ID: Q24BD9EZ332JT
+  'visa_5': 'Q24BD9EZ332JT',
+  'visa_10': 'Q24BD9EZ332JT',
+  'visa_25': 'Q24BD9EZ332JT',
+  'visa_50': 'Q24BD9EZ332JT',
+  'visa_100': 'Q24BD9EZ332JT',
   
-  // Target
-  'target_5': 'TARGET',
-  'target_10': 'TARGET',
-  'target_25': 'TARGET',
-  'target_50': 'TARGET',
-  'target_100': 'TARGET',
+  // Target - Product ID: SRDHFATO9KHN
+  'target_5': 'SRDHFATO9KHN',
+  'target_10': 'SRDHFATO9KHN',
+  'target_25': 'SRDHFATO9KHN',
+  'target_50': 'SRDHFATO9KHN',
+  'target_100': 'SRDHFATO9KHN',
   
-  // Walmart
-  'walmart_5': 'WALMART',
-  'walmart_10': 'WALMART',
-  'walmart_25': 'WALMART',
-  'walmart_50': 'WALMART',
-  'walmart_100': 'WALMART',
+  // Walmart - Product ID: DPIPLH0SRBO6
+  'walmart_5': 'DPIPLH0SRBO6',
+  'walmart_10': 'DPIPLH0SRBO6',
+  'walmart_25': 'DPIPLH0SRBO6',
+  'walmart_50': 'DPIPLH0SRBO6',
+  'walmart_100': 'DPIPLH0SRBO6',
   
-  // Starbucks
-  'starbucks_5': 'STARBUCKS',
-  'starbucks_10': 'STARBUCKS',
-  'starbucks_25': 'STARBUCKS'
+  // Starbucks - Product ID: 2XG0FLQXBDCZ
+  'starbucks_5': '2XG0FLQXBDCZ',
+  'starbucks_10': '2XG0FLQXBDCZ',
+  'starbucks_25': '2XG0FLQXBDCZ'
 };
 
 /**
