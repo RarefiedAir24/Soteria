@@ -117,10 +117,13 @@ struct GiftCardShopView: View {
                 Text("Redeem \(card.name) for \(card.pointsCost) points?")
             }
         }
-        .alert("Success!", isPresented: $showSuccessMessage) {
-            Button("Done", role: .cancel) { }
-        } message: {
-            Text("Gift card redeemed! Check your email for the redemption link.")
+        .fullScreenCover(isPresented: $showSuccessMessage) {
+            if let redemption = redemptionResult {
+                RedemptionSuccessView(redemption: redemption) {
+                    showSuccessMessage = false
+                    redemptionResult = nil
+                }
+            }
         }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") { errorMessage = nil }
@@ -500,7 +503,10 @@ struct GiftCardShopView: View {
         isRedeeming = true
         
         do {
-            _ = try await loyaltyService.redeemGiftCard(giftCard: card, userId: userId, email: email)
+            let redemption = try await loyaltyService.redeemGiftCard(giftCard: card, userId: userId, email: email)
+            
+            // Store redemption result with link
+            redemptionResult = redemption
             
             // Record redemption for AI learning
             recommendationService.recordRedemption(card)
