@@ -185,7 +185,7 @@ async function createTremendousOrder({ externalId, amount, currency, product, re
         currency_code: currency
       },
       delivery: {
-        method: 'EMAIL'
+        method: 'LINK'
       },
       recipient: {
         name: recipientName,
