@@ -1,12 +1,21 @@
 {
   "name": "soteria-redeem-gift-card",
   "version": "1.0.0",
-  "description": "Lambda function to redeem loyalty points for gift cards via Tremendous",
+  "description": "Lambda function for redeeming gift cards via Tremendous API",
   "main": "index.js",
-  "dependencies": {
-    "aws-sdk": "^2.1483.0"
+  "scripts": {
+    "test": "echo \"No tests specified\""
   },
-  "engines": {
-    "node": ">=18.x"
+  "keywords": [
+    "soteria",
+    "gift-cards",
+    "tremendous",
+    "loyalty",
+    "rewards"
+  ],
+  "author": "Soteria",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "aws-sdk": "^2.1000.0"
   }
 }
