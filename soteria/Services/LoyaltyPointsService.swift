@@ -372,8 +372,8 @@ class LoyaltyPointsService: ObservableObject {
     }
     
     private func callRedemptionAPI(giftCard: GiftCard, userId: String, email: String) async throws -> GiftCardRedemption {
-        // TODO: Replace with your actual API Gateway endpoint
-        let endpoint = "https://YOUR_API_GATEWAY_URL/redeem-gift-card"
+        // ✅ LIVE API Gateway endpoint for gift card redemption
+        let endpoint = "https://ue1psw3mt3.execute-api.us-east-1.amazonaws.com/prod/soteria/redeem-gift-card"
         
         guard let url = URL(string: endpoint) else {
             throw GiftCardRedemptionError.invalidEndpoint
